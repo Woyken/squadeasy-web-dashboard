@@ -1,0 +1,31 @@
+{
+  "name": "example-basic",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "version": "vinxi version",
+    "generate-client": "openapi-typescript https://woyken.github.io/squadeasy-api/openapi.yaml -o ./src/api/squadEasyApi.d.ts"
+  },
+  "dependencies": {
+    "@shoelace-style/shoelace": "^2.15.1",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^0.13.3",
+    "@solidjs/start": "^1.0.1",
+    "@tanstack/solid-form": "^0.20.2",
+    "@tanstack/solid-query": "^5.40.0",
+    "@tanstack/valibot-form-adapter": "^0.20.2",
+    "openapi-fetch": "^0.9.7",
+    "solid-js": "^1.8.17",
+    "valibot": "0.31.0-rc.7",
+    "vinxi": "^0.3.11"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@total-typescript/ts-reset": "^0.5.1",
+    "openapi-typescript": "^6.7.6"
+  }
+}

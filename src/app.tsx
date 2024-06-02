@@ -87,6 +87,7 @@ export default function App() {
     const [queryClient] = createSignal(new QueryClient());
     return (
         <Router
+            base="/squadeasy-web-dashboard"
             root={(props) => (
                 <MetaProvider>
                     <QueryClientProvider client={queryClient()}>

@@ -1,5 +1,5 @@
 import { MetaProvider } from "@solidjs/meta";
-import { Router, useBeforeLeave, useNavigate } from "@solidjs/router";
+import { A, Router, useBeforeLeave, useNavigate } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
 import { For, Show, Suspense, createMemo, createSignal } from "solid-js";
 import "./app.css";
@@ -10,7 +10,6 @@ import {
 } from "./components/UsersTokensProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import "@shoelace-style/shoelace/dist/themes/dark.css";
-import Avatar from "./components/sl/Avatar";
 import Drawer from "./components/sl/Drawer";
 import { SlDrawer } from "@shoelace-style/shoelace";
 import { UserPickerRow } from "./components/UserPickerRow";
@@ -72,9 +71,9 @@ function NavigationBar() {
                         </For>
                     </div>
                     <div slot="footer">
-                        <a onclick={() => drawer()?.hide()} href="/login">
+                        <A onclick={() => drawer()?.hide()} href="/login">
                             Login with different user
-                        </a>
+                        </A>
                     </div>
                 </Drawer>
             </div>

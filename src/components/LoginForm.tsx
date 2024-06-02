@@ -59,6 +59,7 @@ export default function LoginForm() {
                             return (
                                 <>
                                     <Input
+                                        prop:type="email"
                                         prop:label="Email"
                                         id={field().name}
                                         prop:name={field().name}
@@ -85,6 +86,7 @@ export default function LoginForm() {
                         children={(field) => (
                             <>
                                 <Input
+                                    prop:type="password"
                                     prop:label="Password"
                                     id={field().name}
                                     prop:name={field().name}

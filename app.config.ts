@@ -4,6 +4,7 @@ export default defineConfig({
     server: {
         static: true,
         prerender: {
+            routes: ["/", "/login"],
             crawlLinks: true,
         },
     },

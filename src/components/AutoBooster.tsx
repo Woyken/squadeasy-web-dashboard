@@ -17,18 +17,21 @@ function AutoBoosterUser(props: { userId: string }) {
     // const myUserQuery = useMyUserQuery(() => props.userId);
     const myTeamQuery = useMyTeamQuery(() => props.userId);
     const boostMutation = useBoostMutation(() => props.userId);
+    const boostAvailableAt = createMemo(() =>
+        myTeamQuery.data ? myTeamQuery.data.boostAvailableAt : ""
+    );
 
     createEffect(() => {
-        const data = myTeamQuery.data;
-        if (!data) return;
+        const boostAvailableDate = boostAvailableAt();
+        if (boostAvailableDate === "") return;
 
-        const boostAtTimestamp = new Date(
-            data.boostAvailableAt ?? ""
-        ).getTime();
+        const boostAtTimestamp = boostAvailableDate
+            ? new Date(boostAvailableDate).getTime()
+            : new Date().getTime();
         const boostInMs = boostAtTimestamp - new Date().getTime();
         const timeout = setTimeout(
             () => {
-                const t = myTeamQuery
+                myTeamQuery
                     .refetch()
                     .then((x) =>
                         x.data?.users

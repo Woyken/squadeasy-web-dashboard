@@ -8,9 +8,6 @@ export interface paths {
   "/": {
     get: operations["Ranking_rankingGlobal"];
   };
-  "/2.0/users/{id}/boost": {
-    post: operations["User_boostUser"];
-  };
   "/api/2.0/my/image": {
     post: operations["User_uploadImage"];
   };
@@ -35,6 +32,9 @@ export interface paths {
   };
   "/api/2.0/users/{id}": {
     get: operations["User_getUser"];
+  };
+  "/api/2.0/users/{id}/boost": {
+    post: operations["User_boostUser"];
   };
   "/api/2.0/users/{id}/statistics": {
     get: operations["User_getUserStatistics"];
@@ -328,21 +328,6 @@ export interface operations {
       };
     };
   };
-  User_boostUser: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
   User_uploadImage: {
     requestBody: {
       content: {
@@ -479,6 +464,21 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["UserDetails"];
+        };
+      };
+    };
+  };
+  User_boostUser: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
     };

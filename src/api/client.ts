@@ -87,7 +87,7 @@ export function useBoostMutation(userId: Accessor<string>) {
             if (!accessToken)
                 throw new Error(`token missing for user ${userId()}`);
             const boostResult = await squadEasyClient.POST(
-                "/2.0/users/{id}/boost",
+                "/api/2.0/users/{id}/boost",
                 {
                     params: {
                         path: {

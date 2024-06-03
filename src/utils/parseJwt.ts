@@ -1,4 +1,9 @@
-export function parseJwt(token: string) {
+interface Token {
+    id: string;
+    exp: number;
+}
+
+export function parseJwt(token: string): Token {
     var base64Url = token.split(".")[1];
     var base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     var jsonPayload = decodeURIComponent(
@@ -20,6 +25,7 @@ export function parseJwt(token: string) {
         "id" in json &&
         typeof json.id === "string"
     )
-        return json;
+        return json as Token;
+
     throw new Error(`Unable to parse token ${jsonPayload}`);
 }

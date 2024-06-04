@@ -10,7 +10,7 @@ export function UserPickerRow(props: { userId: string }) {
         <>
             <Show when={!!query.data} fallback={<Spinner />}>
                 <>
-                    <A href={`/user/${props.userId}`}>
+                    <A href={`/user?id=${props.userId}`}>
                         <UserAvatar userId={props.userId} />
                         {query.data?.firstName} {query.data?.lastName}
                     </A>

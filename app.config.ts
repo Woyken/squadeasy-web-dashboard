@@ -5,7 +5,7 @@ export default defineConfig({
         baseURL: '/squadeasy-web-dashboard',
         static: true,
         prerender: {
-            routes: ["/", "/login"],
+            routes: ["/", "/login", "/user"],
             crawlLinks: true,
         },
     },

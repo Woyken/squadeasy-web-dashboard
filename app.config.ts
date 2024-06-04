@@ -7,7 +7,7 @@ export default defineConfig({
         static: true,
         preset: 'static',
         prerender: {
-            routes: ["/", "/login", "/user"],
+            routes: ["/", "/login", "/user", "/404"],
             crawlLinks: true,
         },
     },

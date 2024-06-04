@@ -14,6 +14,29 @@ export const squadEasyClient = createClient<paths>({
     baseUrl: "https://api-challenge.squadeasy.com",
 });
 
+export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
+    const getUserToken = useGetUserToken(userId);
+    return createQuery(() => ({
+        queryKey: ["/api/3.0/my/challenge", userId()],
+        queryFn: async () => {
+            const token = await getUserToken();
+            if (!token) throw new Error(`token missing for user ${userId()}`);
+            const result = await squadEasyClient.GET("/api/3.0/my/challenge", {
+                headers: {
+                    authorization: `Bearer ${token}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Request failed ${JSON.stringify(result.error)}`
+                );
+            return result.data;
+        },
+        enabled: !!userId(),
+        staleTime: 1 * 60 * 60 * 1000,
+    }));
+}
+
 export function useMyUserQuery(userId: Accessor<string>) {
     const getUserToken = useGetUserToken(userId);
     return createQuery(() => {
@@ -113,10 +136,12 @@ export function useBoostMutation(userId: Accessor<string>) {
     }));
 }
 
-export function useGetUserToken(userId: Accessor<string>) {
+export function useGetUserToken(userId: Accessor<string | undefined>) {
     const usersTokens = useUsersTokens();
     const token = createMemo(() => {
-        const token = usersTokens().tokens.get(userId());
+        const id = userId();
+        if (!id) return;
+        const token = usersTokens().tokens.get(id);
         return token;
     });
     const refreshTokenMutation = useRefreshTokenMutation();

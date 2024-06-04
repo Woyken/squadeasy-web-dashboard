@@ -45,6 +45,9 @@ export interface paths {
   "/api/3.0/auth/refresh-token": {
     post: operations["Authentication_refreshToken"];
   };
+  "/api/3.0/my/challenge": {
+    get: operations["ChallengeService_myChallenge"];
+  };
   "/api/3.0/social/posts": {
     get: operations["Social_posts"];
     post: operations["Social_createPost"];
@@ -136,6 +139,22 @@ export interface components {
     ImageDataMultiPart: {
       /** Format: binary */
       image: string;
+    };
+    MyChallenge: {
+      /** Format: uri */
+      spaceImage: string;
+      /** Format: uri */
+      image: string;
+      /** Format: date-time */
+      startAt: string;
+      /** Format: date-time */
+      endAt: string;
+      title: string;
+      tagline: string;
+      description: string;
+      statistics: unknown;
+      /** Format: date-time */
+      deletionDate: string | null;
     };
     RankingMedal: {
       id: string;
@@ -527,6 +546,16 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["TokenResponse"];
+        };
+      };
+    };
+  };
+  ChallengeService_myChallenge: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MyChallenge"];
         };
       };
     };

@@ -79,14 +79,13 @@ function NavigationBar() {
             </div>
         </header>
     );
-    //
 }
 
 export default function App() {
     const [queryClient] = createSignal(new QueryClient());
     return (
         <Router
-            base="/squadeasy-web-dashboard"
+            base={import.meta.env.SERVER_BASE_URL}
             root={(props) => (
                 <MetaProvider>
                     <QueryClientProvider client={queryClient()}>

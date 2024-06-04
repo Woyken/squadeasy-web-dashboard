@@ -32,6 +32,7 @@ function NavigationBar() {
                 "align-items": "center",
                 padding: "var(--sl-spacing-x-small)",
                 "background-color": "var(--sl-color-neutral-50)",
+                "min-height": "var(--sl-spacing-4x-large)"
             }}
         >
             <div></div>

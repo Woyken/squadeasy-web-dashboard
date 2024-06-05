@@ -9,7 +9,6 @@
     "start": "vinxi start"
   },
   "dependencies": {
-    "@shoelace-style/shoelace": "^2.15.1",
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.13.3",
     "@solidjs/start": "^1.0.1",

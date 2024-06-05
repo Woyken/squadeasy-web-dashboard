@@ -1,5 +1,5 @@
 import { MetaProvider } from "@solidjs/meta";
-import { A, Router, useBeforeLeave, useNavigate } from "@solidjs/router";
+import { A, Router } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
 import { For, Show, Suspense, createMemo, createSignal } from "solid-js";
 import "./app.css";
@@ -10,105 +10,76 @@ import {
 } from "./components/UsersTokensProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import "@shoelace-style/shoelace/dist/themes/dark.css";
-import Drawer from "./components/sl/Drawer";
-import { SlDrawer } from "@shoelace-style/shoelace";
-import { UserPickerRow } from "./components/UserPickerRow";
 import { AutoBooster } from "./components/AutoBooster";
-import { UserAvatar } from "./components/UserAvatar";
 import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
+import { Avatar } from "./components/Avatar";
+import { UserLoader } from "./components/UserLoader";
 
 function NavigationBar() {
-    const [drawer, setDrawer] = createSignal<SlDrawer>();
-    const userTokens = useUsersTokens();
-    const userIds = createMemo(() => Array.from(userTokens().tokens.keys()));
-    useBeforeLeave(() => {
-        drawer()?.hide();
-    });
-    const navigate = useNavigate();
-    return (
-        <header
-            style={{
-                display: "grid",
-                "grid-template-columns": "2fr 1fr 2fr",
-                "align-items": "center",
-                padding: "var(--sl-spacing-x-small)",
-                "background-color": "var(--sl-color-neutral-50)",
-                "min-height": "var(--sl-spacing-4x-large)",
-            }}
-        >
-            <div></div>
-            <h2
-                onclick={() => navigate("/")}
-                style={{ margin: 0, "text-align": "center" }}
-            >
-                SquadEasy
-            </h2>
-            <div style={{ display: "flex", "justify-content": "end" }}>
-                <Show when={userIds().length > 0}>
-                    <UserAvatar
-                        onclick={() => drawer()?.show()}
-                        userId={userIds()[0]}
-                    />
-                </Show>
-                <Drawer ref={setDrawer}>
-                    <div
-                        style={{
-                            display: "flex",
-                            "flex-direction": "column",
-                            gap: "var(--sl-spacing-x-small)",
-                        }}
-                    >
-                        <For each={userIds()}>
-                            {(userId) => (
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "var(--sl-spacing-x-small)",
-                                        "align-items": "center",
-                                    }}
-                                >
-                                    <UserPickerRow userId={userId} />
-                                </div>
-                            )}
-                        </For>
-                    </div>
-                    <div slot="footer">
-                        <A onclick={() => drawer()?.hide()} href="/login">
-                            Login with different user
-                        </A>
-                    </div>
-                </Drawer>
-            </div>
-        </header>
-    );
-}
-
-function NavBar2() {
     const userTokens = useUsersTokens();
     const userIds = createMemo(() => Array.from(userTokens().tokens.keys()));
     return (
         <div class="navbar bg-base-100">
             <div class="flex-1">
-                <a class="btn btn-ghost text-xl">daisyUI</a>
+                <A href="/" class="btn btn-ghost text-xl">
+                    SquadEasy
+                </A>
             </div>
             <div class="flex-none">
-                <ul class="menu menu-horizontal px-1">
-                    <li>
-                        <details>
-                            <summary>
-                                <UsersAvatarsPreview userIds={userIds()} />
-                            </summary>
-                            <ul class="p-2 bg-base-100 rounded-t-none">
+                <div class="dropdown dropdown-end">
+                    <div
+                        tabindex="0"
+                        role="button"
+                        class="btn btn-ghost rounded-btn hover:bg-neutral"
+                    >
+                        <UsersAvatarsPreview userIds={userIds()} />
+                    </div>
+                    <ul
+                        tabindex="0"
+                        class="menu dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box w-52 mt-4"
+                    >
+                        <For each={userIds()}>
+                            {(userId) => (
                                 <li>
-                                    <a>Submenu 1</a>
+                                    <A
+                                        href={`/user?id=${userId}`}
+                                        onclick={(e) => {
+                                            e.currentTarget.blur();
+                                        }}
+                                    >
+                                        <UserLoader userId={userId}>
+                                            {(query, displayName) => (
+                                                <div class="flex items-center space-x-3">
+                                                    <Avatar userId={userId} />
+                                                    <div class="font-bold">
+                                                        <Show
+                                                            when={
+                                                                query.isLoading
+                                                            }
+                                                            fallback={displayName()}
+                                                        >
+                                                            <span class="loading loading-dots loading-lg"></span>
+                                                        </Show>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </UserLoader>
+                                    </A>
                                 </li>
-                                <li>
-                                    <a>Submenu 2</a>
-                                </li>
-                            </ul>
-                        </details>
-                    </li>
-                </ul>
+                            )}
+                        </For>
+                        <li>
+                            <A
+                                href="/login"
+                                onclick={(e) => {
+                                    e.currentTarget.blur();
+                                }}
+                            >
+                                Login with another account
+                            </A>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     );

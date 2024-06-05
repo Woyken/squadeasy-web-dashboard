@@ -6,7 +6,6 @@ export default function LoginNewUser() {
     return (
         <main>
             <Title>Login</Title>
-            <h1>Login</h1>
             <LoginForm />
         </main>
     );

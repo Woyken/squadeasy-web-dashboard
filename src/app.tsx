@@ -15,6 +15,7 @@ import { SlDrawer } from "@shoelace-style/shoelace";
 import { UserPickerRow } from "./components/UserPickerRow";
 import { AutoBooster } from "./components/AutoBooster";
 import { UserAvatar } from "./components/UserAvatar";
+import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
 
 function NavigationBar() {
     const [drawer, setDrawer] = createSignal<SlDrawer>();
@@ -32,7 +33,7 @@ function NavigationBar() {
                 "align-items": "center",
                 padding: "var(--sl-spacing-x-small)",
                 "background-color": "var(--sl-color-neutral-50)",
-                "min-height": "var(--sl-spacing-4x-large)"
+                "min-height": "var(--sl-spacing-4x-large)",
             }}
         >
             <div></div>
@@ -79,6 +80,37 @@ function NavigationBar() {
                 </Drawer>
             </div>
         </header>
+    );
+}
+
+function NavBar2() {
+    const userTokens = useUsersTokens();
+    const userIds = createMemo(() => Array.from(userTokens().tokens.keys()));
+    return (
+        <div class="navbar bg-base-100">
+            <div class="flex-1">
+                <a class="btn btn-ghost text-xl">daisyUI</a>
+            </div>
+            <div class="flex-none">
+                <ul class="menu menu-horizontal px-1">
+                    <li>
+                        <details>
+                            <summary>
+                                <UsersAvatarsPreview userIds={userIds()} />
+                            </summary>
+                            <ul class="p-2 bg-base-100 rounded-t-none">
+                                <li>
+                                    <a>Submenu 1</a>
+                                </li>
+                                <li>
+                                    <a>Submenu 2</a>
+                                </li>
+                            </ul>
+                        </details>
+                    </li>
+                </ul>
+            </div>
+        </div>
     );
 }
 

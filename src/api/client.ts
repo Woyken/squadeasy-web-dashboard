@@ -44,7 +44,7 @@ export function useMyUserQuery(userId: Accessor<string>) {
     });
 }
 
-function getMyUserOptions(
+export function getMyUserOptions(
     userId: string,
     getAccessToken: () => Promise<string | undefined>
 ) {

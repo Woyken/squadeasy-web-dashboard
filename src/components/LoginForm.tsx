@@ -5,6 +5,7 @@ import type { FieldApi } from "@tanstack/solid-form";
 import { useLoginMutation } from "~/api/client";
 import Button from "./sl/ClientButton";
 import Input from "./sl/Input";
+import { useNavigate } from "@solidjs/router";
 
 interface FieldInfoProps {
     field: FieldApi<any, any, any, any>;
@@ -23,6 +24,7 @@ function FieldInfo(props: FieldInfoProps) {
 
 export default function LoginForm() {
     const loginMutation = useLoginMutation();
+    const navigate = useNavigate();
     const form = createForm(() => ({
         defaultValues: {
             email: "",
@@ -33,6 +35,7 @@ export default function LoginForm() {
                 email: value.email,
                 password: value.password,
             });
+            navigate("/");
         },
         // Add a validator to support Valibot usage in Form and Field
         validatorAdapter: valibotValidator,

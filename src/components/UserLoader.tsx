@@ -1,5 +1,6 @@
 import { Accessor, JSX, createMemo } from "solid-js";
 import { useMyUserQuery } from "~/api/client";
+import { getUserDisplayName } from "~/getUserDisplayName";
 
 export function UserLoader(props: {
     userId: string;
@@ -12,11 +13,7 @@ export function UserLoader(props: {
     const displayName = createMemo(() => {
         if (query.isLoading) return;
         if (query.isError) return "Error!";
-        if (query.data?.firstName || query.data?.lastName)
-            return [query.data.firstName, query.data.lastName]
-                .filter((x) => !!x)
-                .join(" ");
-        if (query.data?.email) return query.data?.email;
+        return getUserDisplayName(query.data);
     });
     return <>{props.children(query, displayName)}</>;
 }

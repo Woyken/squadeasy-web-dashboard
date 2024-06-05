@@ -1,5 +1,6 @@
 import { Match, Switch, createMemo } from "solid-js";
 import { useMyUserQuery } from "~/api/client";
+import { getUserInitials } from "~/getUserDisplayName";
 
 export function Avatar(props: { userId: string }) {
     const query = useMyUserQuery(() => props.userId);
@@ -12,17 +13,10 @@ export function Avatar(props: { userId: string }) {
                 (query.error as any)?.cause ??
                 "??"
             ).slice(0, 2);
-        if (!!query.data?.firstName && !!query.data?.lastName)
-            return (
-                query.data.firstName.slice(0, 1) +
-                query.data.lastName.slice(0, 1)
-            ).toUpperCase();
         if (!query.data)
             // Don't know what to display in this case
             return query.status.slice(0, 2);
-        return (query.data.firstName ?? query.data.lastName ?? query.data.email)
-            .slice(0, 2)
-            .toUpperCase();
+        return getUserInitials(query.data);
     });
     return (
         <>

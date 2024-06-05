@@ -2,6 +2,7 @@ import { getMyUserOptions, useGetUserToken } from "~/api/client";
 import { Avatars } from "./Avatars";
 import { createQueries } from "@tanstack/solid-query";
 import { createMemo } from "solid-js";
+import { getUserInitials } from "~/getUserDisplayName";
 
 export function UsersAvatarsPreview(props: { userIds: string[] }) {
     const userIdsWithTokens = createMemo(() =>
@@ -43,21 +44,8 @@ export function UsersAvatarsPreview(props: { userIds: string[] }) {
                     return {
                         image: x.data.image,
                     };
-                if (x.data.firstName && x.data.lastName)
-                    return {
-                        placeholder: (
-                            x.data.firstName.slice(0, 1) +
-                            x.data.lastName.slice(0, 1)
-                        ).toUpperCase(),
-                    };
                 return {
-                    placeholder: (
-                        x.data.firstName ??
-                        x.data.lastName ??
-                        x.data.email
-                    )
-                        .slice(0, 2)
-                        .toUpperCase(),
+                    placeholder: getUserInitials(x.data) ?? "??",
                 };
             })}
         />

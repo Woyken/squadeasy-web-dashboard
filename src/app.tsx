@@ -14,6 +14,7 @@ import { AutoBooster } from "./components/AutoBooster";
 import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
 import { Avatar } from "./components/Avatar";
 import { UserLoader } from "./components/UserLoader";
+import { TeamScoreTracker } from "./components/TeamScoreTracker";
 
 function NavigationBar() {
     const userTokens = useUsersTokens();
@@ -36,7 +37,7 @@ function NavigationBar() {
                     </div>
                     <ul
                         tabindex="0"
-                        class="menu dropdown-content z-[1] p-2 shadow bg-base-100 rounded-box w-52 mt-4"
+                        class="menu dropdown-content z-[1] mt-4 w-52 rounded-box bg-base-100 p-2 shadow"
                     >
                         <For each={userIds()}>
                             {(userId) => (
@@ -96,6 +97,7 @@ export default function App() {
                         <UsersTokensProvider>
                             <AutoBooster>
                                 <NavigationBar />
+                                <TeamScoreTracker />
                                 <Suspense>{props.children}</Suspense>
                             </AutoBooster>
                         </UsersTokensProvider>

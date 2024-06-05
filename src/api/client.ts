@@ -28,7 +28,7 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
             });
             if (!result.data)
                 throw new Error(
-                    `Request failed ${JSON.stringify(result.error)}`
+                    `Request failed ${JSON.stringify(result.error)}`,
                 );
             return result.data;
         },
@@ -46,7 +46,7 @@ export function useMyUserQuery(userId: Accessor<string>) {
 
 export function getMyUserOptions(
     userId: string,
-    getAccessToken: () => Promise<string | undefined>
+    getAccessToken: () => Promise<string | undefined>,
 ) {
     return queryOptions({
         queryKey: ["/api/2.0/my/user", userId],
@@ -60,7 +60,7 @@ export function getMyUserOptions(
             });
             if (!result.data)
                 throw new Error(
-                    `Request failed ${JSON.stringify(result.error)}`
+                    `Request failed ${JSON.stringify(result.error)}`,
                 );
             return result.data;
         },
@@ -70,7 +70,7 @@ export function getMyUserOptions(
 
 function getMyTeamOptions(
     userId: string,
-    getAccessToken: () => Promise<string | undefined>
+    getAccessToken: () => Promise<string | undefined>,
 ) {
     return queryOptions({
         queryKey: ["", userId],
@@ -84,7 +84,7 @@ function getMyTeamOptions(
             });
             if (!result.data)
                 throw new Error(
-                    `Request failed ${JSON.stringify(result.error)}`
+                    `Request failed ${JSON.stringify(result.error)}`,
                 );
             return result.data;
         },
@@ -99,6 +99,31 @@ export function useMyTeamQuery(userId: Accessor<string>) {
 
         return getMyTeamOptions(userId(), getUserToken);
     });
+}
+
+export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
+    const users = useUsersTokens();
+    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
+    const getToken = useGetUserToken(firstUserId);
+    return createQuery(() => ({
+        queryKey: ["/api/2.0/my/ranking/season"],
+        queryFn: async () => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+            const result = await squadEasyClient.GET("/api/2.0/my/ranking/season", {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Get teams failed ${JSON.stringify(result.error)}`,
+                );
+            return result.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: enabled?.(),
+    }));
 }
 
 export function useBoostMutation(userId: Accessor<string>) {
@@ -120,11 +145,11 @@ export function useBoostMutation(userId: Accessor<string>) {
                     headers: {
                         authorization: `Bearer ${accessToken}`,
                     },
-                }
+                },
             );
             if (!boostResult.data)
                 throw new Error(
-                    `Boost failed ${JSON.stringify(boostResult.error)}`
+                    `Boost failed ${JSON.stringify(boostResult.error)}`,
                 );
             return boostResult.data;
         },
@@ -179,11 +204,11 @@ export function useRefreshTokenMutation() {
                     headers: {
                         authorization: `Bearer ${variables.accessToken}`,
                     },
-                }
+                },
             );
             if (!loginResult.data)
                 throw new Error(
-                    `Login failed ${JSON.stringify(loginResult.error)}`
+                    `Login failed ${JSON.stringify(loginResult.error)}`,
                 );
 
             const userId = parseJwt(loginResult.data.accessToken).id;
@@ -197,7 +222,7 @@ export function useRefreshTokenMutation() {
             usersTokens().setToken(
                 data.id,
                 data.accessToken,
-                data.refreshToken
+                data.refreshToken,
             );
         },
     }));
@@ -216,11 +241,11 @@ export function useLoginMutation() {
                         email: variables.email,
                         password: variables.password,
                     },
-                }
+                },
             );
             if (!loginResult.data)
                 throw new Error(
-                    `Login failed ${JSON.stringify(loginResult.error)}`
+                    `Login failed ${JSON.stringify(loginResult.error)}`,
                 );
 
             const myUserResult = await squadEasyClient.GET("/api/2.0/my/user", {
@@ -231,8 +256,8 @@ export function useLoginMutation() {
             if (!myUserResult.data)
                 throw new Error(
                     `Get My User details failed ${JSON.stringify(
-                        myUserResult.error
-                    )}`
+                        myUserResult.error,
+                    )}`,
                 );
 
             return {
@@ -247,13 +272,13 @@ export function useLoginMutation() {
                     .queryKey,
                 () => {
                     return data.myUser;
-                }
+                },
             );
 
             usersTokens().setToken(
                 data.myUser.id,
                 data.accessToken,
-                data.refreshToken
+                data.refreshToken,
             );
         },
     }));

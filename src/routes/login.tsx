@@ -1,5 +1,7 @@
+import { clientOnly } from "@solidjs/start";
 import { Title } from "@solidjs/meta";
-import LoginForm from "~/components/LoginForm";
+
+const LoginForm = clientOnly(() => import("~/components/LoginForm"));
 
 export default function LoginNewUser() {
     return (

@@ -23,6 +23,7 @@ function FieldInfo(props: FieldInfoProps) {
 export default function LoginForm() {
     const loginMutation = useLoginMutation();
     const navigate = useNavigate();
+    // bug, doesn't support ssr. https://github.com/TanStack/form/issues/698
     const form = createForm(() => ({
         defaultValues: {
             email: "",

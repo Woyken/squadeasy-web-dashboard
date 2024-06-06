@@ -95,8 +95,6 @@ function getMyTeamOptions(
 export function useMyTeamQuery(userId: Accessor<string>) {
     const getUserToken = useGetUserToken(userId);
     return createQuery(() => {
-        const token = getUserToken();
-
         return getMyTeamOptions(userId(), getUserToken);
     });
 }
@@ -125,7 +123,7 @@ export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: enabled?.(),
+        enabled: (enabled?.() ?? true) && !!firstUserId(),
     }));
 }
 
@@ -174,22 +172,25 @@ export function userStatisticsQueryOptions(
     userId: Accessor<string>,
     getToken: () => Promise<string | undefined>,
     enabled?: Accessor<boolean>,
-){
+) {
     return queryOptions({
         queryKey: ["/api/2.0/users/{id}/statistics", userId()],
         queryFn: async () => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
-            const result = await squadEasyClient.GET("/api/2.0/users/{id}/statistics", {
-                params: {
-                    path: {
-                        id: userId(),
+            const result = await squadEasyClient.GET(
+                "/api/2.0/users/{id}/statistics",
+                {
+                    params: {
+                        path: {
+                            id: userId(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
                     },
                 },
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
-                },
-            });
+            );
             if (!result.data)
                 throw new Error(
                     `Get user statistics failed ${JSON.stringify(result.error)}`,

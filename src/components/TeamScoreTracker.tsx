@@ -1,10 +1,13 @@
 import {
     Accessor,
+    ParentProps,
     Setter,
+    createContext,
     createEffect,
     createMemo,
     createSignal,
     onCleanup,
+    useContext,
 } from "solid-js";
 import {
     teamQueryOptions,
@@ -81,7 +84,15 @@ function queryAndStore<T, K extends { timestamp: number }>(
     return localData;
 }
 
-export function TeamScoreTracker() {
+const teamsDataCtx = createContext<Accessor<StoredTeamsData[]>>();
+
+export function useTeamsData() {
+    const ctxValue = useContext(teamsDataCtx);
+    if (!ctxValue) throw new Error("Missing teamsDataCtx provider!");
+    return ctxValue;
+}
+
+export function TeamScoreTracker(props: ParentProps) {
     const teamsQuery = useSeasonRankingQuery(() => false);
 
     const [localData, setLocalData] = createSignal<StoredTeamsData[]>();
@@ -131,7 +142,11 @@ export function TeamScoreTracker() {
 
     useTeamUsersScoreTracker(first10TeamsIds);
 
-    return <></>;
+    return (
+        <teamsDataCtx.Provider value={() => localData() ?? []}>
+            {props.children}
+        </teamsDataCtx.Provider>
+    );
 }
 
 function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {

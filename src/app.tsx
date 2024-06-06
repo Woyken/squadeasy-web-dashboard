@@ -95,9 +95,10 @@ export default function App() {
                     <QueryClientProvider client={queryClient()}>
                         <UsersTokensProvider>
                             <AutoBooster>
-                                <NavigationBar />
-                                <TeamScoreTracker />
-                                <Suspense>{props.children}</Suspense>
+                                <TeamScoreTracker>
+                                    <NavigationBar />
+                                    <Suspense>{props.children}</Suspense>
+                                </TeamScoreTracker>
                             </AutoBooster>
                         </UsersTokensProvider>
                     </QueryClientProvider>

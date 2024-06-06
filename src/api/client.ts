@@ -110,11 +110,14 @@ export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
         queryFn: async () => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
-            const result = await squadEasyClient.GET("/api/2.0/my/ranking/season", {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
+            const result = await squadEasyClient.GET(
+                "/api/2.0/my/ranking/season",
+                {
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
                 },
-            });
+            );
             if (!result.data)
                 throw new Error(
                     `Get teams failed ${JSON.stringify(result.error)}`,
@@ -124,6 +127,78 @@ export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
         staleTime: 5 * 60 * 1000,
         enabled: enabled?.(),
     }));
+}
+
+export function useTeamQuery(
+    teamId: Accessor<string>,
+    enabled?: Accessor<boolean>,
+) {
+    const users = useUsersTokens();
+    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
+    const getToken = useGetUserToken(firstUserId);
+    return createQuery(() => teamQueryOptions(teamId, getToken, enabled));
+}
+
+export function teamQueryOptions(
+    teamId: Accessor<string>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["/api/2.0/teams/{id}", teamId()],
+        queryFn: async () => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+            const result = await squadEasyClient.GET("/api/2.0/teams/{id}", {
+                params: {
+                    path: {
+                        id: teamId(),
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Get team failed ${JSON.stringify(result.error)}`,
+                );
+            return result.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: enabled?.(),
+    });
+}
+
+export function userStatisticsQueryOptions(
+    userId: Accessor<string>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+){
+    return queryOptions({
+        queryKey: ["/api/2.0/users/{id}/statistics", userId()],
+        queryFn: async () => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+            const result = await squadEasyClient.GET("/api/2.0/users/{id}/statistics", {
+                params: {
+                    path: {
+                        id: userId(),
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Get user statistics failed ${JSON.stringify(result.error)}`,
+                );
+            return result.data;
+        },
+        staleTime: 20 * 60 * 1000,
+        enabled: enabled?.(),
+    });
 }
 
 export function useBoostMutation(userId: Accessor<string>) {

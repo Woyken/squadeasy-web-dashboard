@@ -9,7 +9,6 @@ import {
     useUsersTokens,
 } from "./components/UsersTokensProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import "@shoelace-style/shoelace/dist/themes/dark.css";
 import { AutoBooster } from "./components/AutoBooster";
 import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
 import { Avatar } from "./components/Avatar";

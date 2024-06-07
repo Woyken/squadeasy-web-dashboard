@@ -19,7 +19,7 @@ function NavigationBar() {
     const userTokens = useUsersTokens();
     const userIds = createMemo(() => Array.from(userTokens().tokens.keys()));
     return (
-        <div class="navbar bg-base-100">
+        <div class="navbar sticky top-0 z-10 bg-base-100">
             <div class="flex-1">
                 <A href="/" class="btn btn-ghost text-xl">
                     SquadEasy

@@ -188,13 +188,14 @@ export default function Home() {
         var lineChart = new Chart(localCanvas, {
             type: "line",
             options: {
+                maintainAspectRatio: false,
                 parsing: false,
                 plugins: {
                     legend: {
                         labels: {
                             usePointStyle: true,
                         },
-                        position: 'right',
+                        position: "right",
                     },
                 },
                 scales: {
@@ -218,36 +219,48 @@ export default function Home() {
     });
 
     return (
-        <main class="flex flex-col items-center">
+        <main class="flex w-full flex-1 flex-col gap-4 bg-base-200 px-6 pt-4">
             <Title>SquadEasy</Title>
-            <h1>Countdown</h1>
-            <div class="grid auto-cols-max grid-flow-col gap-5 text-center">
-                <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
-                    <span class="countdown font-mono text-5xl">
-                        <span style={`--value:${dLeft()};`}></span>
-                    </span>
-                    days
-                </div>
-                <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
-                    <span class="countdown font-mono text-5xl">
-                        <span style={`--value:${hLeft()};`}></span>
-                    </span>
-                    hours
-                </div>
-                <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
-                    <span class="countdown font-mono text-5xl">
-                        <span style={`--value:${mLeft()};`}></span>
-                    </span>
-                    min
-                </div>
-                <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
-                    <span class="countdown font-mono text-5xl">
-                        <span style={`--value:${sLeft()};`}></span>
-                    </span>
-                    sec
+            <div class="mt-2 flex flex-wrap justify-center gap-6">
+                <div class="card bg-base-100 shadow-md">
+                    <div class="card-body items-center text-center">
+                        <h1 class="text-5xl font-bold">Countdown</h1>
+                        <div class="grid auto-cols-max grid-flow-col gap-5 text-center">
+                            <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
+                                <span class="countdown font-mono text-5xl">
+                                    <span style={`--value:${dLeft()};`}></span>
+                                </span>
+                                days
+                            </div>
+                            <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
+                                <span class="countdown font-mono text-5xl">
+                                    <span style={`--value:${hLeft()};`}></span>
+                                </span>
+                                hours
+                            </div>
+                            <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
+                                <span class="countdown font-mono text-5xl">
+                                    <span style={`--value:${mLeft()};`}></span>
+                                </span>
+                                min
+                            </div>
+                            <div class="flex flex-col rounded-box bg-neutral p-2 text-neutral-content">
+                                <span class="countdown font-mono text-5xl">
+                                    <span style={`--value:${sLeft()};`}></span>
+                                </span>
+                                sec
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <canvas ref={setCanvas} />
+            <div class="mt-2 flex flex-1 flex-wrap justify-center gap-6">
+                <div class="card max-h-full min-h-96 w-full bg-base-100 shadow-md">
+                    <div class="card-body">
+                        <canvas ref={setCanvas} />
+                    </div>
+                </div>
+            </div>
         </main>
     );
 }

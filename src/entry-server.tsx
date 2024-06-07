@@ -20,7 +20,7 @@ export default createHandler(() => (
                     {assets}
                 </head>
                 <body>
-                    <div id="app">{children}</div>
+                    <div id="app" class="h-dvh overflow-auto flex flex-col">{children}</div>
                     {scripts}
                 </body>
             </html>

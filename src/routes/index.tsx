@@ -94,7 +94,21 @@ export default function Home() {
     });
 
     const datasets = createMemo(() => {
-        const teamEntries = teamsData()
+        const currentTempData = first10TeamsMetadata()?.reduce(
+            (acc, curr) => {
+                acc.teamsData[curr.id] = curr.points;
+                return acc;
+            },
+            {
+                timestamp: new Date().getTime(),
+                teamsData: {} as Record<string, number>,
+            },
+        );
+        const teamEntries = (
+            !!currentTempData
+                ? teamsData().concat(currentTempData)
+                : teamsData()
+        )
             .map((teamData) => {
                 const timestamp = teamData.timestamp;
                 const teamsPoint = teamData.teamsData;
@@ -122,7 +136,10 @@ export default function Home() {
                         return acc;
                     }
                     acc[curr.teamId] = [
-                        { points: curr.points, timestamp: curr.timestamp },
+                        {
+                            points: curr.points,
+                            timestamp: curr.timestamp,
+                        },
                     ];
                     return acc;
                 },

@@ -96,12 +96,12 @@ export default function Home() {
                     if (existing) {
                         existing.push({
                             points: curr.points,
-                            timestamp: curr.points,
+                            timestamp: curr.timestamp,
                         });
                         return acc;
                     }
                     acc[curr.teamId] = [
-                        { points: curr.points, timestamp: curr.points },
+                        { points: curr.points, timestamp: curr.timestamp },
                     ];
                     return acc;
                 },

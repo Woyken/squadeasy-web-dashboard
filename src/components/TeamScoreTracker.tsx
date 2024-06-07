@@ -56,7 +56,8 @@ function queryAndStore<T, K extends { timestamp: number }>(
     // Every time we receive new query data, set local signal to mapped value
     createEffect(() => {
         if (!query.data) return;
-        if (new Date().getTime() - (lastEntryMs() ?? 0) < debounceStorageMs) return;
+        if (new Date().getTime() - (lastEntryMs() ?? 0) < debounceStorageMs)
+            return;
 
         const data = query.data;
         setLocalData((old) =>
@@ -76,7 +77,11 @@ export function useTeamsData() {
 }
 
 export function TeamScoreTracker(props: ParentProps) {
-    const teamsQuery = useSeasonRankingQuery(() => true, 2 * 60 * 60 * 1000, true);
+    const teamsQuery = useSeasonRankingQuery(
+        () => true,
+        2 * 60 * 60 * 1000,
+        true,
+    );
 
     const [localData, setLocalData] = createSignal<StoredTeamsData[]>();
     const teamsData = queryAndStore(
@@ -121,21 +126,32 @@ export function TeamScoreTracker(props: ParentProps) {
         return first10TeamsIds;
     });
 
-    useTeamUsersScoreTracker(first10TeamsIds);
-
     return (
         <teamsDataCtx.Provider value={() => localData() ?? []}>
-            {props.children}
+            <TeamUsersScoreTracker teamsIds={first10TeamsIds()}>
+                {props.children}
+            </TeamUsersScoreTracker>
         </teamsDataCtx.Provider>
     );
 }
 
-function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {
+const teamUsersCtx =
+    createContext<
+        Accessor<{ users: Record<string, number>; timestamp: number }[]>
+    >();
+
+export function useTeamsUsersScore() {
+    const ctxValue = useContext(teamUsersCtx);
+    if (!ctxValue) throw new Error("Missing teamUsersCtx provider!");
+    return ctxValue;
+}
+
+function TeamUsersScoreTracker(props: ParentProps<{ teamsIds: string[] }>) {
     const users = useUsersTokens();
     const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
     const getToken = useGetUserToken(firstUserId);
     const queriesOptions = createMemo(() =>
-        teamsIds().map((teamId) =>
+        props.teamsIds.map((teamId) =>
             teamQueryOptions(
                 () => teamId,
                 getToken,
@@ -217,15 +233,37 @@ function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {
         return userIds;
     });
 
-    useUsersStatisticsTracker(usersIds);
+    return (
+        <teamUsersCtx.Provider value={() => localData() ?? []}>
+            <UsersStatisticsTracker usersIds={usersIds()}>
+                {props.children}
+            </UsersStatisticsTracker>
+        </teamUsersCtx.Provider>
+    );
 }
 
-function useUsersStatisticsTracker(usersIds: Accessor<string[]>) {
+const userStatisticsCtx = createContext<
+    Accessor<
+        {
+            userId: string;
+            activities: Record<string, { value: number; points: number }>;
+            timestamp: number;
+        }[]
+    >
+>();
+
+export function useUserStatistics() {
+    const ctxValue = useContext(userStatisticsCtx);
+    if (!ctxValue) throw new Error("Missing teamUsersCtx provider!");
+    return ctxValue;
+}
+
+function UsersStatisticsTracker(props: ParentProps<{ usersIds: string[] }>) {
     const users = useUsersTokens();
     const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
     const getToken = useGetUserToken(firstUserId);
     const queriesOptions = createMemo(() =>
-        usersIds().map((x) =>
+        props.usersIds.map((x) =>
             userStatisticsQueryOptions(
                 () => x,
                 getToken,
@@ -283,4 +321,10 @@ function useUsersStatisticsTracker(usersIds: Accessor<string[]>) {
         if (!localD) return;
         teamsStorage.setItem("userStatistics", localD);
     });
+
+    return (
+        <userStatisticsCtx.Provider value={() => localData() ?? []}>
+            {props.children}
+        </userStatisticsCtx.Provider>
+    );
 }

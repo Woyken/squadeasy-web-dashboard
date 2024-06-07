@@ -121,8 +121,6 @@ export function TeamScoreTracker(props: ParentProps) {
         return first10TeamsIds;
     });
 
-    createEffect(() => console.log("first10TeamsIds", first10TeamsIds()));
-
     useTeamUsersScoreTracker(first10TeamsIds);
 
     return (
@@ -218,8 +216,6 @@ function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {
         const userIds = Object.keys(latestUserEntries);
         return userIds;
     });
-
-    createEffect(() => console.log("usersIds", usersIds()));
 
     useUsersStatisticsTracker(usersIds);
 }

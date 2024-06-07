@@ -10,7 +10,7 @@ import {
 import { useMyChallengeQuery, useSeasonRankingQuery } from "~/api/client";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import Chart from "chart.js/auto";
-import 'chartjs-adapter-luxon';
+import "chartjs-adapter-luxon";
 import { useTeamsData } from "~/components/TeamScoreTracker";
 
 export default function Home() {
@@ -63,7 +63,12 @@ export default function Home() {
 
     const [canvas, setCanvas] = createSignal<HTMLCanvasElement>();
 
-    const teamsQuery = useSeasonRankingQuery(()=> false);
+    const teamsQuery = useSeasonRankingQuery();
+    const first10TeamsMetadata = createMemo(() => {
+        return teamsQuery.data?.teams
+            .toSorted((a, b) => b.points - a.points)
+            .slice(0, 10);
+    });
 
     const teamsData = useTeamsData();
 
@@ -104,7 +109,7 @@ export default function Home() {
             );
         const dataByTeamId = Object.keys(teamEntries)
             .map((teamId) => {
-                const teamMetadata = teamsQuery.data?.teams.find(
+                const teamMetadata = first10TeamsMetadata()?.find(
                     (x) => x.id === teamId,
                 );
                 if (!teamMetadata) return;
@@ -184,7 +189,7 @@ export default function Home() {
                     sec
                 </div>
             </div>
-            <canvas ref={setCanvas}  />
+            <canvas ref={setCanvas} />
         </main>
     );
 }

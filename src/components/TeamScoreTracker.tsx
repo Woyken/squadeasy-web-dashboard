@@ -31,51 +31,34 @@ interface StoredTeamsData {
 function queryAndStore<T, K extends { timestamp: number }>(
     storage: LocalForage,
     storageKey: string,
-    fetchEveryMs: number,
+    debounceStorageMs: number,
     query: CreateQueryResult<T>,
     mapResult: (t: T) => K,
     localData: Accessor<K[] | undefined>,
     setLocalData: Setter<K[] | undefined>,
 ) {
-    // Schedule refetching in consistent intervals
     createEffect(() => {
-        let ignore = false;
-        onCleanup(() => (ignore = true));
-        let timeoutVal: ReturnType<typeof setTimeout> | undefined = undefined;
-        onCleanup(() => clearTimeout(timeoutVal));
-        let intervalVal: ReturnType<typeof setInterval> | undefined = undefined;
-        onCleanup(() => clearInterval(intervalVal));
-
         // Get previous data stored on device
         void storage.getItem<K[]>(storageKey).then((storedData) => {
             if (storedData == null) {
                 setLocalData([]);
                 storedData = [];
             } else setLocalData(storedData);
-            // Determine how old stored data is, and schedule interval to continue to fetch
-            const maxDate = Math.max(...storedData.map((x) => x.timestamp));
-            const currentDate = new Date().getTime();
-            const fetchTimer = fetchEveryMs;
-            const initialFetchDelay =
-                currentDate - maxDate > fetchTimer
-                    ? 0
-                    : fetchTimer - (currentDate - maxDate);
-            timeoutVal = setTimeout(() => {
-                if (ignore) return;
-                query.refetch();
-                intervalVal = setInterval(() => {
-                    if (ignore) return;
-                    query.refetch();
-                }, fetchTimer);
-            }, initialFetchDelay);
         });
+    });
+
+    const lastEntryMs = createMemo(() => {
+        const ld = localData();
+        if (!ld) return;
+        return Math.max(...ld.map((x) => x.timestamp));
     });
 
     // Every time we receive new query data, set local signal to mapped value
     createEffect(() => {
         if (!query.data) return;
-        const data = query.data;
+        if (new Date().getTime() - (lastEntryMs() ?? 0) < debounceStorageMs) return;
 
+        const data = query.data;
         setLocalData((old) =>
             old ? [...old, mapResult(data)] : [mapResult(data)],
         );
@@ -93,13 +76,13 @@ export function useTeamsData() {
 }
 
 export function TeamScoreTracker(props: ParentProps) {
-    const teamsQuery = useSeasonRankingQuery(() => false);
+    const teamsQuery = useSeasonRankingQuery(() => true, 2 * 60 * 60 * 1000, true);
 
     const [localData, setLocalData] = createSignal<StoredTeamsData[]>();
     const teamsData = queryAndStore(
         teamsStorage,
         "teamsData",
-        2 * 60 * 60 * 1000,
+        1 * 60 * 60 * 1000,
         teamsQuery,
         (queryData) => ({
             teamsData: queryData.teams.reduce(
@@ -158,7 +141,9 @@ function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {
             teamQueryOptions(
                 () => teamId,
                 getToken,
-                () => false,
+                () => true,
+                2 * 60 * 60 * 1000,
+                true,
             ),
         ),
     );
@@ -173,7 +158,7 @@ function useTeamUsersScoreTracker(teamsIds: Accessor<string[]>) {
             queryAndStore(
                 teamsStorage,
                 `teamUserPoints`,
-                2 * 60 * 60 * 1000,
+                1 * 60 * 60 * 1000,
                 query,
                 (t) => ({
                     users: t.users.reduce(
@@ -248,7 +233,9 @@ function useUsersStatisticsTracker(usersIds: Accessor<string[]>) {
             userStatisticsQueryOptions(
                 () => x,
                 getToken,
-                () => false,
+                () => true,
+                2 * 60 * 60 * 1000,
+                true,
             ),
         ),
     );
@@ -268,7 +255,7 @@ function useUsersStatisticsTracker(usersIds: Accessor<string[]>) {
             queryAndStore(
                 teamsStorage,
                 "userStatistics",
-                2 * 60 * 60 * 1000,
+                1 * 60 * 60 * 1000,
                 query,
                 (t) => ({
                     userId: t.id,

@@ -99,7 +99,11 @@ export function useMyTeamQuery(userId: Accessor<string>) {
     });
 }
 
-export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
+export function useSeasonRankingQuery(
+    enabled?: Accessor<boolean>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
+) {
     const users = useUsersTokens();
     const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
     const getToken = useGetUserToken(firstUserId);
@@ -124,6 +128,8 @@ export function useSeasonRankingQuery(enabled?: Accessor<boolean>) {
         },
         staleTime: 5 * 60 * 1000,
         enabled: (enabled?.() ?? true) && !!firstUserId(),
+        refetchInterval,
+        refetchIntervalInBackground,
     }));
 }
 
@@ -141,6 +147,8 @@ export function teamQueryOptions(
     teamId: Accessor<string>,
     getToken: () => Promise<string | undefined>,
     enabled?: Accessor<boolean>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
 ) {
     return queryOptions({
         queryKey: ["/api/2.0/teams/{id}", teamId()],
@@ -165,6 +173,8 @@ export function teamQueryOptions(
         },
         staleTime: 5 * 60 * 1000,
         enabled: enabled?.(),
+        refetchInterval,
+        refetchIntervalInBackground,
     });
 }
 
@@ -172,6 +182,8 @@ export function userStatisticsQueryOptions(
     userId: Accessor<string>,
     getToken: () => Promise<string | undefined>,
     enabled?: Accessor<boolean>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
 ) {
     return queryOptions({
         queryKey: ["/api/2.0/users/{id}/statistics", userId()],
@@ -199,6 +211,8 @@ export function userStatisticsQueryOptions(
         },
         staleTime: 20 * 60 * 1000,
         enabled: enabled?.(),
+        refetchInterval,
+        refetchIntervalInBackground,
     });
 }
 

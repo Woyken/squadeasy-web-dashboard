@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { useMyChallengeQuery, useSeasonRankingQuery } from "~/api/client";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
-import Chart from "chart.js/auto";
+import Chart, { ChartDataset } from "chart.js/auto";
 import "chartjs-adapter-luxon";
 import { useTeamsData } from "~/components/TeamScoreTracker";
 
@@ -72,6 +72,27 @@ export default function Home() {
 
     const teamsData = useTeamsData();
 
+    const pointStyleImages = [
+        "https://cdn3.emoji.gg/emojis/7529_KEKW.png",
+        "https://cdn3.emoji.gg/emojis/5163-95-crythumbsup.png",
+        "https://cdn3.emoji.gg/emojis/7572-pepe-yes.png",
+        "https://cdn3.emoji.gg/emojis/PepeHands.png",
+        "https://cdn3.emoji.gg/emojis/3049-pepenosign.png",
+        "https://cdn3.emoji.gg/emojis/9378-fuckboi.png",
+        "https://cdn3.emoji.gg/emojis/8176-boohoo.png",
+        "https://cdn3.emoji.gg/emojis/3416-bonk.png",
+        "https://cdn3.emoji.gg/emojis/monkaS.png",
+        "https://cdn3.emoji.gg/emojis/7482-uwucat.png",
+        "https://cdn3.emoji.gg/emojis/6237-megareverse-1.png",
+    ].map((x) => {
+        if (typeof Image === "undefined") return;
+        const image = new Image();
+        image.src = x;
+        image.width = 20;
+        image.height = 20;
+        return image;
+    });
+
     const datasets = createMemo(() => {
         const teamEntries = teamsData()
             .map((teamData) => {
@@ -108,7 +129,16 @@ export default function Home() {
                 {} as Record<string, { timestamp: number; points: number }[]>,
             );
         const dataByTeamId = Object.keys(teamEntries)
-            .map((teamId) => {
+            .map<
+                | ChartDataset<
+                      "line",
+                      {
+                          x: number;
+                          y: number;
+                      }[]
+                  >
+                | undefined
+            >((teamId) => {
                 const teamMetadata = first10TeamsMetadata()?.find(
                     (x) => x.id === teamId,
                 );
@@ -120,6 +150,10 @@ export default function Home() {
                         y: entry.points,
                     })),
                     label: teamMetadata.name,
+                    pointStyle: (x) =>
+                        pointStyleImages[
+                            x.datasetIndex % pointStyleImages.length
+                        ],
                 };
             })
             .filter((x) => !!x)
@@ -137,8 +171,14 @@ export default function Home() {
         var lineChart = new Chart(localCanvas, {
             type: "line",
             options: {
-                spanGaps: true,
                 parsing: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            usePointStyle: true,
+                        },
+                    },
+                },
                 scales: {
                     x: {
                         type: "time",

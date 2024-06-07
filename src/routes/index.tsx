@@ -194,6 +194,7 @@ export default function Home() {
                         labels: {
                             usePointStyle: true,
                         },
+                        position: 'right',
                     },
                 },
                 scales: {

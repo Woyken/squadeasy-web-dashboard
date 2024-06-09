@@ -1,8 +1,9 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import {
     createEffect,
     createMemo,
+    createRenderEffect,
     createSignal,
     onCleanup,
     untrack,
@@ -178,7 +179,7 @@ export default function Home() {
         return dataByTeamId;
     });
 
-    const chart = createMemo(() => {
+    const createChart = () => {
         if (typeof window === "undefined") return;
         // if (!teamsQuery.data) return;
         const localCanvas = canvas();
@@ -209,7 +210,11 @@ export default function Home() {
             },
         });
         return lineChart;
-    });
+    };
+
+    const [chart, setChart] = createSignal<ReturnType<typeof createChart>>();
+
+    createRenderEffect(() => setChart(createChart()));
 
     createEffect(() => {
         const c = chart();
@@ -251,6 +256,13 @@ export default function Home() {
                                 sec
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="card bg-base-100 shadow-md">
+                    <div class="card-body items-center text-center">
+                        <A href="/users-points" class="text-5xl font-bold">
+                            Teams User Scores 🎮
+                        </A>
                     </div>
                 </div>
             </div>

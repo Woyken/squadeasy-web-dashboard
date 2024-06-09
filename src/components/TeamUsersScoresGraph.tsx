@@ -5,6 +5,7 @@ import {
     createMemo,
     createRenderEffect,
     createSignal,
+    onCleanup,
     untrack,
 } from "solid-js";
 import Chart, { ChartDataset } from "chart.js/auto";
@@ -57,10 +58,12 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
                     y: u.points,
                 })) ?? []
             ).concat(
-                teamUsers.filter(x => x.id === user.id).map((x) => ({
-                    x: new Date().getTime(),
-                    y: x.points,
-                })),
+                teamUsers
+                    .filter((x) => x.id === user.id)
+                    .map((x) => ({
+                        x: new Date().getTime(),
+                        y: x.points,
+                    })),
             ),
             label: getUserDisplayName({ email: "unknown", ...user }),
         }));
@@ -103,8 +106,13 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
 
     const [chart, setChart] = createSignal<ReturnType<typeof createChart>>();
 
-    createRenderEffect(() => {
-        setChart(createChart());
+    createRenderEffect(() => setChart(createChart()));
+
+    createEffect(() => {
+        const c = chart();
+        onCleanup(() => {
+            c?.destroy();
+        });
     });
 
     createEffect(() => {

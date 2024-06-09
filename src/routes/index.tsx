@@ -218,6 +218,13 @@ export default function Home() {
 
     createEffect(() => {
         const c = chart();
+        onCleanup(() => {
+            c?.destroy();
+        });
+    });
+
+    createEffect(() => {
+        const c = chart();
         if (!c) return;
         c.data.datasets = datasets();
         c.update();

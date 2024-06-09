@@ -6,7 +6,7 @@ import {
     createEffect,
     createMemo,
     createSignal,
-    onCleanup,
+    untrack,
     useContext,
 } from "solid-js";
 import {
@@ -56,7 +56,7 @@ function queryAndStore<T, K extends { timestamp: number }>(
     // Every time we receive new query data, set local signal to mapped value
     createEffect(() => {
         if (!query.data) return;
-        if (new Date().getTime() - (lastEntryMs() ?? 0) < debounceStorageMs)
+        if (new Date().getTime() - (untrack(() => (lastEntryMs())) ?? 0) < debounceStorageMs)
             return;
 
         const data = query.data;
@@ -172,7 +172,7 @@ function TeamUsersScoreTracker(props: ParentProps<{ teamsIds: string[] }>) {
             queryAndStore(
                 teamsStorage,
                 `teamUserPoints`,
-                1 * 60 * 60 * 1000,
+                0,
                 query,
                 (t) => ({
                     users: t.users.reduce(
@@ -289,7 +289,7 @@ function UsersStatisticsTracker(props: ParentProps<{ usersIds: string[] }>) {
             queryAndStore(
                 teamsStorage,
                 "userStatistics",
-                1 * 60 * 60 * 1000,
+                0,
                 query,
                 (t) => ({
                     userId: t.id,

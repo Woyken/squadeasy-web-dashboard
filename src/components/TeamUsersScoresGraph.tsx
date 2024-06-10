@@ -18,7 +18,9 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
     const usersHistoryData = createMemo(() => {
         const teamUsers = teamQuery.data?.users;
         if (!teamUsers) return;
-        const usersScore = teamsUsersScore().filter(
+        const teamUsersScores = teamsUsersScore()[props.teamId];
+        if(!teamUsersScores) return;
+        const usersScore = teamUsersScores.filter(
             (x) =>
                 !!Object.keys(x.users).find(
                     (userId) => !!teamUsers.find((tu) => tu.id === userId),

@@ -136,11 +136,21 @@ export function useSeasonRankingQuery(
 export function useTeamQuery(
     teamId: Accessor<string>,
     enabled?: Accessor<boolean>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
 ) {
     const users = useUsersTokens();
     const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
     const getToken = useGetUserToken(firstUserId);
-    return createQuery(() => teamQueryOptions(teamId, getToken, enabled));
+    return createQuery(() =>
+        teamQueryOptions(
+            teamId,
+            getToken,
+            enabled,
+            refetchInterval,
+            refetchIntervalInBackground,
+        ),
+    );
 }
 
 export function teamQueryOptions(
@@ -176,6 +186,25 @@ export function teamQueryOptions(
         refetchInterval,
         refetchIntervalInBackground,
     });
+}
+
+export function useUserStatisticsQuery(
+    userId: Accessor<string>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
+) {
+    const users = useUsersTokens();
+    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
+    const getToken = useGetUserToken(firstUserId);
+    return createQuery(() =>
+        userStatisticsQueryOptions(
+            userId,
+            getToken,
+            () => true,
+            refetchInterval,
+            refetchIntervalInBackground,
+        ),
+    );
 }
 
 export function userStatisticsQueryOptions(

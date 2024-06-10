@@ -41,6 +41,7 @@ function queryAndStore<T, K extends { timestamp: number }>(
     localData: Accessor<K[] | undefined>,
     setLocalData: Setter<K[] | undefined>,
 ) {
+    const [isHistoryLoaded, setIsHistoryLoaded] = createSignal(false);
     createEffect(() => {
         // Get previous data stored on device
         void storage.getItem<K[]>(storageKey).then((storedData) => {
@@ -48,12 +49,14 @@ function queryAndStore<T, K extends { timestamp: number }>(
             if (storedData == null) {
                 setLocalData(queryData ? [mapResult(queryData)] : []);
                 storedData = [];
+                setIsHistoryLoaded(true);
             } else {
                 setLocalData(
                     queryData
                         ? storedData.concat(mapResult(queryData))
                         : storedData,
                 );
+                setIsHistoryLoaded(true);
             }
         });
     });
@@ -67,7 +70,7 @@ function queryAndStore<T, K extends { timestamp: number }>(
     // Every time we receive new query data, set local signal to mapped value
     createEffect(() => {
         // wait until local history is retrieved
-        if (!untrack(() => localData())) return;
+        if (!isHistoryLoaded()) return;
         if (!query.data) return;
         if (
             new Date().getTime() - (untrack(() => lastEntryMs()) ?? 0) <

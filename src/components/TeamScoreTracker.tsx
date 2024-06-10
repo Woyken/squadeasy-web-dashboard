@@ -3,7 +3,6 @@ import {
     For,
     ParentProps,
     Setter,
-    Show,
     createContext,
     createEffect,
     createMemo,
@@ -12,16 +11,12 @@ import {
     useContext,
 } from "solid-js";
 import {
-    teamQueryOptions,
-    useGetUserToken,
     useSeasonRankingQuery,
     useTeamQuery,
     useUserStatisticsQuery,
-    userStatisticsQueryOptions,
 } from "~/api/client";
 import localForage from "localforage";
-import { CreateQueryResult, createQueries } from "@tanstack/solid-query";
-import { useUsersTokens } from "./UsersTokensProvider";
+import { CreateQueryResult } from "@tanstack/solid-query";
 
 const teamsStorage = localForage.createInstance({
     name: "teamsStorage2",
@@ -222,7 +217,6 @@ function TrackTeamUsersScore(
 
     const teamQuery = useTeamQuery(
         () => props.teamId,
-        () => true,
         2 * 60 * 60 * 1000,
     );
 

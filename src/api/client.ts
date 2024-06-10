@@ -134,41 +134,41 @@ export function useSeasonRankingQuery(
 }
 
 export function useTeamQuery(
-    teamId: Accessor<string>,
-    enabled?: Accessor<boolean>,
+    teamId: Accessor<string | undefined>,
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
     const users = useUsersTokens();
     const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
     const getToken = useGetUserToken(firstUserId);
-    return createQuery(() =>
-        teamQueryOptions(
+    return createQuery(() => ({
+        ...teamQueryOptions(
             teamId,
             getToken,
-            enabled,
             refetchInterval,
             refetchIntervalInBackground,
         ),
-    );
+        enabled: !!teamId() && !!firstUserId(),
+    }));
 }
 
-export function teamQueryOptions(
-    teamId: Accessor<string>,
+function teamQueryOptions(
+    teamId: Accessor<string | undefined>,
     getToken: () => Promise<string | undefined>,
-    enabled?: Accessor<boolean>,
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
     return queryOptions({
         queryKey: ["/api/2.0/teams/{id}", teamId()],
         queryFn: async () => {
+            const tId = teamId();
+            if (!tId) throw new Error("Missing team id!");
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
             const result = await squadEasyClient.GET("/api/2.0/teams/{id}", {
                 params: {
                     path: {
-                        id: teamId(),
+                        id: tId,
                     },
                 },
                 headers: {
@@ -182,7 +182,6 @@ export function teamQueryOptions(
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: enabled?.(),
         refetchInterval,
         refetchIntervalInBackground,
     });

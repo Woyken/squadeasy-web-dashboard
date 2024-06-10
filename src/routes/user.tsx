@@ -1,11 +1,11 @@
 import { Title } from "@solidjs/meta";
-import { useParams } from "@solidjs/router";
+import { useSearchParams } from "@solidjs/router";
 import { useAutoBoosterSetting } from "~/components/AutoBooster";
 import { Toggle } from "~/components/Toggle";
 
 export default function Home() {
-    const params = useParams();
-    const boost = useAutoBoosterSetting(() => params.id);
+    const [params] = useSearchParams();
+    const boost = useAutoBoosterSetting(() => params.id!);
     return (
         <main class="flex items-center overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
             <Title>User settings</Title>

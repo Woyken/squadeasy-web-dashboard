@@ -1,4 +1,5 @@
 import { Title } from "@solidjs/meta";
+import { A } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
 import { useSeasonRankingQuery } from "~/api/client";
 import { TeamUsersScoresGraph } from "~/components/TeamUsersScoresGraph";
@@ -102,9 +103,16 @@ export default function TeamsUsersPoints() {
                                                     }
                                                 >
                                                     <div>
-                                                        <TeamUsersScoresGraph
-                                                            teamId={team.id}
-                                                        />
+                                                        <A
+                                                            href={`/user-statistics?teamId=${team.id}`}
+                                                        >
+                                                            User statistics
+                                                        </A>
+                                                        <div class="max-w-96">
+                                                            <TeamUsersScoresGraph
+                                                                teamId={team.id}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </Show>
                                             </>

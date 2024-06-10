@@ -37,6 +37,37 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
     }));
 }
 
+export function useUserByIdQuery(userId: Accessor<string>) {
+    const users = useUsersTokens();
+    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
+    const getToken = useGetUserToken(firstUserId);
+    return createQuery(() => ({
+        queryKey: ["/api/2.0/users/{id}", userId()],
+        queryFn: async () => {
+            const token = await getToken();
+            if (!token)
+                throw new Error(`token missing for user ${firstUserId()}`);
+            const result = await squadEasyClient.GET("/api/2.0/users/{id}", {
+                params: {
+                    path: {
+                        id: userId(),
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${token}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Request failed ${JSON.stringify(result.error)}`,
+                );
+            return result.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: !!firstUserId()
+    }));
+}
+
 export function useMyUserQuery(userId: Accessor<string>) {
     const getUserToken = useGetUserToken(userId);
     return createQuery(() => {

@@ -1,16 +1,16 @@
-import { Match, Switch, createMemo } from "solid-js";
-import { useMyUserQuery } from "~/api/client";
+import { Match, Switch, createEffect, createMemo, createSignal } from "solid-js";
+import { useUserByIdQuery } from "~/api/client";
 import { getUserInitials } from "~/getUserDisplayName";
 
 export function Avatar(props: { userId: string }) {
-    const query = useMyUserQuery(() => props.userId);
+    const query = useUserByIdQuery(() => props.userId);
     const placeholder = createMemo(() => {
         if (query.isLoading || !!query.data?.image) return undefined;
         if (query.error)
             return (
-                (query.error as any)?.message ??
-                (query.error as any)?.name ??
-                (query.error as any)?.cause ??
+                query.error?.message ??
+                query.error?.name ??
+                query.error?.cause ??
                 "??"
             ).slice(0, 2);
         if (!query.data)
@@ -18,27 +18,32 @@ export function Avatar(props: { userId: string }) {
             return query.status.slice(0, 2);
         return getUserInitials(query.data);
     });
+    // If I use `query.data?.image` directly inside Switch component, it breaks for some reason
+    const [userImage, setUserImage] = createSignal<string>()
+    createEffect(() => {
+        setUserImage(query.data?.image);
+    })
     return (
         <>
             <Switch
                 fallback={
                     <div class="avatar placeholder">
-                        <div class="bg-neutral text-neutral-content rounded-full w-16">
+                        <div class="w-16 rounded-full bg-neutral text-neutral-content">
                             <span class="loading loading-ring loading-lg"></span>
                         </div>
                     </div>
                 }
             >
-                <Match when={!!query.data?.image}>
+                <Match when={!!userImage()}>
                     <div class="avatar">
                         <div class="w-16 rounded-full">
-                            <img src={query.data?.image} />
+                            <img src={userImage()} />
                         </div>
                     </div>
                 </Match>
                 <Match when={!!placeholder()}>
                     <div class="avatar placeholder">
-                        <div class="bg-neutral text-neutral-content rounded-full w-16">
+                        <div class="w-16 rounded-full bg-neutral text-neutral-content">
                             <span class="text-xl">{placeholder()}</span>
                         </div>
                     </div>

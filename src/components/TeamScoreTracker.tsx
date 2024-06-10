@@ -45,17 +45,12 @@ function queryAndStore<T, K extends { timestamp: number }>(
     createEffect(() => {
         // Get previous data stored on device
         void storage.getItem<K[]>(storageKey).then((storedData) => {
-            const queryData = untrack(() => query.data);
             if (storedData == null) {
-                setLocalData(queryData ? [mapResult(queryData)] : []);
+                setLocalData([]);
                 storedData = [];
                 setIsHistoryLoaded(true);
             } else {
-                setLocalData(
-                    queryData
-                        ? storedData.concat(mapResult(queryData))
-                        : storedData,
-                );
+                setLocalData(storedData);
                 setIsHistoryLoaded(true);
             }
         });

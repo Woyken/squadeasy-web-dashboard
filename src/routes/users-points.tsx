@@ -108,7 +108,7 @@ export default function TeamsUsersPoints() {
                                                         >
                                                             User statistics
                                                         </A>
-                                                        <div class="max-w-96">
+                                                        <div class="max-h-96">
                                                             <TeamUsersScoresGraph
                                                                 teamId={team.id}
                                                             />

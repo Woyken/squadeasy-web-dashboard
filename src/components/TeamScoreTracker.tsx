@@ -55,6 +55,8 @@ function queryAndStore<T, K extends { timestamp: number }>(
 
     // Every time we receive new query data, set local signal to mapped value
     createEffect(() => {
+        // wait until local history is retrieved
+        if (!!untrack(() => localData())) return;
         if (!query.data) return;
         if (new Date().getTime() - (untrack(() => (lastEntryMs())) ?? 0) < debounceStorageMs)
             return;

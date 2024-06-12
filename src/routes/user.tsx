@@ -1,11 +1,13 @@
 import { Title } from "@solidjs/meta";
 import { useSearchParams } from "@solidjs/router";
 import { useAutoBoosterSetting } from "~/components/AutoBooster";
+import { useAutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
 import { Toggle } from "~/components/Toggle";
 
 export default function Home() {
     const [params] = useSearchParams();
     const boost = useAutoBoosterSetting(() => params.id!);
+    const autoLikeTeamPosts = useAutoLikeTeamPosts();
     return (
         <main class="flex items-center overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
             <Title>User settings</Title>
@@ -18,6 +20,16 @@ export default function Home() {
                         boost.setAutoBoost(checked);
                     }}
                     label="Auto boost"
+                />
+                <Toggle
+                    checked={autoLikeTeamPosts.autoLikeTeamPosts(params.id!)}
+                    onChecked={(checked) => {
+                        autoLikeTeamPosts.setAutoLikeTeamPosts(
+                            params.id!,
+                            checked,
+                        );
+                    }}
+                    label="Auto like team posts"
                 />
             </div>
         </main>

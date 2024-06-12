@@ -14,6 +14,7 @@ import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
 import { Avatar } from "./components/Avatar";
 import { UserLoader } from "./components/UserLoader";
 import { TeamScoreTracker } from "./components/TeamScoreTracker";
+import { AutoLikeTeamPosts } from "./components/AutoLikeTeamPosts";
 
 function NavigationBar() {
     const userTokens = useUsersTokens();
@@ -95,10 +96,12 @@ export default function App() {
                     <QueryClientProvider client={queryClient()}>
                         <UsersTokensProvider>
                             <AutoBooster>
-                                <TeamScoreTracker>
-                                    <NavigationBar />
-                                    <Suspense>{props.children}</Suspense>
-                                </TeamScoreTracker>
+                                <AutoLikeTeamPosts>
+                                    <TeamScoreTracker>
+                                        <NavigationBar />
+                                        <Suspense>{props.children}</Suspense>
+                                    </TeamScoreTracker>
+                                </AutoLikeTeamPosts>
                             </AutoBooster>
                         </UsersTokensProvider>
                     </QueryClientProvider>

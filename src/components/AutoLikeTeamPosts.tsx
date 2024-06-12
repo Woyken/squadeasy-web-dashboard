@@ -1,4 +1,16 @@
-import { For, createEffect, createMemo, createSignal, untrack } from "solid-js";
+import {
+    Accessor,
+    For,
+    JSX,
+    ParentProps,
+    createContext,
+    createEffect,
+    createMemo,
+    createSignal,
+    onCleanup,
+    untrack,
+    useContext,
+} from "solid-js";
 import { useUsersTokens } from "./UsersTokensProvider";
 import {
     useLikePostMutation,
@@ -6,24 +18,114 @@ import {
     useSocialPostsQuery,
 } from "~/api/client";
 
-export function AutoLikeTeamPosts() {
+const ctx = createContext<{
+    setAutoLikeTeamPosts: (userId: string, autoLike: boolean) => void;
+    autoLikeTeamPosts: (userId: string) => boolean;
+}>();
+
+export function useAutoLikeTeamPosts() {
+    const value = useContext(ctx);
+    if (!value)
+        throw new Error("Missing Auto Like Team Posts context provider");
+    return value;
+}
+
+export function AutoLikeTeamPosts(props: ParentProps) {
     const tokens = useUsersTokens();
     const userIds = createMemo(() => Array.from(tokens().tokens.keys()));
-    // TODO add provider to enable this as a setting
+    const [userAutoLikeSetting, setUserAutoLikeSetting] = createSignal(
+        new Map<
+            string,
+            {
+                setAutoLike: (autoLike: boolean) => void;
+                autoLike: Accessor<boolean>;
+            }
+        >(),
+    );
     return (
-        <For each={userIds()}>
-            {(userId) => <AutoLikePostUser userId={userId} />}
-        </For>
+        <ctx.Provider
+            value={{
+                setAutoLikeTeamPosts: (userId, autoLike) => {
+                    userAutoLikeSetting().get(userId)?.setAutoLike(autoLike);
+                },
+                autoLikeTeamPosts: (userId) =>
+                    userAutoLikeSetting().get(userId)?.autoLike() ?? false,
+            }}
+        >
+            <For each={userIds()}>
+                {(userId) => (
+                    <AutoLikePostUser userId={userId}>
+                        {(setAutoLike, autoLike) => {
+                            setUserAutoLikeSetting((old) =>
+                                new Map(old).set(userId, {
+                                    setAutoLike,
+                                    autoLike,
+                                }),
+                            );
+                            onCleanup(() => {
+                                setUserAutoLikeSetting((old) => {
+                                    const n = new Map(old);
+                                    n.delete(userId);
+                                    return n;
+                                });
+                            });
+                            return <></>;
+                        }}
+                    </AutoLikePostUser>
+                )}
+            </For>
+            {props.children}
+        </ctx.Provider>
     );
 }
 
-function AutoLikePostUser(props: { userId: string }) {
+function AutoLikePostUser(props: {
+    userId: string;
+    children: (
+        setAutoLikeTeamPosts: (autoLike: boolean) => void,
+        autoLikeTeamPosts: Accessor<boolean>,
+    ) => JSX.Element;
+}) {
     const [postLikeSettings, setPostLikeSettings] = createSignal<{
         enabled: boolean;
-        lastCrawledPost?: { id: string; timestamp: number };
+        lastCrawledPost?: { id: string; timestamp: number; ended: boolean };
         latestKnownPost?: { id: string; timestamp: number };
     }>();
-    // TODO store settings in local storage
+
+    const initialAutoLikeSettings = createMemo(() => {
+        const autoLikeSetting = localStorage.getItem(
+            `autoLikeSettings-${props.userId}`,
+        );
+        if (!autoLikeSetting) return;
+        const parsed = JSON.parse(autoLikeSetting);
+        if (
+            parsed &&
+            typeof parsed === "object" &&
+            "enabled" in parsed &&
+            typeof parsed.enabled === "boolean"
+        )
+            return {
+                ...parsed,
+                enabled: parsed.enabled,
+            };
+    });
+
+    createEffect(() => {
+        const autoLikeSetting = initialAutoLikeSettings();
+        if (!autoLikeSetting) return;
+
+        setPostLikeSettings(autoLikeSetting);
+    });
+
+    createEffect(() => {
+        const settings = postLikeSettings();
+        if (!settings) return;
+        if (initialAutoLikeSettings() === settings) return;
+        localStorage.setItem(
+            `autoLikeSettings-${props.userId}`,
+            JSON.stringify(postLikeSettings()),
+        );
+    });
 
     const likePostMutation = useLikePostMutation(() => props.userId);
 
@@ -35,9 +137,15 @@ function AutoLikePostUser(props: { userId: string }) {
     const socialPostsQuery = useSocialPostsQuery(
         () => props.userId,
         () => latestKnownPostCrawl()?.nextId,
+        () => 30 * 60 * 1000,
+        () => !!postLikeSettings()?.enabled,
     );
 
-    const myTeamQuery = useMyTeamQuery(() => props.userId);
+    const myTeamQuery = useMyTeamQuery(
+        () => props.userId,
+        () => !!postLikeSettings()?.enabled,
+    );
+
     const myTeamUserIds = createMemo(() =>
         myTeamQuery.data
             ? new Set(myTeamQuery.data.users.map((x) => x.id))
@@ -48,7 +156,7 @@ function AutoLikePostUser(props: { userId: string }) {
         // Watch latest posts
         if (!socialPostsQuery.data) return;
         if (socialPostsQuery.data.length === 0) return;
-        const teamUserIds = myTeamUserIds()
+        const teamUserIds = myTeamUserIds();
         if (!teamUserIds) return;
         const currentLatest = socialPostsQuery.data[0]!;
         const latestKnownPost = untrack(
@@ -67,6 +175,7 @@ function AutoLikePostUser(props: { userId: string }) {
                     : {
                           ...old,
                           latestKnownPost: {
+                              ...old.latestKnownPost,
                               id: currentLatest.id,
                               timestamp: new Date(
                                   currentLatest.createdAt,
@@ -180,19 +289,38 @@ function AutoLikePostUser(props: { userId: string }) {
     const socialLastCheckedPostsQuery = useSocialPostsQuery(
         () => props.userId,
         () => postLikeSettings()?.lastCrawledPost?.id,
+        undefined,
+        () =>
+            !!postLikeSettings()?.enabled &&
+            !postLikeSettings()?.lastCrawledPost?.ended,
     );
 
     createEffect(() => {
         // Go back in history one page at a time
         if (!socialLastCheckedPostsQuery.data) return;
-        if (socialLastCheckedPostsQuery.data.length === 0) return;
+        if (socialLastCheckedPostsQuery.data.length === 0) {
+            setPostLikeSettings((old) =>
+                old?.lastCrawledPost
+                    ? {
+                          ...old,
+                          lastCrawledPost: {
+                              ...old?.lastCrawledPost,
+                              ended: true,
+                          },
+                      }
+                    : old,
+            );
+            return;
+        }
+        const teamUserIds = myTeamUserIds();
+        if (!teamUserIds) return;
 
         socialLastCheckedPostsQuery.data.forEach((data) => {
             // is user in current team?
-            const isCurrentTeam = !![].find(() => !!data.sender.id);
+            const isCurrentTeam = teamUserIds.has(data.sender.id);
             const isLiked = data.likes.isLikedByUser;
             if (!isLiked && isCurrentTeam) {
-                // Do mutation to like it or save to list for todo
+                likePostMutation.mutate(data.id);
             }
         });
         const currentLastPost =
@@ -205,6 +333,7 @@ function AutoLikePostUser(props: { userId: string }) {
                 : {
                       ...old,
                       lastCrawledPost: {
+                          ...(old.lastCrawledPost ?? { ended: false }),
                           id: currentLastPost.id,
                           timestamp: new Date(
                               currentLastPost.createdAt,
@@ -214,5 +343,17 @@ function AutoLikePostUser(props: { userId: string }) {
         );
     });
 
-    return <></>;
+    return (
+        <>
+            {props.children(
+                (autoLike) => {
+                    setPostLikeSettings((old) => ({
+                        ...old,
+                        enabled: autoLike,
+                    }));
+                },
+                () => postLikeSettings()?.enabled ?? false,
+            )}
+        </>
+    );
 }

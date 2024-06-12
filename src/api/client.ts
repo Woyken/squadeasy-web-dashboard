@@ -123,10 +123,16 @@ function getMyTeamOptions(
     });
 }
 
-export function useMyTeamQuery(userId: Accessor<string>) {
+export function useMyTeamQuery(
+    userId: Accessor<string>,
+    enabled?: Accessor<boolean>,
+) {
     const getUserToken = useGetUserToken(userId);
     return createQuery(() => {
-        return getMyTeamOptions(userId(), getUserToken);
+        return {
+            ...getMyTeamOptions(userId(), getUserToken),
+            enabled: enabled?.() ?? true,
+        };
     });
 }
 
@@ -278,6 +284,8 @@ export function userStatisticsQueryOptions(
 export function useSocialPostsQuery(
     userId: Accessor<string>,
     sincePostId?: Accessor<string | undefined>,
+    refetchIntervalInBackground?: Accessor<number>,
+    enabled?: Accessor<boolean>,
 ) {
     const getToken = useGetUserToken(userId);
     return createQuery(() => ({
@@ -304,7 +312,9 @@ export function useSocialPostsQuery(
         staleTime:
             sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
         gcTime: sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
-        enabled: !!userId(),
+        refetchInterval: refetchIntervalInBackground?.(),
+        refetchIntervalInBackground: !!refetchIntervalInBackground,
+        enabled: !!userId() && (enabled?.() ?? true),
     }));
 }
 

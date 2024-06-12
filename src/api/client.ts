@@ -64,7 +64,7 @@ export function useUserByIdQuery(userId: Accessor<string>) {
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: !!firstUserId()
+        enabled: !!firstUserId(),
     }));
 }
 
@@ -273,6 +273,68 @@ export function userStatisticsQueryOptions(
         refetchInterval,
         refetchIntervalInBackground,
     });
+}
+
+export function useSocialPostsQuery(
+    userId: Accessor<string>,
+    sincePostId?: Accessor<string | undefined>,
+) {
+    const getToken = useGetUserToken(userId);
+    return createQuery(() => ({
+        queryKey: ["/api/3.0/social/posts", userId(), sincePostId?.()],
+        queryFn: async () => {
+            const token = await getToken();
+            if (!token) throw new Error(`token missing for user ${userId()}`);
+            const result = await squadEasyClient.GET("/api/3.0/social/posts", {
+                params: {
+                    query: {
+                        sincePostId: sincePostId?.(),
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${token}`,
+                },
+            });
+            if (!result.data)
+                throw new Error(
+                    `Request failed ${JSON.stringify(result.error)}`,
+                );
+            return result.data;
+        },
+        staleTime:
+            sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
+        gcTime: sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
+        enabled: !!userId(),
+    }));
+}
+
+export function useLikePostMutation(userId: Accessor<string>) {
+    const getUserToken = useGetUserToken(userId);
+    return createMutation(() => ({
+        mutationFn: async (targetPostId: string) => {
+            const accessToken = await getUserToken();
+            if (!accessToken)
+                throw new Error(`token missing for user ${userId()}`);
+            const likePostResult = await squadEasyClient.PUT(
+                "/api/3.0/social/posts/{post_id}/like",
+                {
+                    params: {
+                        path: {
+                            post_id: targetPostId,
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                },
+            );
+            if (!likePostResult.data)
+                throw new Error(
+                    `Like post failed ${JSON.stringify(likePostResult.error)}`,
+                );
+            return likePostResult.data;
+        },
+    }));
 }
 
 export function useBoostMutation(userId: Accessor<string>) {

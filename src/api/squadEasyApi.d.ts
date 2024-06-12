@@ -21,6 +21,9 @@ export interface paths {
     get: operations["User_user"];
     patch: operations["User_updateUser"];
   };
+  "/api/2.0/socialTags/list": {
+    get: operations["Social_getSocialTags"];
+  };
   "/api/2.0/teams": {
     get: operations["TeamService_teams"];
   };
@@ -51,6 +54,9 @@ export interface paths {
   "/api/3.0/social/posts": {
     get: operations["Social_posts"];
     post: operations["Social_createPost"];
+  };
+  "/api/3.0/social/posts/{post_id}/like": {
+    put: operations["Social_likePost"];
   };
   "/api/3.0/user-status": {
     get: operations["User_userStatus"];
@@ -208,6 +214,22 @@ export interface components {
         lastName?: string;
       };
       comments: unknown[];
+    };
+    SocialTag: {
+      id: string;
+      /** Format: int32 */
+      remaining: number;
+      availability: ("WEEKLY" | "DAILY") | string;
+      /** Format: int32 */
+      occurrence: number;
+      /** Format: int32 */
+      points: number;
+      /** Format: date-time */
+      date: string;
+      /** Format: uri */
+      image: string;
+      name: string;
+      description: string;
     };
     Team: {
       name: string;
@@ -425,6 +447,19 @@ export interface operations {
       };
     };
   };
+  Social_getSocialTags: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": {
+            ongoing: components["schemas"]["SocialTag"][];
+            upcoming: components["schemas"]["SocialTag"][];
+          };
+        };
+      };
+    };
+  };
   TeamService_teams: {
     responses: {
       /** @description The request has succeeded. */
@@ -561,6 +596,11 @@ export interface operations {
     };
   };
   Social_posts: {
+    parameters: {
+      query?: {
+        sincePostId?: string;
+      };
+    };
     responses: {
       /** @description The request has succeeded. */
       200: {
@@ -583,6 +623,21 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["SocialPost"];
+        };
+      };
+    };
+  };
+  Social_likePost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": unknown;
         };
       };
     };

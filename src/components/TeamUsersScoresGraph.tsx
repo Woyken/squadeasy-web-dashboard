@@ -10,7 +10,9 @@ import {
 } from "solid-js";
 import Chart, { ChartDataset } from "chart.js/auto";
 import { getUserDisplayName } from "~/getUserDisplayName";
-import "chartjs-adapter-luxon";
+import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
+
+addChartJsDateAdapter();
 
 export function TeamUsersScoresGraph(props: { teamId: string }) {
     const teamsUsersScore = useTeamsUsersScore();
@@ -19,7 +21,7 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
         const teamUsers = teamQuery.data?.users;
         if (!teamUsers) return;
         const teamUsersScores = teamsUsersScore()[props.teamId];
-        if(!teamUsersScores) return;
+        if (!teamUsersScores) return;
         const usersScore = teamUsersScores.filter(
             (x) =>
                 !!Object.keys(x.users).find(

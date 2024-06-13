@@ -9,7 +9,9 @@ import {
     untrack,
 } from "solid-js";
 import Chart, { ChartDataset } from "chart.js/auto";
-import "chartjs-adapter-luxon";
+import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
+
+addChartJsDateAdapter();
 
 export function UserStatisticsGraph(props: { userId: string }) {
     const userStatistics = useUserStatistics();

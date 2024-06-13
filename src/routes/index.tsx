@@ -11,9 +11,11 @@ import {
 import { useMyChallengeQuery, useSeasonRankingQuery } from "~/api/client";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import Chart, { ChartDataset } from "chart.js/auto";
-import "chartjs-adapter-luxon";
 import { useTeamsData } from "~/components/TeamScoreTracker";
 import { useMainUser } from "~/components/MainUserProvider";
+import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
+
+addChartJsDateAdapter();
 
 export default function Home() {
     const navigate = useNavigate();

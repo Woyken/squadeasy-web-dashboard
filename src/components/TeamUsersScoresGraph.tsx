@@ -18,6 +18,7 @@ import {
     LineElement,
     PointElement,
     TimeScale,
+    Tooltip,
     type ChartDataset,
 } from "chart.js";
 import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
@@ -30,6 +31,7 @@ Chart.register(
     PointElement,
     Legend,
     Colors,
+    Tooltip,
 );
 
 addChartJsDateAdapter();

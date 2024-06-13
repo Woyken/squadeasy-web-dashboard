@@ -1,4 +1,4 @@
-import { TimeUnit, _adapters } from "chart.js";
+import { type TimeUnit, _adapters } from "chart.js";
 const dayFmt = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "2-digit",

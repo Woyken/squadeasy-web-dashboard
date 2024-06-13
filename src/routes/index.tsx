@@ -10,10 +10,30 @@ import {
 } from "solid-js";
 import { useMyChallengeQuery, useSeasonRankingQuery } from "~/api/client";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
-import Chart, { ChartDataset } from "chart.js/auto";
 import { useTeamsData } from "~/components/TeamScoreTracker";
 import { useMainUser } from "~/components/MainUserProvider";
+import {
+    Chart,
+    Colors,
+    Legend,
+    LinearScale,
+    LineController,
+    LineElement,
+    PointElement,
+    TimeScale,
+    type ChartDataset,
+} from "chart.js";
 import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
+
+Chart.register(
+    LineController,
+    LineElement,
+    TimeScale,
+    LinearScale,
+    PointElement,
+    Legend,
+    Colors,
+);
 
 addChartJsDateAdapter();
 

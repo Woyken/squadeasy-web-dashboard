@@ -8,8 +8,28 @@ import {
     onCleanup,
     untrack,
 } from "solid-js";
-import Chart, { ChartDataset } from "chart.js/auto";
+import {
+    Chart,
+    ChartDataset,
+    Colors,
+    Legend,
+    LinearScale,
+    LineController,
+    LineElement,
+    PointElement,
+    TimeScale,
+} from "chart.js";
 import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
+
+Chart.register(
+    LineController,
+    LineElement,
+    TimeScale,
+    LinearScale,
+    PointElement,
+    Legend,
+    Colors,
+);
 
 addChartJsDateAdapter();
 

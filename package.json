@@ -16,6 +16,7 @@
         "@tanstack/solid-query": "^5.40.1",
         "@tanstack/valibot-form-adapter": "^0.20.3",
         "chart.js": "^4.4.3",
+        "chartjs-plugin-zoom": "^2.0.1",
         "localforage": "^1.10.0",
         "openapi-fetch": "^0.9.7",
         "solid-js": "^1.8.17",
@@ -38,7 +39,8 @@
     },
     "pnpm": {
         "patchedDependencies": {
-            "@tanstack/solid-form@0.20.3": "patches/@tanstack__solid-form@0.20.3.patch"
+            "@tanstack/solid-form@0.20.3": "patches/@tanstack__solid-form@0.20.3.patch",
+            "hammerjs@2.0.8": "patches/hammerjs@2.0.8.patch"
         }
     }
 }

@@ -24,6 +24,7 @@ import {
     Tooltip,
     type ChartDataset,
 } from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
 import { addChartJsDateAdapter } from "~/utils/chartJsDateAdapter";
 
 Chart.register(
@@ -35,6 +36,7 @@ Chart.register(
     Legend,
     Colors,
     Tooltip,
+    zoomPlugin,
 );
 
 addChartJsDateAdapter();
@@ -216,6 +218,19 @@ export default function Home() {
                 maintainAspectRatio: false,
                 parsing: false,
                 plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            drag: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true,
+                            },
+                        },
+                    },
                     legend: {
                         labels: {
                             usePointStyle: true,

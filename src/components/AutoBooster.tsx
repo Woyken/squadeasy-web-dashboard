@@ -12,13 +12,17 @@ import {
 } from "solid-js";
 import { useUsersTokens } from "./UsersTokensProvider";
 import { useBoostMutation, useMyTeamQuery } from "~/api/client";
+import {
+    localStorageGetItem,
+    localStorageSetItem,
+} from "../utils/localStorage";
 
 function AutoBoosterUser(props: { userId: string }) {
     // const myUserQuery = useMyUserQuery(() => props.userId);
     const myTeamQuery = useMyTeamQuery(() => props.userId);
     const boostMutation = useBoostMutation(() => props.userId);
     const boostAvailableAt = createMemo(() =>
-        myTeamQuery.data ? myTeamQuery.data.boostAvailableAt : ""
+        myTeamQuery.data ? myTeamQuery.data.boostAvailableAt : "",
     );
 
     createEffect(() => {
@@ -36,13 +40,13 @@ function AutoBoosterUser(props: { userId: string }) {
                     .then((x) =>
                         x.data?.users
                             .toSorted((u1, u2) => u2.points - u1.points)
-                            .find((x) => x.isBoostable)
+                            .find((x) => x.isBoostable),
                     )
                     .then((user) => {
                         if (user) boostMutation.mutate(user.id);
                     });
             },
-            boostInMs < 0 ? 0 : boostInMs
+            boostInMs < 0 ? 0 : boostInMs,
         );
         onCleanup(() => {
             clearTimeout(timeout);
@@ -71,7 +75,7 @@ export function useAutoBoosterSetting(userId: Accessor<string>) {
         autoBoost: createMemo(
             () =>
                 data().settings.find((x) => x.userId === userId())?.autoBoost ??
-                false
+                false,
         ),
         setAutoBoost: (value: boolean) =>
             data().setSettings((old) => [
@@ -92,7 +96,7 @@ export function AutoBooster(props: ParentProps) {
     >([]);
 
     createEffect(() => {
-        const itemsStr = window?.localStorage?.getItem("boostSettings");
+        const itemsStr = localStorageGetItem("boostSettings");
         if (itemsStr) {
             const parsedData = JSON.parse(itemsStr);
             if (parsedData && Array.isArray(parsedData))
@@ -102,10 +106,7 @@ export function AutoBooster(props: ParentProps) {
     });
 
     createEffect(() => {
-        window?.localStorage?.setItem(
-            "boostSettings",
-            JSON.stringify(userSettings())
-        );
+        localStorageSetItem("boostSettings", JSON.stringify(userSettings()));
     });
 
     return (

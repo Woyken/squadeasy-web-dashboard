@@ -6,6 +6,7 @@ import {
     createSignal,
     useContext,
 } from "solid-js";
+import { localStorageGetItem, localStorageSetItem } from "~/utils/localStorage";
 
 interface Token {
     accessToken: string;
@@ -17,7 +18,7 @@ interface CtxValue {
     setToken: (
         userId: string,
         accessToken: string,
-        refreshToken: string
+        refreshToken: string,
     ) => void;
     removeToken: (userId: string) => void;
 }
@@ -35,7 +36,7 @@ export function UsersTokensProvider(props: ParentProps) {
     const [tokens, setTokens] = createSignal(new Map<string, Token>());
 
     createEffect(() => {
-        const itemsStr = window?.localStorage?.getItem("loginData");
+        const itemsStr = localStorageGetItem("loginData");
         if (itemsStr) {
             const parsedMapData = JSON.parse(itemsStr);
             if (parsedMapData && Array.isArray(parsedMapData))
@@ -45,9 +46,9 @@ export function UsersTokensProvider(props: ParentProps) {
     });
 
     createEffect(() => {
-        window?.localStorage?.setItem(
+        localStorageSetItem(
             "loginData",
-            JSON.stringify(Array.from(tokens().entries()))
+            JSON.stringify(Array.from(tokens().entries())),
         );
     });
 

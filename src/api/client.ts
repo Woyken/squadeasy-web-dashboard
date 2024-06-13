@@ -9,6 +9,7 @@ import {
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { Accessor, createMemo } from "solid-js";
 import { parseJwt } from "~/utils/parseJwt";
+import { useMainUser } from "~/components/MainUserProvider";
 
 export const squadEasyClient = createClient<paths>({
     baseUrl: "https://api-challenge.squadeasy.com",
@@ -38,15 +39,14 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
 }
 
 export function useUserByIdQuery(userId: Accessor<string>) {
-    const users = useUsersTokens();
-    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
-    const getToken = useGetUserToken(firstUserId);
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
     return createQuery(() => ({
         queryKey: ["/api/2.0/users/{id}", userId()],
         queryFn: async () => {
             const token = await getToken();
             if (!token)
-                throw new Error(`token missing for user ${firstUserId()}`);
+                throw new Error(`token missing for user ${mainUser.mainUserId()}`);
             const result = await squadEasyClient.GET("/api/2.0/users/{id}", {
                 params: {
                     path: {
@@ -64,7 +64,7 @@ export function useUserByIdQuery(userId: Accessor<string>) {
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: !!firstUserId(),
+        enabled: !!mainUser.mainUserId(),
     }));
 }
 
@@ -141,9 +141,8 @@ export function useSeasonRankingQuery(
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
-    const users = useUsersTokens();
-    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
-    const getToken = useGetUserToken(firstUserId);
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
     return createQuery(() => ({
         queryKey: ["/api/2.0/my/ranking/season"],
         queryFn: async () => {
@@ -164,7 +163,7 @@ export function useSeasonRankingQuery(
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
-        enabled: (enabled?.() ?? true) && !!firstUserId(),
+        enabled: (enabled?.() ?? true) && !!mainUser.mainUserId(),
         refetchInterval,
         refetchIntervalInBackground,
     }));
@@ -175,9 +174,8 @@ export function useTeamQuery(
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
-    const users = useUsersTokens();
-    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
-    const getToken = useGetUserToken(firstUserId);
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
     return createQuery(() => ({
         ...teamQueryOptions(
             teamId,
@@ -185,7 +183,7 @@ export function useTeamQuery(
             refetchInterval,
             refetchIntervalInBackground,
         ),
-        enabled: !!teamId() && !!firstUserId(),
+        enabled: !!teamId() && !!mainUser.mainUserId(),
     }));
 }
 
@@ -229,9 +227,8 @@ export function useUserStatisticsQuery(
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
-    const users = useUsersTokens();
-    const firstUserId = createMemo(() => Array.from(users().tokens.keys())[0]);
-    const getToken = useGetUserToken(firstUserId);
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
     return createQuery(() =>
         userStatisticsQueryOptions(
             userId,

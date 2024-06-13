@@ -13,18 +13,18 @@ import { useUsersTokens } from "~/components/UsersTokensProvider";
 import Chart, { ChartDataset } from "chart.js/auto";
 import "chartjs-adapter-luxon";
 import { useTeamsData } from "~/components/TeamScoreTracker";
+import { useMainUser } from "~/components/MainUserProvider";
 
 export default function Home() {
     const navigate = useNavigate();
+    const mainUser = useMainUser();
     const users = useUsersTokens();
     createEffect(() => {
         if (users().tokens.size === 0) navigate("/login");
     });
-    const firstUserId = createMemo(
-        () => users().tokens.keys().next().value as string | undefined,
-    );
+
     // If user is not set, will navigate out, this page
-    const query = useMyChallengeQuery(firstUserId);
+    const query = useMyChallengeQuery(mainUser.mainUserId);
     const endAtTimestamp = createMemo(() => {
         if (!query.data || !query.data.endAt) return;
         return new Date(query.data.endAt).getTime();

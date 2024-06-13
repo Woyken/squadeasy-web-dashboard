@@ -17,6 +17,7 @@ import {
     useMyTeamQuery,
     useSocialPostsQuery,
 } from "~/api/client";
+import { localStorageGetItem, localStorageSetItem } from "~/utils/localStorage";
 
 const ctx = createContext<{
     setAutoLikeTeamPosts: (userId: string, autoLike: boolean) => void;
@@ -93,7 +94,7 @@ function AutoLikePostUser(props: {
     }>();
 
     const initialAutoLikeSettings = createMemo(() => {
-        const autoLikeSetting = localStorage.getItem(
+        const autoLikeSetting = localStorageGetItem(
             `autoLikeSettings-${props.userId}`,
         );
         if (!autoLikeSetting) return;
@@ -121,7 +122,7 @@ function AutoLikePostUser(props: {
         const settings = postLikeSettings();
         if (!settings) return;
         if (initialAutoLikeSettings() === settings) return;
-        localStorage.setItem(
+        localStorageSetItem(
             `autoLikeSettings-${props.userId}`,
             JSON.stringify(postLikeSettings()),
         );

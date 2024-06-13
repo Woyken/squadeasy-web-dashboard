@@ -1,7 +1,7 @@
 import { Title } from "@solidjs/meta";
 import { useSearchParams } from "@solidjs/router";
 import { For, Show, createSignal, createMemo } from "solid-js";
-import { useTeamQuery } from "~/api/client";
+import { useTeamQuery, useUserStatisticsQuery } from "~/api/client";
 import { Avatar } from "~/components/Avatar";
 import { UserStatisticsGraph } from "~/components/UserStatisticsGraph";
 import { getUserDisplayName } from "~/getUserDisplayName";
@@ -26,6 +26,10 @@ export default function UserStatisticsPage() {
                                 <tr>
                                     <th>Name</th>
                                     <th>Points</th>
+                                    <th>
+                                        Step length (assuming every walk was
+                                        tracked)
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -75,6 +79,9 @@ export default function UserStatisticsPage() {
                                                         </div>
                                                     </td>
                                                     <td>{user.points}</td>
+                                                    <UserStepLengthRow
+                                                        userId={user.id}
+                                                    />
                                                 </tr>
                                                 <Show
                                                     when={
@@ -99,4 +106,34 @@ export default function UserStatisticsPage() {
             </div>
         </main>
     );
+}
+
+function UserStepLengthRow(props: { userId: string }) {
+    const userStatisticsQuery = useUserStatisticsQuery(() => props.userId);
+    const totalTrackedMovingDistance = createMemo(() => {
+        if (!userStatisticsQuery.data) return;
+        return userStatisticsQuery.data.activities
+            .filter(
+                (a) =>
+                    !!["active_walk", "run", "hiking"].find(
+                        (x) => x === a.activityId,
+                    ),
+            )
+            .map((a) => a.value)
+            .reduce((acc, curr) => acc + curr, 0);
+    });
+    const stepsCount = createMemo(() => {
+        if (!userStatisticsQuery.data) return;
+        return userStatisticsQuery.data.activities.find(
+            (a) => a.activityId === "walk",
+        )?.value;
+    });
+    const stepLength = createMemo(() => {
+        const distance = totalTrackedMovingDistance();
+        const steps = stepsCount();
+        if (!distance || !steps) return;
+        // meters per step
+        return (distance / steps);
+    });
+    return <td>{stepLength()?.toFixed(2) ?? "-"}</td>;
 }

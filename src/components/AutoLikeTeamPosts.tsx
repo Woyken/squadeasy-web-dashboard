@@ -15,9 +15,12 @@ import { useUsersTokens } from "./UsersTokensProvider";
 import {
     useLikePostMutation,
     useMyTeamQuery,
+    useMyUserQuery,
     useSocialPostsQuery,
 } from "~/api/client";
 import { localStorageGetItem, localStorageSetItem } from "~/utils/localStorage";
+import { useToaster } from "./ToasterProvider";
+import { getUserDisplayName } from "~/getUserDisplayName";
 
 const ctx = createContext<{
     setAutoLikeTeamPosts: (userId: string, autoLike: boolean) => void;
@@ -146,6 +149,8 @@ function AutoLikePostUser(props: {
         () => props.userId,
         () => !!postLikeSettings()?.enabled,
     );
+
+    const myUserQuery = useMyUserQuery(() => props.userId);
 
     const myTeamUserIds = createMemo(() =>
         myTeamQuery.data
@@ -287,6 +292,23 @@ function AutoLikePostUser(props: {
         });
     });
 
+    const toaster = useToaster();
+    const showNewPostsToastText = createMemo(() => {
+        if (!myUserQuery.data) return;
+        const settings = postLikeSettings();
+        if (!settings?.enabled) return;
+        if (!settings.latestKnownPost?.id) return;
+        if (!latestKnownPostCrawl()?.nextId) return;
+        return `New posts found, liking... (${getUserDisplayName(myUserQuery.data)!})`;
+    });
+
+    createEffect(() => {
+        const text = showNewPostsToastText();
+        if (!text) return;
+        const cleanupToast = toaster(text);
+        onCleanup(cleanupToast);
+    });
+
     const socialLastCheckedPostsQuery = useSocialPostsQuery(
         () => props.userId,
         () => postLikeSettings()?.lastCrawledPost?.id,
@@ -342,6 +364,22 @@ function AutoLikePostUser(props: {
                       },
                   },
         );
+    });
+
+    const showHistoryToastText = createMemo(() => {
+        if (!myUserQuery.data) return;
+        const settings = postLikeSettings();
+        if (!settings?.enabled) return;
+        if (!settings.lastCrawledPost?.id) return;
+        if (settings.lastCrawledPost?.ended) return;
+        return `Finding and liking older posts... (${getUserDisplayName(myUserQuery.data)!}) (${new Date(settings.lastCrawledPost?.timestamp ?? 0).toISOString().split("T")[0]})`;
+    });
+
+    createEffect(() => {
+        const text = showHistoryToastText();
+        if (!text) return;
+        const cleanupToast = toaster(text);
+        onCleanup(cleanupToast);
     });
 
     return (

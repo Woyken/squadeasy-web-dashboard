@@ -16,6 +16,7 @@ import { UserLoader } from "./components/UserLoader";
 import { TeamScoreTracker } from "./components/TeamScoreTracker";
 import { AutoLikeTeamPosts } from "./components/AutoLikeTeamPosts";
 import { MainUserProvider } from "./components/MainUserProvider";
+import { ToasterProvider } from "./components/ToasterProvider";
 
 function NavigationBar() {
     const userTokens = useUsersTokens();
@@ -94,22 +95,24 @@ export default function App() {
             base={import.meta.env.SERVER_BASE_URL}
             root={(props) => (
                 <MetaProvider>
-                    <QueryClientProvider client={queryClient()}>
-                        <UsersTokensProvider>
-                            <MainUserProvider>
-                                <AutoBooster>
-                                    <AutoLikeTeamPosts>
-                                        <TeamScoreTracker>
-                                            <NavigationBar />
-                                            <Suspense>
-                                                {props.children}
-                                            </Suspense>
-                                        </TeamScoreTracker>
-                                    </AutoLikeTeamPosts>
-                                </AutoBooster>
-                            </MainUserProvider>
-                        </UsersTokensProvider>
-                    </QueryClientProvider>
+                    <ToasterProvider>
+                        <QueryClientProvider client={queryClient()}>
+                            <UsersTokensProvider>
+                                <MainUserProvider>
+                                    <AutoBooster>
+                                        <AutoLikeTeamPosts>
+                                            <TeamScoreTracker>
+                                                <NavigationBar />
+                                                <Suspense>
+                                                    {props.children}
+                                                </Suspense>
+                                            </TeamScoreTracker>
+                                        </AutoLikeTeamPosts>
+                                    </AutoBooster>
+                                </MainUserProvider>
+                            </UsersTokensProvider>
+                        </QueryClientProvider>
+                    </ToasterProvider>
                 </MetaProvider>
             )}
         >

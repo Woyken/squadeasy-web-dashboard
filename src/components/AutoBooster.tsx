@@ -25,7 +25,9 @@ function AutoBoosterUser(props: { userId: string }) {
         myTeamQuery.data ? myTeamQuery.data.boostAvailableAt : "",
     );
 
+    const autoBoostSetting = useAutoBoosterSetting(() => props.userId);
     createEffect(() => {
+        if(!autoBoostSetting.autoBoost()) return;
         const boostAvailableDate = boostAvailableAt();
         if (boostAvailableDate === "") return;
 

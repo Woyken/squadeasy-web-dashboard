@@ -1,5 +1,12 @@
 import { Title } from "@solidjs/meta";
-import { For, Show, createSignal, createMemo, onMount } from "solid-js";
+import {
+    For,
+    Show,
+    createSignal,
+    createMemo,
+    onMount,
+    Suspense,
+} from "solid-js";
 import {
     useMyChallengeQuery,
     useTeamQuery,
@@ -52,104 +59,111 @@ function RouteComponent() {
                 </div>
                 <div class="divider mt-2" />
                 <div class="h-full w-full bg-base-100 pb-6">
-                    <div class="w-full overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Points</th>
-                                    <th>
-                                        Step length (assuming every walk was
-                                        tracked)
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <Show when={teamQuery.isLoading}>
+                    <Suspense fallback={<span>Loading...</span>}>
+                        <div class="w-full overflow-x-auto">
+                            <table class="table w-full">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <span class="loading loading-spinner"></span>
-                                        </td>
+                                        <th>Name</th>
+                                        <th>Points</th>
+                                        <th>
+                                            Step length (assuming every walk was
+                                            tracked)
+                                        </th>
                                     </tr>
-                                </Show>
-                                <Show when={!!teamQuery.data}>
-                                    <For
-                                        each={
-                                            teamQuery.data?.users.toSorted(
-                                                (a, b) => b.points - a.points,
-                                            ) ?? []
-                                        }
-                                    >
-                                        {(user) => (
-                                            <>
-                                                <tr>
-                                                    <td
-                                                        onclick={() =>
-                                                            setShowUserStatistics(
-                                                                (old) =>
-                                                                    old ===
-                                                                    user.id
-                                                                        ? undefined
-                                                                        : user.id,
-                                                            )
-                                                        }
-                                                    >
-                                                        <div
-                                                            class="flex items-center space-x-3"
-                                                            id={user.id}
-                                                        >
-                                                            <Avatar
-                                                                userId={user.id}
-                                                            />
-                                                            <div>
-                                                                <div class="font-bold">
-                                                                    {getUserDisplayName(
-                                                                        {
-                                                                            email: "Unknown",
-                                                                            ...user,
-                                                                        },
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>{user.points}</td>
-                                                    <UserStepLengthRow
-                                                        userId={user.id}
-                                                    />
-                                                </tr>
-                                                <Show
-                                                    when={
-                                                        showUserStatistics() ===
-                                                        user.id
-                                                    }
-                                                >
-                                                    <div>
-                                                        <Show
-                                                            when={
-                                                                endAtTimestamp() &&
-                                                                startAtTimestamp()
+                                </thead>
+                                <tbody>
+                                    <Show when={teamQuery.isLoading}>
+                                        <tr>
+                                            <td>
+                                                <span class="loading loading-spinner"></span>
+                                            </td>
+                                        </tr>
+                                    </Show>
+                                    <Show when={!!teamQuery.data}>
+                                        <For
+                                            each={
+                                                teamQuery.data?.users.toSorted(
+                                                    (a, b) =>
+                                                        b.points - a.points,
+                                                ) ?? []
+                                            }
+                                        >
+                                            {(user) => (
+                                                <>
+                                                    <tr>
+                                                        <td
+                                                            onclick={() =>
+                                                                setShowUserStatistics(
+                                                                    (old) =>
+                                                                        old ===
+                                                                        user.id
+                                                                            ? undefined
+                                                                            : user.id,
+                                                                )
                                                             }
                                                         >
-                                                            <UserStatisticsGraph
-                                                                userId={user.id}
-                                                                endsAt={
-                                                                    endAtTimestamp()!
+                                                            <div
+                                                                class="flex items-center space-x-3"
+                                                                id={user.id}
+                                                            >
+                                                                <Avatar
+                                                                    userId={
+                                                                        user.id
+                                                                    }
+                                                                />
+                                                                <div>
+                                                                    <div class="font-bold">
+                                                                        {getUserDisplayName(
+                                                                            {
+                                                                                email: "Unknown",
+                                                                                ...user,
+                                                                            },
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>{user.points}</td>
+                                                        <UserStepLengthRow
+                                                            userId={user.id}
+                                                        />
+                                                    </tr>
+                                                    <Show
+                                                        when={
+                                                            showUserStatistics() ===
+                                                            user.id
+                                                        }
+                                                    >
+                                                        <div>
+                                                            <Show
+                                                                when={
+                                                                    endAtTimestamp() &&
+                                                                    startAtTimestamp()
                                                                 }
-                                                                startAt={
-                                                                    startAtTimestamp()!
-                                                                }
-                                                            />
-                                                        </Show>
-                                                    </div>
-                                                </Show>
-                                            </>
-                                        )}
-                                    </For>
-                                </Show>
-                            </tbody>
-                        </table>
-                    </div>
+                                                            >
+                                                                <UserStatisticsGraph
+                                                                    userId={
+                                                                        user.id
+                                                                    }
+                                                                    endsAt={
+                                                                        endAtTimestamp()!
+                                                                    }
+                                                                    startAt={
+                                                                        startAtTimestamp()!
+                                                                    }
+                                                                />
+                                                            </Show>
+                                                        </div>
+                                                    </Show>
+                                                </>
+                                            )}
+                                        </For>
+                                    </Show>
+                                </tbody>
+                            </table>
+                        </div>
+                    </Suspense>
                 </div>
             </div>
         </main>

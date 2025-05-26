@@ -1,32 +1,33 @@
-# SolidStart
+# SquadEasy Web Dashboard
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://start.solidjs.com);
+A web dashboard for visualizing and tracking team and user statistics for the SquadEasy platform. It provides interactive charts and tables to monitor team rankings, user points, and activity statistics over time.
 
-## Creating a project
+## Features
+- **Team Rankings:** View and compare the top teams, with interactive charts showing points progression.
+- **User Statistics:** Drill down into individual user stats, including activity points and step length calculations.
+- **Live Countdown:** Displays a countdown to the end of the current challenge or event.
+- **Interactive Graphs:** Zoom, pan, and click through team and user data using ECharts.
+- **Authentication:** Requires login to access dashboard features.
+- **Modern UI:** Built with Tailwind CSS and DaisyUI for a responsive, clean interface.
 
-```bash
-# create a new project in the current directory
-npm init solid@latest
+## Getting Started
+1. Install dependencies:
+   ```bash
+   pnpm install
+   # or
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   pnpm run dev
+   # or
+   npm run dev
+   ```
+3. Open your browser to the local server URL.
 
-# create a new project in my-app
-npm init solid@latest my-app
-```
+## Available Scripts
+- `dev` – Start the development server
+- `build` – Build the app for production
+- `start` – Start the production server
+- `generate-client` – Regenerate TypeScript API types from the OpenAPI spec
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-Solid apps are built with _presets_, which optimise your project for deployment to different environments.
-
-By default, `npm run build` will generate a Node app that you can run with `npm start`. To use a different preset, add it to the `devDependencies` in `package.json` and specify in your `app.config.js`.
-
-## This project was created with the [Solid CLI](https://solid-cli.netlify.app)

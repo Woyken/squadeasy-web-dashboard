@@ -9,6 +9,7 @@ import {
     createSignal,
     onCleanup,
     Show,
+    Suspense,
     untrack,
 } from "solid-js";
 import { getUserDisplayName } from "~/getUserDisplayName";
@@ -32,20 +33,22 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
 
     return (
         <Show when={startAtTimestamp() && endAtTimestamp()}>
-            <Show when={teamQuery.data}>
-                {(team) => (
-                    <CanvasRenderer
-                        endsAt={endAtTimestamp()!}
-                        startAt={startAtTimestamp()!}
-                        users={team().users.map((x) => ({
-                            email: x.id,
-                            firstName: x.firstName,
-                            lastName: x.lastName,
-                            id: x.id,
-                        }))}
-                    />
-                )}
-            </Show>
+            <Suspense fallback={<span>Loading...</span>}>
+                <Show when={teamQuery.data}>
+                    {(team) => (
+                        <CanvasRenderer
+                            endsAt={endAtTimestamp()!}
+                            startAt={startAtTimestamp()!}
+                            users={team().users.map((x) => ({
+                                email: x.id,
+                                firstName: x.firstName,
+                                lastName: x.lastName,
+                                id: x.id,
+                            }))}
+                        />
+                    )}
+                </Show>
+            </Suspense>
         </Show>
     );
 }

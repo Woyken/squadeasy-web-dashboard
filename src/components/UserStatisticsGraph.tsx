@@ -1,16 +1,12 @@
-import {
-    useHistoricalUserActivityPointsQuery,
-    useUserStatisticsQuery,
-} from "~/api/client";
+import { useHistoricalUserActivityPointsQuery } from "~/api/client";
 import {
     Accessor,
     createEffect,
     createMemo,
     createSignal,
     onCleanup,
-    onMount,
     Setter,
-    Show,
+    Suspense,
     untrack,
 } from "solid-js";
 import { init as echartsInit, EChartsType } from "echarts";
@@ -36,25 +32,29 @@ export function UserStatisticsGraph(props: {
         <>
             <div class="max-h-96">
                 <div class="inline-block text-xl font-semibold">Points</div>
-                <UserChart
-                    type="points"
-                    endsAt={props.endsAt}
-                    startAt={props.startAt}
-                    userId={props.userId}
-                    timeWindow={timeWindow}
-                    setTimeWindow={setTimeWindow}
-                />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <UserChart
+                        type="points"
+                        endsAt={props.endsAt}
+                        startAt={props.startAt}
+                        userId={props.userId}
+                        timeWindow={timeWindow}
+                        setTimeWindow={setTimeWindow}
+                    />
+                </Suspense>
             </div>
             <div class="max-h-96">
                 <div class="inline-block text-xl font-semibold">Values</div>
-                <UserChart
-                    type="values"
-                    endsAt={props.endsAt}
-                    startAt={props.startAt}
-                    userId={props.userId}
-                    timeWindow={timeWindow}
-                    setTimeWindow={setTimeWindow}
-                />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <UserChart
+                        type="values"
+                        endsAt={props.endsAt}
+                        startAt={props.startAt}
+                        userId={props.userId}
+                        timeWindow={timeWindow}
+                        setTimeWindow={setTimeWindow}
+                    />
+                </Suspense>
             </div>
         </>
     );

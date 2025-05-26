@@ -33,7 +33,11 @@ function RootComponent() {
                                     <AutoLikeTeamPosts>
                                         {/* <TeamScoreTracker> */}
                                         <NavigationBar />
-                                        <Suspense>
+                                        <Suspense
+                                            fallback={
+                                                <span>ROOT Loading...</span>
+                                            }
+                                        >
                                             <Outlet />
                                         </Suspense>
                                         {/* </TeamScoreTracker> */}

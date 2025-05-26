@@ -5,6 +5,7 @@ import {
     createSignal,
     onCleanup,
     Show,
+    Suspense,
     untrack,
 } from "solid-js";
 import {
@@ -124,12 +125,14 @@ function RouteComponent() {
             </div>
             <div class="mt-2 flex flex-1 flex-wrap justify-center gap-6">
                 <div class="card max-h-full min-h-96 w-full bg-base-100 shadow-md">
-                    <Show when={startAtTimestamp() && endAtTimestamp()}>
-                        <CanvasRenderer
-                            startAt={startAtTimestamp()!}
-                            endsAt={endAtTimestamp()!}
-                        ></CanvasRenderer>
-                    </Show>
+                    <Suspense fallback={<span>Loading...</span>}>
+                        <Show when={startAtTimestamp() && endAtTimestamp()}>
+                            <CanvasRenderer
+                                startAt={startAtTimestamp()!}
+                                endsAt={endAtTimestamp()!}
+                            ></CanvasRenderer>
+                        </Show>
+                    </Suspense>
                 </div>
             </div>
         </main>

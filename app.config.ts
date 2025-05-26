@@ -15,7 +15,7 @@ export default defineConfig({
                 "/user-statistics",
                 "/user",
                 "/users-points",
-            ].map((route) => process.env.BASE_PATH + route),
+            ],
             crawlLinks: true,
         },
     },

@@ -1,16 +1,40 @@
 import { Title } from "@solidjs/meta";
 import { useSearchParams } from "@solidjs/router";
-import { For, Show, createSignal, createMemo } from "solid-js";
-import { useTeamQuery, useUserStatisticsQuery } from "~/api/client";
+import { For, Show, createSignal, createMemo, onMount } from "solid-js";
+import {
+    useMyChallengeQuery,
+    useTeamQuery,
+    useUserStatisticsQuery,
+} from "~/api/client";
 import { Avatar } from "~/components/Avatar";
+import { useMainUser } from "~/components/MainUserProvider";
 import { UserStatisticsGraph } from "~/components/UserStatisticsGraph";
 import { getUserDisplayName } from "~/getUserDisplayName";
 
 export default function UserStatisticsPage() {
     const [params] = useSearchParams();
     const teamId = createMemo(() => params.teamId);
+    const userIdParam = createMemo(() => params.userId); // get userId from query
     const teamQuery = useTeamQuery(teamId);
     const [showUserStatistics, setShowUserStatistics] = createSignal<string>();
+
+    onMount(() => {
+        if (userIdParam()) {
+            setShowUserStatistics(userIdParam());
+        }
+    });
+
+    const mainUser = useMainUser();
+    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
+    const endAtTimestamp = createMemo(() => {
+        if (!challengeQuery.data || !challengeQuery.data.endAt) return;
+        return new Date(challengeQuery.data.endAt).getTime();
+    });
+    const startAtTimestamp = createMemo(() => {
+        if (!challengeQuery.data || !challengeQuery.data.startAt) return;
+        return new Date(challengeQuery.data.startAt).getTime();
+    });
+
     return (
         <main class="flex-1 overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
             <Title>Users statistics</Title>
@@ -62,7 +86,10 @@ export default function UserStatisticsPage() {
                                                             )
                                                         }
                                                     >
-                                                        <div class="flex items-center space-x-3">
+                                                        <div
+                                                            class="flex items-center space-x-3"
+                                                            id={user.id}
+                                                        >
                                                             <Avatar
                                                                 userId={user.id}
                                                             />
@@ -90,9 +117,22 @@ export default function UserStatisticsPage() {
                                                     }
                                                 >
                                                     <div>
-                                                        <UserStatisticsGraph
-                                                            userId={user.id}
-                                                        />
+                                                        <Show
+                                                            when={
+                                                                endAtTimestamp() &&
+                                                                startAtTimestamp()
+                                                            }
+                                                        >
+                                                            <UserStatisticsGraph
+                                                                userId={user.id}
+                                                                endsAt={
+                                                                    endAtTimestamp()!
+                                                                }
+                                                                startAt={
+                                                                    startAtTimestamp()!
+                                                                }
+                                                            />
+                                                        </Show>
                                                     </div>
                                                 </Show>
                                             </>
@@ -133,7 +173,7 @@ function UserStepLengthRow(props: { userId: string }) {
         const steps = stepsCount();
         if (!distance || !steps) return;
         // meters per step
-        return (distance / steps);
+        return distance / steps;
     });
     return <td>{stepLength()?.toFixed(2) ?? "-"}</td>;
 }

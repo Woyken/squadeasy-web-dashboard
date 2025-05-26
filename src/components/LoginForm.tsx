@@ -1,5 +1,4 @@
 import { createForm } from "@tanstack/solid-form";
-import { valibotValidator } from "@tanstack/valibot-form-adapter";
 import { email, minLength, pipe, string } from "valibot";
 import type { FieldApi } from "@tanstack/solid-form";
 import { useLoginMutation } from "~/api/client";
@@ -36,8 +35,6 @@ export default function LoginForm() {
             });
             navigate("/");
         },
-        // Add a validator to support Valibot usage in Form and Field
-        validatorAdapter: valibotValidator,
     }));
 
     return (

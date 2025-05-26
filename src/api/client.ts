@@ -2,7 +2,9 @@ import createClient from "openapi-fetch";
 import { paths } from "./squadEasyApi";
 import {
     createMutation,
+    createQueries,
     createQuery,
+    keepPreviousData,
     queryOptions,
     useQueryClient,
 } from "@tanstack/solid-query";
@@ -10,6 +12,9 @@ import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { Accessor, createMemo } from "solid-js";
 import { parseJwt } from "~/utils/parseJwt";
 import { useMainUser } from "~/components/MainUserProvider";
+
+const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:3231";
 
 export const squadEasyClient = createClient<paths>({
     baseUrl: "https://api-challenge.squadeasy.com",
@@ -42,21 +47,26 @@ export function useUserByIdQuery(userId: Accessor<string>) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     return createQuery(() => ({
-        queryKey: ["/api/2.0/users/{id}", userId()],
+        queryKey: ["/api/3.0/user-profile/{userId}", userId()],
         queryFn: async () => {
             const token = await getToken();
             if (!token)
-                throw new Error(`token missing for user ${mainUser.mainUserId()}`);
-            const result = await squadEasyClient.GET("/api/2.0/users/{id}", {
-                params: {
-                    path: {
-                        id: userId(),
+                throw new Error(
+                    `token missing for user ${mainUser.mainUserId()}`,
+                );
+            const result = await squadEasyClient.GET(
+                "/api/3.0/user-profile/{userId}",
+                {
+                    params: {
+                        path: {
+                            userId: userId(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${token}`,
                     },
                 },
-                headers: {
-                    authorization: `Bearer ${token}`,
-                },
-            });
+            );
             if (!result.data)
                 throw new Error(
                     `Request failed ${JSON.stringify(result.error)}`,
@@ -166,6 +176,7 @@ export function useSeasonRankingQuery(
         enabled: (enabled?.() ?? true) && !!mainUser.mainUserId(),
         refetchInterval,
         refetchIntervalInBackground,
+        placeholderData: keepPreviousData,
     }));
 }
 
@@ -500,4 +511,137 @@ export function useLoginMutation() {
             );
         },
     }));
+}
+
+export function useHistoricalTeamPointsQuery(
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const query = createQuery(() => ({
+        queryKey: ["historicalTeamPoints", start(), end()],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const url = `${API_BASE_URL}/api/team-points?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
+            const resp = await fetch(url, {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+                signal,
+            });
+            if (!resp.ok) throw new Error("Network response was not ok");
+            const result = (await resp.json()) as [
+                { teamId: string; time: string; points: number },
+            ];
+            return result;
+        },
+        staleTime: 1000 * 60 * 1, // 1 minutes
+        cacheTime: 1000 * 60 * 5, // 5 minutes
+        deferStream: true,
+        gcTime: 1000 * 60 * 5, // 5 minutes
+        enabled: typeof window !== "undefined",
+        placeholderData: keepPreviousData,
+    }));
+    return query;
+}
+
+export function useHistoricalUserPointsQueries(
+    userIds: Accessor<string[]>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    return createQueries(() => ({
+        queries: userIds().map((userId) =>
+            getHistoricalUserPointsQueryOptions(() => userId, start, end),
+        ),
+    }));
+}
+
+export function getHistoricalUserPointsQueryOptions(
+    userId: Accessor<string>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const options = queryOptions<
+        [
+            {
+                userId: string;
+                time: string;
+                points: number;
+            },
+        ],
+        Error
+    >({
+        queryKey: ["historicalUserPoints", userId(), start(), end()],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const url = `${API_BASE_URL}/api/user-points/${userId()}?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
+            const resp = await fetch(url, {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+                signal,
+            });
+            if (!resp.ok) throw new Error("Network response was not ok");
+            const result = (await resp.json()) as [
+                { userId: string; time: string; points: number },
+            ];
+            return result;
+        },
+        staleTime: 1000 * 60 * 1, // 1 minutes
+        deferStream: true,
+        gcTime: 1000 * 60 * 5, // 5 minutes
+        enabled: typeof window !== "undefined",
+        placeholderData: keepPreviousData,
+    });
+    return options;
+}
+
+export function useHistoricalUserActivityPointsQuery(
+    userId: Accessor<string>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const query = createQuery(() => ({
+        queryKey: ["historicalUserActivityPoints", userId(), start(), end()],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const url = `${API_BASE_URL}/api/user-activity-points/${userId()}?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
+            const resp = await fetch(url, {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+                signal,
+            });
+            if (!resp.ok) throw new Error("Network response was not ok");
+            const result = (await resp.json()) as [
+                {
+                    userId: string;
+                    activityId: string;
+                    time: string;
+                    value: number;
+                    points: number;
+                },
+            ];
+            return result;
+        },
+        staleTime: 1000 * 60 * 1, // 1 minutes
+        cacheTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 5, // 5 minutes
+        enabled: typeof window !== "undefined",
+        placeholderData: keepPreviousData,
+    }));
+
+    return query;
 }

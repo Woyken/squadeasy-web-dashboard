@@ -4,14 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@tanstack/solid-form@0.20.3':
-    hash: 6d2a3vww2qcrrwcbb4eawqcram
-    path: patches/@tanstack__solid-form@0.20.3.patch
-  hammerjs@2.0.8:
-    hash: qxerx36ftg2rsoa347bepyc5mu
-    path: patches/hammerjs@2.0.8.patch
-
 importers:
 
   .:
@@ -26,20 +18,20 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1(rollup@4.18.0)(solid-js@1.8.17)(vinxi@0.3.11(@opentelemetry/api@1.8.0)(@types/node@20.13.0)(ioredis@5.4.1)(terser@5.31.0))(vite@5.2.12(@types/node@20.13.0)(terser@5.31.0))
       '@tanstack/solid-form':
-        specifier: ^0.20.3
-        version: 0.20.3(patch_hash=6d2a3vww2qcrrwcbb4eawqcram)(solid-js@1.8.17)
+        specifier: ^1.11.2
+        version: 1.11.2(solid-js@1.8.17)
       '@tanstack/solid-query':
         specifier: ^5.40.1
         version: 5.40.1(solid-js@1.8.17)
-      '@tanstack/valibot-form-adapter':
-        specifier: ^0.20.3
-        version: 0.20.3(valibot@0.31.0-rc.12)
       chart.js:
         specifier: ^4.4.3
         version: 4.4.3
       chartjs-plugin-zoom:
         specifier: ^2.0.1
         version: 2.0.1(chart.js@4.4.3)
+      echarts:
+        specifier: ^5.6.0
+        version: 5.6.0
       localforage:
         specifier: ^1.10.0
         version: 1.10.0
@@ -50,8 +42,8 @@ importers:
         specifier: ^1.8.17
         version: 1.8.17
       valibot:
-        specifier: ^0.31.0-rc.12
-        version: 0.31.0-rc.12
+        specifier: ^1.1.0
+        version: 1.1.0(typescript@5.4.5)
       vinxi:
         specifier: ^0.3.11
         version: 0.3.11(@opentelemetry/api@1.8.0)(@types/node@20.13.0)(ioredis@5.4.1)(terser@5.31.0)
@@ -886,14 +878,14 @@ packages:
   '@solidjs/start@1.0.1':
     resolution: {integrity: sha512-W29OlcJewXUehvDu5Lf+w8hQRiRMdMGaNUwMhnR3neqPxwdZf0LPPPVGyHxZHk4375HdcdBXHuvrOI+xv8Xrcg==}
 
-  '@tanstack/form-core@0.20.3':
-    resolution: {integrity: sha512-oFu1fBSQyDL7fkvXxP2ZPnXWFcac973xghNPfiF8DMUzJ7MBFe4sZHB5HS6l3YGWtMFnqRwW4sFIhHLGKtDVJA==}
+  '@tanstack/form-core@1.11.2':
+    resolution: {integrity: sha512-HAocV5E6y4EHisH6qPvredkr2X5ARULDLWx8Z7Jz9pNz0bUBzUjPF/QtVBHQKrYMrwl9cE+TxddcghjiQYDsmQ==}
 
   '@tanstack/query-core@5.40.0':
     resolution: {integrity: sha512-eD8K8jsOIq0Z5u/QbvOmfvKKE/XC39jA7yv4hgpl/1SRiU+J8QCIwgM/mEHuunQsL87dcvnHqSVLmf9pD4CiaA==}
 
-  '@tanstack/solid-form@0.20.3':
-    resolution: {integrity: sha512-zXh/doScri/dZCzy4xSJHrQcJIUkkN6jWUCsOT9G7J2vX0mPJ+EHjY5l4rLuFI+a1N8obg36gI8AJU6Ovp+FSw==}
+  '@tanstack/solid-form@1.11.2':
+    resolution: {integrity: sha512-KQNcyS0OMgC1OrMNeEa3pxQc5J2PdXXKf4OAm7an1eSkoVGNlA3RqPrf9Tu4cfDM6eKMGT+/9KKnWj2va9x34g==}
     peerDependencies:
       solid-js: ^1.6.0
 
@@ -902,18 +894,13 @@ packages:
     peerDependencies:
       solid-js: ^1.6.0
 
-  '@tanstack/solid-store@0.3.1':
-    resolution: {integrity: sha512-MBsV3kTHW0v+fHsSUfxpVUh2FVX/qmc6hTq8HdwOkleBcpVRiF8RX0gyCcE5+cE03LncKoIEw9hO80dOBEZbFw==}
+  '@tanstack/solid-store@0.7.0':
+    resolution: {integrity: sha512-uDQYkUuH3MppitiduZLTEcItkTr8vEJ33jzp2rH2VvlNRMGbuU54GQcqf3dLIlTbZ1/Z2TtIBtBjjl+N/OhwRg==}
     peerDependencies:
       solid-js: ^1.6.0
 
-  '@tanstack/store@0.3.1':
-    resolution: {integrity: sha512-A49KN8SpLMWaNmZGPa9K982RQ81W+m7W6iStcQVeKeVS70JZRqkF0fDwKByREPq6qz9/kS0aQFOPQ0W6wIeU5g==}
-
-  '@tanstack/valibot-form-adapter@0.20.3':
-    resolution: {integrity: sha512-8ZqL43i/y3BmLd5xZh6yPJLifJkpoPFIWa1Qa6ncNG5zoNIdwcSNyyMwy1DQzNSorjlzEdsluPTBj2owxnkacQ==}
-    peerDependencies:
-      valibot: ^0.x
+  '@tanstack/store@0.7.0':
+    resolution: {integrity: sha512-CNIhdoUsmD2NolYuaIs8VfWM467RK6oIBAW4nPEKZhg1smZ+/CwtCdpURgp7nxSqOaV9oKkzdWD80+bC66F/Jg==}
 
   '@total-typescript/ts-reset@0.5.1':
     resolution: {integrity: sha512-AqlrT8YA1o7Ff5wPfMOL0pvL+1X+sw60NN6CcOCqs658emD6RfiXhF7Gu9QcfKBH7ELY2nInLhKSCWVoNL70MQ==}
@@ -1416,6 +1403,9 @@ packages:
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
+
+  echarts@5.6.0:
+    resolution: {integrity: sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==}
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
@@ -2611,6 +2601,9 @@ packages:
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
+  tslib@2.3.0:
+    resolution: {integrity: sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==}
+
   tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
 
@@ -2734,8 +2727,13 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  valibot@0.31.0-rc.12:
-    resolution: {integrity: sha512-vAI18A65Og1BwuVqC3Zvr0+yNxOANLHDVo3r5VOTsVItfBl6KcykmY7fioSU5CVSlrj2JgViHjcsfAofO2h0rw==}
+  valibot@1.1.0:
+    resolution: {integrity: sha512-Nk8lX30Qhu+9txPYTwM0cFlWLdPFsFr6LblzqIySfbZph9+BFsAHsNvHOymEviUepeIW6KFHzpX8TKhbptBXXw==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   validate-html-nesting@1.2.2:
     resolution: {integrity: sha512-hGdgQozCsQJMyfK5urgFcWEqsSSrK63Awe0t/IMR0bZ0QMtnuaiHzThW81guu3qx9abLi99NEuiaN6P9gVYsNg==}
@@ -2870,6 +2868,9 @@ packages:
 
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
+
+  zrender@5.6.1:
+    resolution: {integrity: sha512-OFXkDJKcrlx5su2XbzJvj/34Q3m6PvyCZkVPHGYpcCJ52ek4U/ymZyfuV1nKE23AyBJ51E/6Yr0mhZ7xGTO4ag==}
 
 snapshots:
 
@@ -3546,16 +3547,16 @@ snapshots:
       - vinxi
       - vite
 
-  '@tanstack/form-core@0.20.3':
+  '@tanstack/form-core@1.11.2':
     dependencies:
-      '@tanstack/store': 0.3.1
+      '@tanstack/store': 0.7.0
 
   '@tanstack/query-core@5.40.0': {}
 
-  '@tanstack/solid-form@0.20.3(patch_hash=6d2a3vww2qcrrwcbb4eawqcram)(solid-js@1.8.17)':
+  '@tanstack/solid-form@1.11.2(solid-js@1.8.17)':
     dependencies:
-      '@tanstack/form-core': 0.20.3
-      '@tanstack/solid-store': 0.3.1(solid-js@1.8.17)
+      '@tanstack/form-core': 1.11.2
+      '@tanstack/solid-store': 0.7.0(solid-js@1.8.17)
       solid-js: 1.8.17
 
   '@tanstack/solid-query@5.40.1(solid-js@1.8.17)':
@@ -3563,17 +3564,12 @@ snapshots:
       '@tanstack/query-core': 5.40.0
       solid-js: 1.8.17
 
-  '@tanstack/solid-store@0.3.1(solid-js@1.8.17)':
+  '@tanstack/solid-store@0.7.0(solid-js@1.8.17)':
     dependencies:
-      '@tanstack/store': 0.3.1
+      '@tanstack/store': 0.7.0
       solid-js: 1.8.17
 
-  '@tanstack/store@0.3.1': {}
-
-  '@tanstack/valibot-form-adapter@0.20.3(valibot@0.31.0-rc.12)':
-    dependencies:
-      '@tanstack/form-core': 0.20.3
-      valibot: 0.31.0-rc.12
+  '@tanstack/store@0.7.0': {}
 
   '@total-typescript/ts-reset@0.5.1': {}
 
@@ -3916,7 +3912,7 @@ snapshots:
   chartjs-plugin-zoom@2.0.1(chart.js@4.4.3):
     dependencies:
       chart.js: 4.4.3
-      hammerjs: 2.0.8(patch_hash=qxerx36ftg2rsoa347bepyc5mu)
+      hammerjs: 2.0.8
 
   chokidar@3.6.0:
     dependencies:
@@ -4093,6 +4089,11 @@ snapshots:
   duplexer@0.1.2: {}
 
   eastasianwidth@0.2.0: {}
+
+  echarts@5.6.0:
+    dependencies:
+      tslib: 2.3.0
+      zrender: 5.6.1
 
   ee-first@1.1.1: {}
 
@@ -4371,7 +4372,7 @@ snapshots:
     transitivePeerDependencies:
       - uWebSockets.js
 
-  hammerjs@2.0.8(patch_hash=qxerx36ftg2rsoa347bepyc5mu): {}
+  hammerjs@2.0.8: {}
 
   has-flag@3.0.0: {}
 
@@ -5358,6 +5359,8 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
+  tslib@2.3.0: {}
+
   tslib@2.6.2: {}
 
   type-fest@2.19.0: {}
@@ -5468,7 +5471,9 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  valibot@0.31.0-rc.12: {}
+  valibot@1.1.0(typescript@5.4.5):
+    optionalDependencies:
+      typescript: 5.4.5
 
   validate-html-nesting@1.2.2: {}
 
@@ -5649,3 +5654,7 @@ snapshots:
       readable-stream: 4.5.2
 
   zod@3.23.8: {}
+
+  zrender@5.6.1:
+    dependencies:
+      tslib: 2.3.0

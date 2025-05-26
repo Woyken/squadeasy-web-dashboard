@@ -1,12 +1,21 @@
 import { Title } from "@solidjs/meta";
-import { A } from "@solidjs/router";
-import { For, Show, createSignal } from "solid-js";
+import { A, useSearchParams, useNavigate } from "@solidjs/router";
+import { For, Show, createSignal, onMount } from "solid-js";
 import { useSeasonRankingQuery } from "~/api/client";
 import { TeamUsersScoresGraph } from "~/components/TeamUsersScoresGraph";
 
 export default function TeamsUsersPoints() {
     const teamsRankingQuery = useSeasonRankingQuery();
     const [showTeamScores, setShowTeamScores] = createSignal<string>();
+    const [params] = useSearchParams();
+    const navigate = useNavigate();
+
+    onMount(() => {
+        if (params.teamId) {
+            setShowTeamScores(params.teamId);
+        }
+    });
+
     return (
         <main class="flex-1 overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
             <Title>Users points</Title>
@@ -47,15 +56,19 @@ export default function TeamsUsersPoints() {
                                             <>
                                                 <tr>
                                                     <td
-                                                        onclick={() =>
+                                                        onclick={() => {
                                                             setShowTeamScores(
                                                                 (old) =>
                                                                     old ===
                                                                     team.id
                                                                         ? undefined
                                                                         : team.id,
-                                                            )
-                                                        }
+                                                            );
+                                                            // Update the query string to reflect the expanded team
+                                                            navigate(
+                                                                `/users-points?teamId=${team.id}`,
+                                                            );
+                                                        }}
                                                     >
                                                         <div class="flex items-center space-x-3">
                                                             <Show

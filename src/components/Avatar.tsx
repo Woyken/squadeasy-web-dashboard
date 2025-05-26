@@ -1,11 +1,17 @@
-import { Match, Switch, createEffect, createMemo, createSignal } from "solid-js";
+import {
+    Match,
+    Switch,
+    createEffect,
+    createMemo,
+    createSignal,
+} from "solid-js";
 import { useUserByIdQuery } from "~/api/client";
 import { getUserInitials } from "~/getUserDisplayName";
 
 export function Avatar(props: { userId: string }) {
     const query = useUserByIdQuery(() => props.userId);
     const placeholder = createMemo(() => {
-        if (query.isLoading || !!query.data?.image) return undefined;
+        if (query.isLoading || !!query.data?.imageUrl) return undefined;
         if (query.error)
             return (
                 query.error?.message ??
@@ -19,10 +25,10 @@ export function Avatar(props: { userId: string }) {
         return getUserInitials(query.data);
     });
     // If I use `query.data?.image` directly inside Switch component, it breaks for some reason
-    const [userImage, setUserImage] = createSignal<string>()
+    const [userImage, setUserImage] = createSignal<string>();
     createEffect(() => {
-        setUserImage(query.data?.image);
-    })
+        setUserImage(query.data?.imageUrl);
+    });
     return (
         <>
             <Switch

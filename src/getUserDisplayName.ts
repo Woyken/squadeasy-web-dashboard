@@ -1,7 +1,7 @@
 export function getUserDisplayName(
     userData:
         | { firstName?: string; lastName?: string; email: string }
-        | undefined
+        | undefined,
 ) {
     if (userData?.firstName || userData?.lastName)
         return [userData.firstName, userData.lastName]
@@ -12,8 +12,8 @@ export function getUserDisplayName(
 
 export function getUserInitials(
     userData:
-        | { firstName?: string; lastName?: string; email: string }
-        | undefined
+        | { firstName?: string; lastName?: string; email?: string }
+        | undefined,
 ) {
     if (!userData) return;
     if (userData.firstName && userData.lastName)
@@ -21,7 +21,12 @@ export function getUserInitials(
             userData.firstName.slice(0, 1) + userData.lastName.slice(0, 1)
         ).toUpperCase();
 
-    return (userData.firstName ?? userData.lastName ?? userData.email)
+    return (
+        userData.firstName ??
+        userData.lastName ??
+        userData.email ??
+        "Unknown"
+    )
         .slice(0, 2)
         .toUpperCase();
 }

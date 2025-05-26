@@ -13,7 +13,6 @@ import { AutoBooster } from "./components/AutoBooster";
 import { UsersAvatarsPreview } from "./components/UsersAvatarsPreview";
 import { Avatar } from "./components/Avatar";
 import { UserLoader } from "./components/UserLoader";
-import { TeamScoreTracker } from "./components/TeamScoreTracker";
 import { AutoLikeTeamPosts } from "./components/AutoLikeTeamPosts";
 import { MainUserProvider } from "./components/MainUserProvider";
 import { ToasterProvider } from "./components/ToasterProvider";
@@ -101,12 +100,12 @@ export default function App() {
                                 <MainUserProvider>
                                     <AutoBooster>
                                         <AutoLikeTeamPosts>
-                                            <TeamScoreTracker>
-                                                <NavigationBar />
-                                                <Suspense>
-                                                    {props.children}
-                                                </Suspense>
-                                            </TeamScoreTracker>
+                                            {/* <TeamScoreTracker> */}
+                                            <NavigationBar />
+                                            <Suspense>
+                                                {props.children}
+                                            </Suspense>
+                                            {/* </TeamScoreTracker> */}
                                         </AutoLikeTeamPosts>
                                     </AutoBooster>
                                 </MainUserProvider>

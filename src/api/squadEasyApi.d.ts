@@ -67,6 +67,9 @@ export interface paths {
   "/api/4.0/histories/gps/{id}": {
     get: operations["Activity_activityHistory"];
   };
+    "/api/3.0/user-profile/{userId}": {
+    get: operations["UserService_getUserProfile"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -103,6 +106,22 @@ export interface components {
       pace: number;
       status: "OK" | string;
       externalActivityUrl: unknown;
+    };
+    UserProfileRemoteEntity: {
+      id: string;
+      isCurrentUser: boolean;
+      name: string;
+      firstName: string;
+      lastName: string;
+      teamName: string;
+      entityName?: string;
+      isInSameTeam: boolean;
+      imageUrl?: string;
+      isBlocked: boolean;
+      isPrivate: boolean;
+      isBoostable: boolean;
+      canSendMessage: boolean;
+      points?: string;
     };
     ActivityHistoryList: {
       filters: {
@@ -650,6 +669,21 @@ export interface operations {
           "application/json": {
             status: components["schemas"]["UserStatus"];
           };
+        };
+      };
+    };
+  };
+    UserService_getUserProfile: {
+    parameters: {
+      path: {
+        userId: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserProfileRemoteEntity"];
         };
       };
     };

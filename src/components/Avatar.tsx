@@ -9,7 +9,16 @@ import { useUserByIdQuery } from "~/api/client";
 import { getUserInitials } from "~/getUserDisplayName";
 
 export function Avatar(props: { userId: string }) {
+    // Currently there's a bug, if I try to access query props, like query.isLoading in a Match component, it will break ui.
+    // Delay rendering via separate signal and effect to avoid this.
+    const [queryLoaded, setQueryLoaded] = createSignal(false);
+
     const query = useUserByIdQuery(() => props.userId);
+    createEffect(() => {
+        if (query.isSuccess || query.isError) {
+            setQueryLoaded(true);
+        }
+    });
     const placeholder = createMemo(() => {
         if (query.isLoading || !!query.data?.imageUrl) return undefined;
         if (query.error)
@@ -40,14 +49,14 @@ export function Avatar(props: { userId: string }) {
                     </div>
                 }
             >
-                <Match when={!!userImage()}>
+                <Match when={userImage()}>
                     <div class="avatar">
                         <div class="w-16 rounded-full">
                             <img src={userImage()} />
                         </div>
                     </div>
                 </Match>
-                <Match when={!!placeholder()}>
+                <Match when={queryLoaded()}>
                     <div class="avatar placeholder">
                         <div class="w-16 rounded-full bg-neutral text-neutral-content">
                             <span class="text-xl">{placeholder()}</span>

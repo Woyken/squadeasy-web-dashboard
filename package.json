@@ -10,29 +10,29 @@
     },
     "dependencies": {
         "@solidjs/meta": "^0.29.4",
-        "@solidjs/router": "^0.13.5",
-        "@solidjs/start": "^1.0.1",
-        "@tanstack/solid-form": "^1.11.2",
-        "@tanstack/solid-query": "^5.40.1",
+        "@solidjs/router": "^0.15.3",
+        "@solidjs/start": "^1.1.4",
+        "@tanstack/solid-form": "^1.11.3",
+        "@tanstack/solid-query": "^5.77.1",
         "echarts": "^5.6.0",
         "localforage": "^1.10.0",
-        "openapi-fetch": "^0.9.7",
-        "solid-js": "^1.8.17",
+        "openapi-fetch": "^0.14.0",
+        "solid-js": "^1.9.7",
         "valibot": "^1.1.0",
-        "vinxi": "^0.3.11"
+        "vinxi": "^0.5.6"
     },
     "engines": {
-        "node": ">=18"
+        "node": ">=22"
     },
     "devDependencies": {
-        "@total-typescript/ts-reset": "^0.5.1",
-        "autoprefixer": "^10.4.19",
+        "@total-typescript/ts-reset": "^0.6.1",
+        "autoprefixer": "^10.4.21",
         "daisyui": "^4.12.2",
         "openapi-typescript": "^6.7.6",
-        "postcss": "^8.4.38",
-        "prettier": "^3.3.1",
-        "prettier-plugin-tailwindcss": "^0.6.1",
+        "postcss": "^8.5.3",
+        "prettier": "^3.5.3",
+        "prettier-plugin-tailwindcss": "^0.6.11",
         "tailwindcss": "^3.4.3",
-        "typescript": "^5.4.5"
+        "typescript": "^5.8.3"
     }
 }

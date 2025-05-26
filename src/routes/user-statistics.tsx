@@ -12,7 +12,7 @@ import { UserStatisticsGraph } from "~/components/UserStatisticsGraph";
 import { getUserDisplayName } from "~/getUserDisplayName";
 
 export default function UserStatisticsPage() {
-    const [params] = useSearchParams();
+    const [params] = useSearchParams<{ teamId: string; userId: string }>();
     const teamId = createMemo(() => params.teamId);
     const userIdParam = createMemo(() => params.userId); // get userId from query
     const teamQuery = useTeamQuery(teamId);

@@ -1,13 +1,21 @@
 import { Title } from "@solidjs/meta";
-import { useSearchParams } from "@solidjs/router";
+import { createFileRoute } from "@tanstack/solid-router";
 import { useAutoBoosterSetting } from "~/components/AutoBooster";
 import { useAutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
 import { useMainUser } from "~/components/MainUserProvider";
 import { Toggle } from "~/components/Toggle";
+import * as v from "valibot";
 
-export default function Home() {
-    const [params] = useSearchParams();
-    const boost = useAutoBoosterSetting(() => params.id!);
+export const Route = createFileRoute("/user")({
+    component: RouteComponent,
+    validateSearch: v.object({
+        id: v.string(),
+    }),
+});
+
+function RouteComponent() {
+    const userId = Route.useSearch({ select: (s) => s.id });
+    const boost = useAutoBoosterSetting(userId);
     const autoLikeTeamPosts = useAutoLikeTeamPosts();
     const mainUser = useMainUser();
     return (
@@ -17,10 +25,10 @@ export default function Home() {
                 <div class="text-xl font-semibold">Settings</div>
                 <div class="divider mt-2" />
                 <Toggle
-                    checked={mainUser.mainUserId() === params.id}
+                    checked={mainUser.mainUserId() === userId()}
                     onChecked={(checked) =>
                         checked
-                            ? mainUser.setMainUserId(params.id)
+                            ? mainUser.setMainUserId(userId())
                             : mainUser.setMainUserId(undefined)
                     }
                     label="Set as main user (will be used for common queries)"
@@ -33,10 +41,10 @@ export default function Home() {
                     label="Auto boost"
                 />
                 <Toggle
-                    checked={autoLikeTeamPosts.autoLikeTeamPosts(params.id!)}
+                    checked={autoLikeTeamPosts.autoLikeTeamPosts(userId())}
                     onChecked={(checked) => {
                         autoLikeTeamPosts.setAutoLikeTeamPosts(
-                            params.id!,
+                            userId(),
                             checked,
                         );
                     }}

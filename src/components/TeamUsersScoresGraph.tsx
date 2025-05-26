@@ -14,7 +14,7 @@ import {
 import { getUserDisplayName } from "~/getUserDisplayName";
 import { init as echartsInit } from "echarts";
 import { useMainUser } from "./MainUserProvider";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate } from "@tanstack/solid-router";
 
 export function TeamUsersScoresGraph(props: { teamId: string }) {
     const teamQuery = useTeamQuery(() => props.teamId);
@@ -230,9 +230,13 @@ function CanvasRenderer(props: {
                 const urlParams = new URLSearchParams(window.location.search);
                 const teamId = urlParams.get("teamId");
                 if (teamId) {
-                    navigate(
-                        `/user-statistics?teamId=${teamId}&userId=${user.id}`,
-                    );
+                    navigate({
+                        to: `/user-statistics`,
+                        search: {
+                            teamId: teamId,
+                            userId: user.id,
+                        },
+                    });
                 }
             }
         });

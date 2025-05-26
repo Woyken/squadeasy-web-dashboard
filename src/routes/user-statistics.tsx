@@ -1,5 +1,4 @@
 import { Title } from "@solidjs/meta";
-import { useSearchParams } from "@solidjs/router";
 import { For, Show, createSignal, createMemo, onMount } from "solid-js";
 import {
     useMyChallengeQuery,
@@ -10,11 +9,20 @@ import { Avatar } from "~/components/Avatar";
 import { useMainUser } from "~/components/MainUserProvider";
 import { UserStatisticsGraph } from "~/components/UserStatisticsGraph";
 import { getUserDisplayName } from "~/getUserDisplayName";
+import { createFileRoute } from "@tanstack/solid-router";
+import * as v from "valibot";
 
-export default function UserStatisticsPage() {
-    const [params] = useSearchParams<{ teamId: string; userId: string }>();
-    const teamId = createMemo(() => params.teamId);
-    const userIdParam = createMemo(() => params.userId); // get userId from query
+export const Route = createFileRoute("/user-statistics")({
+    component: RouteComponent,
+    validateSearch: v.object({
+        teamId: v.optional(v.string()),
+        userId: v.optional(v.string()),
+    }),
+});
+
+function RouteComponent() {
+    const teamId = Route.useSearch({ select: (s) => s.teamId });
+    const userIdParam = Route.useSearch({ select: (s) => s.userId });
     const teamQuery = useTeamQuery(teamId);
     const [showUserStatistics, setShowUserStatistics] = createSignal<string>();
 

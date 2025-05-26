@@ -2,7 +2,7 @@ import { createForm } from "@tanstack/solid-form";
 import { email, minLength, pipe, string } from "valibot";
 import type { FieldApi } from "@tanstack/solid-form";
 import { useLoginMutation } from "~/api/client";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate } from "@tanstack/solid-router";
 
 interface FieldInfoProps {
     field: FieldApi<any, any, any, any>;
@@ -33,7 +33,7 @@ export default function LoginForm() {
                 email: value.email,
                 password: value.password,
             });
-            navigate("/");
+            navigate({ to: "/" });
         },
     }));
 

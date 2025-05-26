@@ -1,18 +1,26 @@
+import { createFileRoute, Link } from "@tanstack/solid-router";
 import { Title } from "@solidjs/meta";
-import { A, useSearchParams, useNavigate } from "@solidjs/router";
 import { For, Show, createSignal, onMount } from "solid-js";
 import { useSeasonRankingQuery } from "~/api/client";
 import { TeamUsersScoresGraph } from "~/components/TeamUsersScoresGraph";
+import * as v from "valibot";
 
-export default function TeamsUsersPoints() {
+export const Route = createFileRoute("/users-points")({
+    component: RouteComponent,
+    validateSearch: v.object({
+        teamId: v.optional(v.string()),
+    }),
+});
+
+function RouteComponent() {
     const teamsRankingQuery = useSeasonRankingQuery();
     const [showTeamScores, setShowTeamScores] = createSignal<string>();
-    const [params] = useSearchParams();
-    const navigate = useNavigate();
+    const teamId = Route.useSearch({ select: (s) => s.teamId });
+    const navigate = Route.useNavigate();
 
     onMount(() => {
-        if (params.teamId) {
-            setShowTeamScores(params.teamId);
+        if (teamId()) {
+            setShowTeamScores(teamId());
         }
     });
 
@@ -65,9 +73,12 @@ export default function TeamsUsersPoints() {
                                                                         : team.id,
                                                             );
                                                             // Update the query string to reflect the expanded team
-                                                            navigate(
-                                                                `/users-points?teamId=${team.id}`,
-                                                            );
+                                                            navigate({
+                                                                to: "/users-points",
+                                                                search: {
+                                                                    teamId: team.id,
+                                                                },
+                                                            });
                                                         }}
                                                     >
                                                         <div class="flex items-center space-x-3">
@@ -116,11 +127,14 @@ export default function TeamsUsersPoints() {
                                                     }
                                                 >
                                                     <div>
-                                                        <A
-                                                            href={`/user-statistics?teamId=${team.id}`}
+                                                        <Link
+                                                            to={`/user-statistics`}
+                                                            search={{
+                                                                teamId: team.id,
+                                                            }}
                                                         >
                                                             User statistics
-                                                        </A>
+                                                        </Link>
                                                         <div class="max-h-96">
                                                             <TeamUsersScoresGraph
                                                                 teamId={team.id}

@@ -1,5 +1,4 @@
 import { Title } from "@solidjs/meta";
-import { A, useNavigate } from "@solidjs/router";
 import {
     createEffect,
     createMemo,
@@ -16,13 +15,25 @@ import {
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { useMainUser } from "~/components/MainUserProvider";
 import { init as echartsInit } from "echarts";
+import { createFileRoute, Link } from "@tanstack/solid-router";
+import { NotFound } from "~/components/NotFoundRoutePage";
 
-export default function Home() {
-    const navigate = useNavigate();
+export const Route = createFileRoute("/")({
+    component: RouteComponent,
+    notFoundComponent: () => <NotFound />,
+    errorComponent: (props) => (
+        <div onclick={props.reset}>
+            Error occured! {JSON.stringify(props.error)}
+        </div>
+    ),
+});
+
+function RouteComponent() {
+    const navigate = Route.useNavigate();
     const mainUser = useMainUser();
     const users = useUsersTokens();
     createEffect(() => {
-        if (users().tokens.size === 0) navigate("/login");
+        if (users().tokens.size === 0) navigate({ to: "/login" });
     });
 
     // If user is not set, will navigate out, this page
@@ -105,9 +116,9 @@ export default function Home() {
                 </div>
                 <div class="card bg-base-100 shadow-md">
                     <div class="card-body items-center text-center">
-                        <A href="/users-points" class="text-5xl font-bold">
+                        <Link to="/users-points" class="text-5xl font-bold">
                             Teams User Scores 🎮
-                        </A>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -129,7 +140,7 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
     const [canvasContainer, setCanvasContainer] =
         createSignal<HTMLDivElement>();
 
-    const navigate = useNavigate(); // Add navigate for programmatic routing
+    const navigate = Route.useNavigate();
     const teamsQuery = useSeasonRankingQuery();
     const first20TeamsMetadata = createMemo(() => {
         return {
@@ -189,7 +200,7 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
         const teamEntries = (
             !!currentTempData
                 ? (historicalData ?? []).concat(currentTempData)
-                : historicalData ?? []
+                : (historicalData ?? [])
         )
             .map((teamData) => {
                 const timestamp = teamData.timestamp;
@@ -342,7 +353,10 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
                 (t) => t.teamName === params.seriesName,
             );
             if (team) {
-                navigate(`/users-points?teamId=${team.teamId}`);
+                navigate({
+                    to: `/users-points`,
+                    search: { teamId: team.teamId },
+                });
             }
         });
 

@@ -10,10 +10,11 @@
     },
     "dependencies": {
         "@solidjs/meta": "^0.29.4",
-        "@solidjs/router": "^0.15.3",
         "@solidjs/start": "^1.1.4",
         "@tanstack/solid-form": "^1.11.3",
         "@tanstack/solid-query": "^5.77.1",
+        "@tanstack/solid-router": "^1.120.10",
+        "@tanstack/solid-router-devtools": "^1.120.10",
         "echarts": "^5.6.0",
         "localforage": "^1.10.0",
         "openapi-fetch": "^0.14.0",
@@ -25,6 +26,7 @@
         "node": ">=22"
     },
     "devDependencies": {
+        "@tanstack/router-plugin": "^1.120.10",
         "@total-typescript/ts-reset": "^0.6.1",
         "autoprefixer": "^10.4.21",
         "daisyui": "^4.12.2",

@@ -1,9 +1,9 @@
 import createClient from "openapi-fetch";
 import { paths } from "./squadEasyApi";
 import {
-    createMutation,
-    createQueries,
-    createQuery,
+    useMutation,
+    useQueries,
+    useQuery,
     keepPreviousData,
     queryOptions,
     useQueryClient,
@@ -22,7 +22,7 @@ export const squadEasyClient = createClient<paths>({
 
 export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
     const getUserToken = useGetUserToken(userId);
-    return createQuery(() => ({
+    return useQuery(() => ({
         queryKey: ["/api/3.0/my/challenge", userId()],
         queryFn: async () => {
             const token = await getUserToken();
@@ -46,7 +46,7 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
 export function useUserByIdQuery(userId: Accessor<string>) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    return createQuery(() => ({
+    return useQuery(() => ({
         queryKey: ["/api/3.0/user-profile/{userId}", userId()],
         queryFn: async () => {
             const token = await getToken();
@@ -80,7 +80,7 @@ export function useUserByIdQuery(userId: Accessor<string>) {
 
 export function useMyUserQuery(userId: Accessor<string>) {
     const getUserToken = useGetUserToken(userId);
-    return createQuery(() => {
+    return useQuery(() => {
         return getMyUserOptions(userId(), getUserToken);
     });
 }
@@ -138,7 +138,7 @@ export function useMyTeamQuery(
     enabled?: Accessor<boolean>,
 ) {
     const getUserToken = useGetUserToken(userId);
-    return createQuery(() => {
+    return useQuery(() => {
         return {
             ...getMyTeamOptions(userId(), getUserToken),
             enabled: enabled?.() ?? true,
@@ -153,7 +153,7 @@ export function useSeasonRankingQuery(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    return createQuery(() => ({
+    return useQuery(() => ({
         queryKey: ["/api/2.0/my/ranking/season"],
         queryFn: async () => {
             const accessToken = await getToken();
@@ -187,7 +187,7 @@ export function useTeamQuery(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    return createQuery(() => ({
+    return useQuery(() => ({
         ...teamQueryOptions(
             teamId,
             getToken,
@@ -240,7 +240,7 @@ export function useUserStatisticsQuery(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    return createQuery(() =>
+    return useQuery(() =>
         userStatisticsQueryOptions(
             userId,
             getToken,
@@ -296,7 +296,7 @@ export function useSocialPostsQuery(
     enabled?: Accessor<boolean>,
 ) {
     const getToken = useGetUserToken(userId);
-    return createQuery(() => ({
+    return useQuery(() => ({
         queryKey: ["/api/3.0/social/posts", userId(), sincePostId?.()],
         queryFn: async () => {
             const token = await getToken();
@@ -328,7 +328,7 @@ export function useSocialPostsQuery(
 
 export function useLikePostMutation(userId: Accessor<string>) {
     const getUserToken = useGetUserToken(userId);
-    return createMutation(() => ({
+    return useMutation(() => ({
         mutationFn: async (targetPostId: string) => {
             const accessToken = await getUserToken();
             if (!accessToken)
@@ -358,7 +358,7 @@ export function useLikePostMutation(userId: Accessor<string>) {
 export function useBoostMutation(userId: Accessor<string>) {
     const client = useQueryClient();
     const getUserToken = useGetUserToken(userId);
-    return createMutation(() => ({
+    return useMutation(() => ({
         mutationFn: async (targetUserId: string) => {
             const accessToken = await getUserToken();
             if (!accessToken)
@@ -416,7 +416,7 @@ export function useGetUserToken(userId: Accessor<string | undefined>) {
 
 export function useRefreshTokenMutation() {
     const usersTokens = useUsersTokens();
-    return createMutation(() => ({
+    return useMutation(() => ({
         mutationKey: ["/api/3.0/auth/refresh-token"],
         mutationFn: async (variables: {
             accessToken: string;
@@ -460,7 +460,7 @@ export function useRefreshTokenMutation() {
 export function useLoginMutation() {
     const client = useQueryClient();
     const usersTokens = useUsersTokens();
-    return createMutation(() => ({
+    return useMutation(() => ({
         mutationKey: ["/api/3.0/auth/login"],
         mutationFn: async (variables: { email: string; password: string }) => {
             const loginResult = await squadEasyClient.POST(
@@ -519,7 +519,7 @@ export function useHistoricalTeamPointsQuery(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    const query = createQuery(() => ({
+    const query = useQuery(() => ({
         queryKey: ["historicalTeamPoints", start(), end()],
         queryFn: async ({ signal }) => {
             const accessToken = await getToken();
@@ -553,7 +553,7 @@ export function useHistoricalUserPointsQueries(
     start: Accessor<number>,
     end: Accessor<number>,
 ) {
-    return createQueries(() => ({
+    return useQueries(() => ({
         queries: userIds().map((userId) =>
             getHistoricalUserPointsQueryOptions(() => userId, start, end),
         ),
@@ -611,7 +611,7 @@ export function useHistoricalUserActivityPointsQuery(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    const query = createQuery(() => ({
+    const query = useQuery(() => ({
         queryKey: ["historicalUserActivityPoints", userId(), start(), end()],
         queryFn: async ({ signal }) => {
             const accessToken = await getToken();

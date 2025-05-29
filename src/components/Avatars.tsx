@@ -1,15 +1,11 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { For, Match, Show, Suspense, Switch } from "solid-js";
+import { useMyUserQuery, useUserStatisticsQuery } from "~/api/client";
+import { getUserInitials } from "~/getUserDisplayName";
 
-export function Avatars(props: {
-    users: (
-        | { image: string; placeholder?: never }
-        | { placeholder: string; image?: never }
-        | { loading: true; placeholder?: never; image?: never }
-    )[];
-}) {
+export function Avatars(props: { userIds: string[] }) {
     return (
         <div class="avatar-group -space-x-6 rtl:space-x-reverse">
-            <Show when={props.users.length === 0}>
+            <Show when={props.userIds.length === 0}>
                 <div class="avatar placeholder">
                     <div class="w-12 bg-neutral text-neutral-content">
                         <svg
@@ -29,49 +25,78 @@ export function Avatars(props: {
             </Show>
             <For
                 each={
-                    props.users.length === 3
-                        ? props.users
-                        : props.users.slice(0, 2)
+                    props.userIds.length === 3
+                        ? props.userIds
+                        : props.userIds.slice(0, 2)
                 }
             >
-                {(user) => (
-                    <Switch
-                        fallback={
-                            <div class="avatar placeholder">
-                                <div class="w-12 bg-neutral text-neutral-content">
-                                    <span class="loading loading-ring loading-lg"></span>
+                {(userId) => {
+                    const myUserQuery = useMyUserQuery(() => userId);
+
+                    const userStatisticsQuery = useUserStatisticsQuery(
+                        () => userId,
+                    );
+
+                    return (
+                        <Suspense
+                            fallback={
+                                <div class="avatar placeholder">
+                                    <div class="w-12 bg-neutral text-neutral-content">
+                                        <span class="loading loading-ring loading-lg"></span>
+                                    </div>
                                 </div>
-                            </div>
-                        }
-                    >
-                        <Match when={!!user.image}>
-                            <div class="avatar">
-                                <div class="w-12">
-                                    <img src={user.image} />
-                                </div>
-                            </div>
-                        </Match>
-                        <Match when={!!user.placeholder}>
-                            <div class="avatar placeholder">
-                                <div class="w-12 bg-neutral text-neutral-content">
-                                    <span>{user.placeholder}</span>
-                                </div>
-                            </div>
-                        </Match>
-                    </Switch>
-                )}
+                            }
+                        >
+                            <Switch
+                                fallback={
+                                    <div class="avatar placeholder">
+                                        <div class="w-12 bg-neutral text-neutral-content">
+                                            <span class="loading loading-ring loading-lg"></span>
+                                        </div>
+                                    </div>
+                                }
+                            >
+                                <Match when={!!userStatisticsQuery.data?.image}>
+                                    <div class="avatar">
+                                        <div class="w-12">
+                                            <img
+                                                src={
+                                                    userStatisticsQuery.data!
+                                                        .image!
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                </Match>
+                                <Match
+                                    when={!!getUserInitials(myUserQuery.data)}
+                                >
+                                    <div class="avatar placeholder">
+                                        <div class="w-12 bg-neutral text-neutral-content">
+                                            <span>
+                                                {getUserInitials(
+                                                    myUserQuery.data,
+                                                ) ?? "??"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Match>
+                            </Switch>
+                        </Suspense>
+                    );
+                }}
             </For>
-            <Show when={props.users.length > 3}>
+            <Show when={props.userIds.length > 3}>
                 <div class="avatar placeholder">
                     <div class="w-12 bg-neutral text-neutral-content">
-                        <span>+{props.users.length - 2}</span>
+                        <span>+{props.userIds.length - 2}</span>
                     </div>
                 </div>
             </Show>
-            <Show when={props.users.length > 3}>
+            <Show when={props.userIds.length > 3}>
                 <div class="avatar placeholder">
                     <div class="w-12 bg-neutral text-neutral-content">
-                        <span>+{props.users.length - 2}</span>
+                        <span>+{props.userIds.length - 2}</span>
                     </div>
                 </div>
             </Show>

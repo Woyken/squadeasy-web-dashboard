@@ -1,0 +1,2 @@
+patchedDependencies:
+    "@tanstack/solid-router": patches/@tanstack__solid-router.patch

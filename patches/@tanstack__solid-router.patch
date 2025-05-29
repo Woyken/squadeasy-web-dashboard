@@ -1,0 +1,39 @@
+diff --git a/dist/source/link.jsx b/dist/source/link.jsx
+index 8f842a47b89071b5dae57aee8f7a3675cb649a63..c8ad7ad49e222632ec7d5d7e223b2bb7460dae1c 100644
+--- a/dist/source/link.jsx
++++ b/dist/source/link.jsx
+@@ -94,8 +94,9 @@ export function useLinkProps(options) {
+     const from = useMatches({
+         select: (matches) => options.from ?? matches[matches.length - 1]?.fullPath,
+     });
++    const [ignoreOptionsWithChildren, localOptions] = Solid.splitProps(options, ['children'])
+     const _options = () => ({
+-        ...options,
++        ...localOptions,
+         from: from(),
+     });
+     const next = Solid.createMemo(() => {
+@@ -315,13 +316,16 @@ export function createLink(Comp) {
+ export const Link = (props) => {
+     const [local, rest] = Solid.splitProps(props, ['_asChild']);
+     const [_, linkProps] = Solid.splitProps(useLinkProps(rest), ['type', 'children']);
+-    const children = () => typeof rest.children === 'function'
+-        ? rest.children({
+-            get isActive() {
+-                return linkProps['data-status'] === 'active';
+-            },
+-        })
+-        : rest.children;
++    const children = () => {
++        const ch = rest.children;
++        return typeof ch === 'function'
++            ? ch({
++                get isActive() {
++                    return linkProps['data-status'] === 'active';
++                },
++            })
++            : ch;
++    };
+     return (<Dynamic component={local._asChild ? local._asChild : 'a'} {...linkProps}>
+       {children}
+     </Dynamic>);

@@ -3,6 +3,7 @@ import {
     For,
     ParentProps,
     Setter,
+    Suspense,
     createContext,
     createEffect,
     createMemo,
@@ -27,7 +28,7 @@ function AutoBoosterUser(props: { userId: string }) {
 
     const autoBoostSetting = useAutoBoosterSetting(() => props.userId);
     createEffect(() => {
-        if(!autoBoostSetting.autoBoost()) return;
+        if (!autoBoostSetting.autoBoost()) return;
         const boostAvailableDate = boostAvailableAt();
         if (boostAvailableDate === "") return;
 
@@ -119,9 +120,11 @@ export function AutoBooster(props: ParentProps) {
                     setSettings: setUserSettings,
                 })}
             >
-                <For each={userIds()}>
-                    {(userId) => <AutoBoosterUser userId={userId} />}
-                </For>
+                <Suspense>
+                    <For each={userIds()}>
+                        {(userId) => <AutoBoosterUser userId={userId} />}
+                    </For>
+                </Suspense>
                 {props.children}
             </ctx.Provider>
         </>

@@ -3,6 +3,7 @@ import {
     For,
     JSX,
     ParentProps,
+    Suspense,
     createContext,
     createEffect,
     createMemo,
@@ -56,28 +57,30 @@ export function AutoLikeTeamPosts(props: ParentProps) {
                     userAutoLikeSetting().get(userId)?.autoLike() ?? false,
             }}
         >
-            <For each={userIds()}>
-                {(userId) => (
-                    <AutoLikePostUser userId={userId}>
-                        {(setAutoLike, autoLike) => {
-                            setUserAutoLikeSetting((old) =>
-                                new Map(old).set(userId, {
-                                    setAutoLike,
-                                    autoLike,
-                                }),
-                            );
-                            onCleanup(() => {
-                                setUserAutoLikeSetting((old) => {
-                                    const n = new Map(old);
-                                    n.delete(userId);
-                                    return n;
+            <Suspense>
+                <For each={userIds()}>
+                    {(userId) => (
+                        <AutoLikePostUser userId={userId}>
+                            {(setAutoLike, autoLike) => {
+                                setUserAutoLikeSetting((old) =>
+                                    new Map(old).set(userId, {
+                                        setAutoLike,
+                                        autoLike,
+                                    }),
+                                );
+                                onCleanup(() => {
+                                    setUserAutoLikeSetting((old) => {
+                                        const n = new Map(old);
+                                        n.delete(userId);
+                                        return n;
+                                    });
                                 });
-                            });
-                            return <></>;
-                        }}
-                    </AutoLikePostUser>
-                )}
-            </For>
+                                return <></>;
+                            }}
+                        </AutoLikePostUser>
+                    )}
+                </For>
+            </Suspense>
             {props.children}
         </ctx.Provider>
     );

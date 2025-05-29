@@ -49,7 +49,9 @@ function RootComponent() {
                 </ToasterProvider>
             </MetaProvider>
 
-            <TanStackRouterDevtools />
+            <Suspense>
+                <TanStackRouterDevtools />
+            </Suspense>
         </>
     );
 }

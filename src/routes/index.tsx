@@ -147,8 +147,8 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
     const teamsQuery = useSeasonRankingQuery();
     const first20TeamsMetadata = createMemo(() => {
         return {
-            timestamp: teamsQuery.dataUpdatedAt,
-            data: teamsQuery.data?.teams
+            timestamp: teamsQuery.data?.time ?? Date.now(),
+            data: teamsQuery.data?.data?.teams
                 .toSorted((a, b) => b.points - a.points)
                 .slice(0, 20),
         };

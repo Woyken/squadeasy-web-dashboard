@@ -170,7 +170,7 @@ export function useSeasonRankingQuery(
                 throw new Error(
                     `Get teams failed ${JSON.stringify(result.error)}`,
                 );
-            return result.data;
+            return { time: Date.now(), data: result.data };
         },
         staleTime: 5 * 60 * 1000,
         enabled: (enabled?.() ?? true) && !!mainUser.mainUserId(),

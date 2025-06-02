@@ -53,7 +53,7 @@ function RouteComponent() {
                                     <Show when={!!teamsRankingQuery.data}>
                                         <For
                                             each={
-                                                teamsRankingQuery.data?.teams
+                                                teamsRankingQuery.data?.data?.teams
                                                     .toSorted(
                                                         (a, b) =>
                                                             b.points - a.points,

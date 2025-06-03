@@ -164,6 +164,12 @@ function UserChart(props: {
         const c = chart();
         if (!c) return;
         c.setOption({
+            legend: {
+                inactiveColor: "#777",
+                textStyle: {
+                    color: "#fff",
+                },
+            },
             type: "line",
             emphasis: {
                 focus: "series",

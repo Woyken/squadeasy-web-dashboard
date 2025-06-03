@@ -163,6 +163,11 @@ function CanvasRenderer(props: {
 
         const t = setTimeout(() => {
             lineChart()?.setOption({
+                legend: {
+                    data: sortedDatasets.map(
+                        (x) => userDisplayNames()[x.id] || x.id,
+                    ),
+                },
                 series: sortedDatasets.map((x, idx) => ({
                     name: userDisplayNames()[x.id] || x.id,
                     type: "line",
@@ -203,9 +208,15 @@ function CanvasRenderer(props: {
         });
 
         lineChart()?.setOption({
+            legend: {
+                inactiveColor: "#777",
+                textStyle: {
+                    color: "#fff",
+                },
+            },
             type: "line",
             tooltip: {
-                trigger: "item",
+                trigger: "axis",
             },
             xAxis: {
                 min: xAxisMin(),

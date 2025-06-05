@@ -17,16 +17,9 @@ import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { useMainUser } from "~/components/MainUserProvider";
 import { init as echartsInit } from "echarts";
 import { createFileRoute, Link } from "@tanstack/solid-router";
-import { NotFound } from "~/components/NotFoundRoutePage";
 
 export const Route = createFileRoute("/")({
     component: RouteComponent,
-    notFoundComponent: () => <NotFound />,
-    errorComponent: (props) => (
-        <div onclick={props.reset}>
-            Error occured! {JSON.stringify(props.error)}
-        </div>
-    ),
 });
 
 function RouteComponent() {

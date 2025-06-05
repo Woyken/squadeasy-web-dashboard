@@ -15,9 +15,16 @@ import { MainUserProvider } from "~/components/MainUserProvider";
 import { ToasterProvider } from "~/components/ToasterProvider";
 import { Outlet, createRootRoute } from "@tanstack/solid-router";
 import { TanStackRouterDevtools } from "@tanstack/solid-router-devtools";
+import { NotFound } from "~/components/NotFoundRoutePage";
 
 export const Route = createRootRoute({
     component: RootComponent,
+    notFoundComponent: () => <NotFound />,
+    errorComponent: (props) => (
+        <div onclick={props.reset}>
+            Error occured! {JSON.stringify(props.error)}
+        </div>
+    ),
 });
 
 function RootComponent() {

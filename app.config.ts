@@ -4,7 +4,7 @@ import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 export default defineConfig({
     ssr: true,
     server: {
-        baseURL: process.env.BASE_PATH,
+        baseURL: process.env.VITE_BASE_PATH,
         static: true,
         preset: "static",
         prerender: {

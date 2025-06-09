@@ -34,7 +34,7 @@ jobs:
             - name: Run build
               run: pnpm build
               env:
-                  BASE_PATH: /squadeasy-web-dashboard
+                  VITE_BASE_PATH: /squadeasy-web-dashboard
                   VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
 
             - name: Setup Pages

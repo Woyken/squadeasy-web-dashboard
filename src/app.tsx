@@ -15,7 +15,7 @@ export default function App() {
     return (
         <RouterProvider
             router={router}
-            basepath={import.meta.env.SERVER_BASE_URL}
+            basepath={import.meta.env.VITE_BASE_PATH}
         />
     );
 }

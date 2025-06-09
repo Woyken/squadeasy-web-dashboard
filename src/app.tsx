@@ -3,7 +3,10 @@ import { routeTree } from "./routeTree.gen";
 import "./app.css";
 import "./resetCss.css";
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+    routeTree,
+    basepath: import.meta.env.SERVER_BASE_URL,
+});
 
 declare module "@tanstack/solid-router" {
     interface Register {
@@ -12,10 +15,5 @@ declare module "@tanstack/solid-router" {
 }
 
 export default function App() {
-    return (
-        <RouterProvider
-            router={router}
-            basepath={import.meta.env.VITE_BASE_PATH}
-        />
-    );
+    return <RouterProvider router={router} />;
 }

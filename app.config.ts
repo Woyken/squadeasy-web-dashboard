@@ -13,7 +13,7 @@ export default defineConfig({
         preset: "static",
         prerender: {
             routes: [
-                `${basePathPrepend}/`,
+                `/`,
                 `${basePathPrepend}/404.html`,
                 `${basePathPrepend}/login`,
                 `${basePathPrepend}/user-statistics`,

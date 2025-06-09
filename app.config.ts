@@ -1,10 +1,6 @@
 import { defineConfig } from "@solidjs/start/config";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
-const basePathPrepend = process.env.BASE_PATH
-    ? `/${process.env.BASE_PATH}`
-    : "";
-
 export default defineConfig({
     ssr: true,
     server: {
@@ -14,11 +10,11 @@ export default defineConfig({
         prerender: {
             routes: [
                 `/`,
-                `${basePathPrepend}/404.html`,
-                `${basePathPrepend}/login`,
-                `${basePathPrepend}/user-statistics`,
-                `${basePathPrepend}/user`,
-                `${basePathPrepend}/users-points`,
+                `/404.html`,
+                `/login`,
+                `/user-statistics`,
+                `/user`,
+                `/users-points`,
             ],
             crawlLinks: true,
         },

@@ -141,9 +141,9 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
     const first20TeamsMetadata = createMemo(() => {
         return {
             timestamp: teamsQuery.data?.time ?? Date.now(),
-            data: teamsQuery.data?.data?.teams
-                .toSorted((a, b) => b.points - a.points)
-                .slice(0, 20),
+            data: teamsQuery.data?.data?.teams.toSorted(
+                (a, b) => b.points - a.points,
+            ),
         };
     });
 
@@ -213,6 +213,10 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
                     .map((x) => x as NonNullable<typeof x>);
             })
             .flatMap((x) => x)
+            .filter(
+                (x) =>
+                    x.timestamp >= props.startAt && x.timestamp <= props.endsAt,
+            )
             .toSorted((a, b) => b.timestamp - a.timestamp)
             .reduce(
                 (acc, curr) => {
@@ -394,6 +398,7 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
         );
         lineChart()?.setOption({
             legend: {
+                type: "scroll",
                 inactiveColor: "#777",
                 textStyle: {
                     color: "#fff",

@@ -166,6 +166,11 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
         end: number;
     }>(
         (() => {
+            const now = Date.now();
+            if (now < props.startAt || now >= props.endsAt) {
+                return { start: props.startAt, end: props.endsAt };
+            }
+
             const end = Date.now();
             const start = end - 24 * 60 * 60 * 1000;
             return { start, end };
@@ -392,10 +397,19 @@ function CanvasRenderer(props: { endsAt: number; startAt: number }) {
     createEffect(() => {
         // Prepare legend.selected: top 10 enabled, rest disabled
         const allTeams = untrack(() => datasets());
-        const top10 = allTeams.slice(-10).map((x) => x.teamName);
-        const legendSelected = Object.fromEntries(
-            allTeams.map((x) => [x.teamName, top10.includes(x.teamName)]),
-        );
+        let legendSelected:
+            | {
+                  [k: string]: boolean;
+              }
+            | undefined = undefined;
+
+        const now = Date.now();
+        if (now >= props.startAt && now < props.endsAt) {
+            const top10 = allTeams.slice(-10).map((x) => x.teamName);
+            legendSelected = Object.fromEntries(
+                allTeams.map((x) => [x.teamName, top10.includes(x.teamName)]),
+            );
+        }
         lineChart()?.setOption({
             legend: {
                 type: "scroll",

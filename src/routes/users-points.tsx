@@ -62,7 +62,7 @@ function RouteComponent() {
                                         >
                                             {(team) => (
                                                 <>
-                                                    <tr id={team.id}>
+                                                    <tr id={`id-${team.id}`}>
                                                         <Show
                                                             when={
                                                                 teamId() ===
@@ -73,7 +73,7 @@ function RouteComponent() {
                                                                 onMount={() => {
                                                                     document
                                                                         .querySelector(
-                                                                            `#${team.id}`,
+                                                                            `#id-${team.id}`,
                                                                         )
                                                                         ?.scrollIntoView();
                                                                 }}

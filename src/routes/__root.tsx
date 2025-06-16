@@ -20,11 +20,14 @@ import { NotFound } from "~/components/NotFoundRoutePage";
 export const Route = createRootRoute({
     component: RootComponent,
     notFoundComponent: () => <NotFound />,
-    errorComponent: (props) => (
-        <div onclick={props.reset}>
-            Error occured! {JSON.stringify(props.error)}
-        </div>
-    ),
+    errorComponent: (props) => {
+        console.error("rendering error", props.error);
+        return (
+            <div onclick={props.reset}>
+                Error occured! {JSON.stringify(props.error)}
+            </div>
+        );
+    },
 });
 
 function RootComponent() {

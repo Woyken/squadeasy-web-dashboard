@@ -4,6 +4,7 @@ import { For, Show, Suspense, createSignal, onMount } from "solid-js";
 import { useSeasonRankingQuery } from "~/api/client";
 import { TeamUsersScoresGraph } from "~/components/TeamUsersScoresGraph";
 import * as v from "valibot";
+import { OnMount } from "~/components/OnMount";
 
 export const Route = createFileRoute("/users-points")({
     component: RouteComponent,
@@ -61,7 +62,23 @@ function RouteComponent() {
                                         >
                                             {(team) => (
                                                 <>
-                                                    <tr>
+                                                    <tr id={team.id}>
+                                                        <Show
+                                                            when={
+                                                                teamId() ===
+                                                                team.id
+                                                            }
+                                                        >
+                                                            <OnMount
+                                                                onMount={() => {
+                                                                    document
+                                                                        .querySelector(
+                                                                            `#${team.id}`,
+                                                                        )
+                                                                        ?.scrollIntoView();
+                                                                }}
+                                                            />
+                                                        </Show>
                                                         <td
                                                             onclick={() => {
                                                                 setShowTeamScores(

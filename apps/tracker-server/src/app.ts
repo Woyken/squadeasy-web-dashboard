@@ -26,6 +26,7 @@ import {
 } from "./intervalQuery.ts";
 import { initializeDatabase } from "./scripts/init-db.ts";
 import cors from "@fastify/cors";
+import httpProxy from "@fastify/http-proxy";
 import { subscribeToPointsStream } from "./realtime/pointsEvents.ts";
 
 const dateTimeStringSchema = z
@@ -138,7 +139,7 @@ const fastify: FastifyInstance = Fastify({
   logger: process.env.NODE_ENV === "development",
 });
 const swaggerTransform = createJsonSchemaTransform({
-  skipList: ["/docs", "/docs/*", "/openapi.json"],
+  skipList: ["/docs", "/docs/*", "/openapi.json", "/squadeasy/proxy", "/squadeasy/proxy/*"],
 });
 const api = fastify.withTypeProvider<ZodTypeProvider>();
 
@@ -201,6 +202,14 @@ fastify.setErrorHandler((error, _request, reply) => {
 
 fastify.register(cors, {
   origin: "*",
+});
+
+// Proxy all /squadeasy/proxy/* requests to the SquadEasy API, stripping the prefix
+fastify.register(httpProxy, {
+  upstream: "https://api-challenge.squadeasy.com",
+  prefix: "/squadeasy/proxy",
+  rewritePrefix: "",
+  http2: false,
 });
 
 fastify.after(() => {

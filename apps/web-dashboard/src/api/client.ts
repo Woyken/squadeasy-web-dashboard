@@ -17,7 +17,7 @@ const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:3231";
 
 export const squadEasyClient = createClient<paths>({
-    baseUrl: "https://api-challenge.squadeasy.com",
+    baseUrl: `${API_BASE_URL}/squadeasy/proxy`,
 });
 
 export function useMyChallengeQuery(userId: Accessor<string | undefined>) {

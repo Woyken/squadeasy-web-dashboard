@@ -13,6 +13,7 @@ import { AutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
 import { MainUserProvider } from "~/components/MainUserProvider";
 import { ToasterProvider } from "~/components/ToasterProvider";
 import { NotFound } from "~/components/NotFoundRoutePage";
+import { RealtimePointsListener } from "~/components/RealtimePointsListener";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -56,6 +57,7 @@ function RootComponent() {
                     <AutoBooster>
                         <AutoLikeTeamPosts>
                             <ToasterProvider>
+                                <RealtimePointsListener />
                                 <NavigationBar />
                                 <Outlet />
                             </ToasterProvider>

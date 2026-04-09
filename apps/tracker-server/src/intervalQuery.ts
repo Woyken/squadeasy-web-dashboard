@@ -9,10 +9,12 @@ import {
 import {
   getLatestActivityVisibilityForUsers,
   getLatestPointsForTeams,
+  getLatestTeamMembershipsForUsers,
   getLatestPointsForUserActivities,
   getLatestPointsForUsers,
   storeTeamData,
   storeUserActivities,
+  storeUserTeamMemberships,
   storeUsersActivityVisibility,
   storeUsersPoints,
 } from "./services/pointsStorage.ts";
@@ -27,6 +29,10 @@ type UserActivitySnapshot = {
 
 type TeamUserSnapshot = {
   id: string;
+  teamId: string;
+  firstName: string;
+  lastName: string;
+  image?: string;
   points?: number;
   isActivityPublic?: boolean;
 };
@@ -102,6 +108,10 @@ async function fetchTeamUsersPoints(accessToken: string, id: string) {
   const teamUsersPoints = await queryTeamById(accessToken, id);
   const teamUsers = teamUsersPoints.users?.map((x): TeamUserSnapshot => ({
     id: x.id,
+    teamId: id,
+    firstName: x.firstName,
+    lastName: x.lastName,
+    image: x.image,
     points: x.points,
     isActivityPublic: x.isActivityPublic,
   }));
@@ -121,7 +131,14 @@ async function handleFetchTeamsUsersPoints(
     fetchTeamUsersPoints(accessToken, teamId)
   );
   const teamsUsersPoints = await Promise.all(teamsUsersQueries);
-  const teamsUsersFlat = teamsUsersPoints.flatMap((x) => x);
+  const teamsUsersFlat = Array.from(
+    new Map(
+      teamsUsersPoints.flatMap((teamUsers) => teamUsers).map((user) => [
+        user.id,
+        user,
+      ])
+    ).values()
+  );
 
   console.log("Teams have total users: ", teamsUsersFlat.length);
 
@@ -136,8 +153,40 @@ async function handleFetchTeamsUsersPoints(
     "Last users activity visibility fetched: ",
     lastUsersActivityVisibility.length
   );
+  const lastUsersTeamMemberships = await getLatestTeamMembershipsForUsers(
+    teamsUsersFlat.map((x) => x.id)
+  );
+  console.log(
+    "Last users team memberships fetched: ",
+    lastUsersTeamMemberships.length
+  );
 
   const now = Date.now();
+
+  const onlyChangedUsersTeamMemberships = teamsUsersFlat.filter((newUser) => {
+    const lastTeamMembership = lastUsersTeamMemberships.find(
+      (x) => x.user_id === newUser.id
+    )?.team_id;
+
+    return lastTeamMembership !== newUser.teamId;
+  });
+
+  if (onlyChangedUsersTeamMemberships.length > 0) {
+    console.log(
+      "changed team memberships for users: ",
+      onlyChangedUsersTeamMemberships.length
+    );
+    await storeUserTeamMemberships(
+      now,
+      onlyChangedUsersTeamMemberships.map((user) => ({
+        userId: user.id,
+        teamId: user.teamId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        image: user.image,
+      }))
+    );
+  }
 
   const onlyChangedUsersActivityVisibility = teamsUsersFlat.filter((newUser) => {
     const lastVisibility = lastUsersActivityVisibility.find(

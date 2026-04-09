@@ -15,7 +15,7 @@ import { parseJwt } from "~/utils/parseJwt";
 import { clampRangeToNow } from "~/utils/timeRange";
 import { useMainUser } from "~/components/MainUserProvider";
 
-const API_BASE_URL =
+export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 export const squadEasyClient = createClient<paths>({
@@ -25,6 +25,9 @@ export const squadEasyClient = createClient<paths>({
 export const trackerServerClient = createClient<trackerServerPaths>({
     baseUrl: API_BASE_URL,
 });
+
+export type HistoricalTeamMembership =
+    trackerServerPaths["/api/team-memberships/{teamId}"]["get"]["responses"][200]["content"]["application/json"][number];
 
 export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
     const getUserToken = useGetUserToken(userId);
@@ -565,6 +568,64 @@ export function useHistoricalTeamPointsQuery(
         enabled: typeof window !== "undefined",
         placeholderData: keepPreviousData,
     }));
+    return query;
+}
+
+export function useHistoricalTeamMembershipsQuery(
+    teamId: Accessor<string>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const query = useQuery(() => ({
+        queryKey: [
+            "historicalTeamMemberships",
+            teamId(),
+            clampRangeToNow(start(), end()).start,
+            clampRangeToNow(start(), end()).end,
+        ],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const range = clampRangeToNow(start(), end());
+
+            const result = await trackerServerClient.GET(
+                "/api/team-memberships/{teamId}",
+                {
+                    params: {
+                        path: {
+                            teamId: teamId(),
+                        },
+                        query: {
+                            startDate: new Date(range.start).toISOString(),
+                            endDate: new Date(range.end).toISOString(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                    signal,
+                },
+            );
+
+            if (!result.data) {
+                throw new Error(
+                    `Get team memberships failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
+        },
+        staleTime: 1000 * 60 * 1,
+        cacheTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 5,
+        deferStream: true,
+        enabled: typeof window !== "undefined" && !!teamId(),
+        placeholderData: keepPreviousData,
+    }));
+
     return query;
 }
 

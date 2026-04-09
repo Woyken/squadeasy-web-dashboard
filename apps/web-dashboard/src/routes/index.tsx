@@ -13,7 +13,6 @@ import {
     useSeasonRankingQuery,
 } from "~/api/client";
 import {
-    clampRangeToNow,
     getDefaultHistoricalTimeWindow,
 } from "~/utils/timeRange";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
@@ -247,7 +246,7 @@ function TeamScoreChart(props: { endsAt: number; startAt: number }) {
         };
     });
 
-    const [timeWindow, setTimeWindow] = createSignal(
+    const timeWindow = createMemo(() =>
         getDefaultHistoricalTimeWindow(props.startAt, props.endsAt),
     );
 

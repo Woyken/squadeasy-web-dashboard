@@ -1,14 +1,15 @@
-import { createSignal, createMemo, createEffect, For, Show, Suspense } from "solid-js";
+import { createMemo, createSignal, For, Show, Suspense } from "solid-js";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import {
-    useSeasonRankingQuery,
-    useTeamQuery,
-    useMyChallengeQuery,
+    useHistoricalTeamMembershipsQuery,
     useHistoricalUserPointsQueries,
+    useMyChallengeQuery,
+    useSeasonRankingQuery,
+    type HistoricalTeamMembership,
 } from "~/api/client";
 import { useMainUser } from "~/components/MainUserProvider";
+import { BrutChart, brutAxis, brutGrid, brutTip, brutZoom } from "~/components/BrutChart";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
-import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
 
 export const Route = createFileRoute("/users-points")({
     component: UsersPointsPage,
@@ -19,7 +20,6 @@ export const Route = createFileRoute("/users-points")({
 
 function UsersPointsPage() {
     const search = Route.useSearch();
-    const mainUser = useMainUser();
     const teamsQuery = useSeasonRankingQuery();
 
     const sortedTeams = createMemo(() =>
@@ -35,7 +35,7 @@ function UsersPointsPage() {
     return (
         <main class="mx-auto max-w-250 px-5 pb-20 pt-6 font-mono">
             <h1 class="mb-1 text-lg font-bold uppercase">TEAMS</h1>
-            <div class="mb-6 bg-black px-3 py-1 text-[11px] tracking-widest text-(--color-brut-red) inline-block">
+            <div class="mb-6 inline-block bg-black px-3 py-1 text-[11px] tracking-widest text-(--color-brut-red)">
                 SEASON RANKING
             </div>
 
@@ -46,6 +46,7 @@ function UsersPointsPage() {
                             const isExpanded = createMemo(
                                 () => expandedTeamId() === team.id,
                             );
+
                             return (
                                 <div class="border-2 border-black -mt-0.5">
                                     <button
@@ -110,26 +111,31 @@ function UsersPointsPage() {
 
 function TeamDetail(props: { teamId: string }) {
     const mainUser = useMainUser();
-    const teamQuery = useTeamQuery(() => props.teamId);
     const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
 
-    const users = createMemo(() =>
-        teamQuery.data?.users?.slice().sort((a, b) => b.points - a.points) ?? [],
-    );
-    const userIds = createMemo(() => users().map((u) => u.id));
-
     const startAt = createMemo(() => {
-        const s = challengeQuery.data?.startAt;
-        return s ? new Date(s).getTime() : Date.now() - 86400000;
+        const start = challengeQuery.data?.startAt;
+        return start ? new Date(start).getTime() : Date.now() - 86400000;
     });
     const endsAt = createMemo(() => {
-        const e = challengeQuery.data?.endAt;
-        return e ? new Date(e).getTime() : Date.now();
+        const end = challengeQuery.data?.endAt;
+        return end ? new Date(end).getTime() : Date.now();
     });
 
-    const [timeWindow] = createSignal(
+    const timeWindow = createMemo(() =>
         getDefaultHistoricalTimeWindow(startAt(), endsAt()),
     );
+
+    const membershipsQuery = useHistoricalTeamMembershipsQuery(
+        () => props.teamId,
+        () => timeWindow().start,
+        () => timeWindow().end,
+    );
+
+    const users = createMemo(() =>
+        groupHistoricalTeamMembers(membershipsQuery.data ?? []),
+    );
+    const userIds = createMemo(() => users().map((user) => user.userId));
 
     const userPointsQueries = useHistoricalUserPointsQueries(
         userIds,
@@ -143,27 +149,31 @@ function TeamDetail(props: { teamId: string }) {
     ];
 
     const chartOptions = createMemo(() => {
-        const usrs = users();
-        const series = usrs.map((user, i) => {
-            const queryResult = userPointsQueries[i];
-            const raw = queryResult?.data ?? [];
-            const data = [...raw]
-                .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-                .map((d) => [new Date(d.time).getTime(), d.points]);
-            // Add current points as last point
-            data.push([Date.now(), user.points]);
-            return {
-                name: `${user.firstName} ${user.lastName}`,
-                type: "line" as const,
-                smooth: false,
-                step: "middle" as const,
-                data,
-                lineStyle: { color: userColors[i % userColors.length]!, width: 2 },
-                itemStyle: { color: userColors[i % userColors.length]! },
-                symbol: "rect" as const,
-                symbolSize: 5,
-            };
-        });
+        const series = users()
+            .map((user, i) => {
+                const data = buildMembershipSeriesData(
+                    userPointsQueries[i]?.data ?? [],
+                    user.intervals,
+                );
+
+                if (data.length === 0) {
+                    return null;
+                }
+
+                return {
+                    name: `${user.firstName} ${user.lastName}`,
+                    type: "line" as const,
+                    smooth: false,
+                    step: "middle" as const,
+                    connectNulls: false,
+                    data,
+                    lineStyle: { color: userColors[i % userColors.length]!, width: 2 },
+                    itemStyle: { color: userColors[i % userColors.length]! },
+                    symbol: "rect" as const,
+                    symbolSize: 5,
+                };
+            })
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
         return {
             backgroundColor: "transparent",
@@ -183,9 +193,15 @@ function TeamDetail(props: { teamId: string }) {
 
     return (
         <div class="border-t-2 border-black">
-            {/* Members table */}
             <Suspense fallback={<div class="h-40 brut-skeleton" />}>
-                <Show when={users().length > 0}>
+                <Show
+                    when={users().length > 0}
+                    fallback={
+                        <div class="p-4 text-xs text-(--color-brut-gray)">
+                            NO_MEMBERS_TRACKED_FOR_THIS_RANGE.
+                        </div>
+                    }
+                >
                     <table class="w-full border-collapse text-xs">
                         <thead>
                             <tr>
@@ -196,7 +212,10 @@ function TeamDetail(props: { teamId: string }) {
                                     MEMBER
                                 </th>
                                 <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 text-right text-[10px] tracking-widest text-(--color-brut-gray)">
-                                    PTS
+                                    ACTIVE_IN_RANGE
+                                </th>
+                                <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 text-left text-[10px] tracking-widest text-(--color-brut-gray)">
+                                    PERIODS
                                 </th>
                                 <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 w-8" />
                             </tr>
@@ -219,28 +238,41 @@ function TeamDetail(props: { teamId: string }) {
                                                     }
                                                 >
                                                     <img
-                                                        src={user.image!}
+                                                        src={user.image ?? undefined}
                                                         alt={user.firstName}
                                                         class="h-6 w-6 border border-black object-cover"
                                                     />
                                                 </Show>
-                                                <span class="font-bold uppercase">
-                                                    {user.firstName} {user.lastName}
-                                                </span>
-                                                <Show when={user.isCaptain}>
-                                                    <span class="bg-(--color-brut-red) px-1 py-0.5 text-[8px] font-bold text-white">
-                                                        CPT
-                                                    </span>
-                                                </Show>
+                                                <div class="min-w-0">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-bold uppercase">
+                                                            {user.firstName} {user.lastName}
+                                                        </span>
+                                                        <Show when={user.isCurrentMember}>
+                                                            <span class="bg-(--color-brut-red) px-1 py-0.5 text-[8px] font-bold text-white">
+                                                                NOW
+                                                            </span>
+                                                        </Show>
+                                                    </div>
+                                                    <div class="text-[10px] text-(--color-brut-gray)">
+                                                        {formatMembershipIntervals(user.intervals)}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td class="border-b border-(--color-brut-light) px-3 py-2 text-right font-bold">
-                                            {user.points.toLocaleString()}
+                                            {formatDuration(user.totalActiveMs)}
+                                        </td>
+                                        <td class="border-b border-(--color-brut-light) px-3 py-2 text-(--color-brut-gray)">
+                                            {user.intervals.length}
+                                            <span class="ml-1 text-[10px] uppercase">
+                                                {user.intervals.length === 1 ? "period" : "periods"}
+                                            </span>
                                         </td>
                                         <td class="border-b border-(--color-brut-light) px-3 py-2 text-center">
                                             <Link
                                                 to="/user"
-                                                search={{ id: user.id }}
+                                                search={{ id: user.userId }}
                                                 class="font-bold text-(--color-brut-red) no-underline"
                                             >
                                                 →
@@ -254,7 +286,6 @@ function TeamDetail(props: { teamId: string }) {
                 </Show>
             </Suspense>
 
-            {/* User scores chart */}
             <div class="p-4">
                 <span class="brut-heading mb-2">USER_SCORES</span>
                 <div class="mt-2 border-2 border-black bg-white p-3">
@@ -262,7 +293,7 @@ function TeamDetail(props: { teamId: string }) {
                         when={users().length > 0}
                         fallback={
                             <div class="flex h-75 items-center justify-center text-xs text-(--color-brut-gray)">
-                                LOADING...
+                                NO_MEMBERS_TRACKED_FOR_THIS_RANGE.
                             </div>
                         }
                     >
@@ -272,4 +303,213 @@ function TeamDetail(props: { teamId: string }) {
             </div>
         </div>
     );
+}
+
+type HistoricalTeamMember = {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    image?: string | null;
+    intervals: {
+        activeFrom: number;
+        activeUntil: number;
+        leftAt: number | null;
+    }[];
+    totalActiveMs: number;
+    isCurrentMember: boolean;
+};
+
+type HistoricalUserPointsEntry = {
+    time: string;
+    points: number;
+};
+
+const membershipDateFormatter = new Intl.DateTimeFormat("en-GB", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+});
+
+function groupHistoricalTeamMembers(
+    memberships: HistoricalTeamMembership[],
+): HistoricalTeamMember[] {
+    const membersByUser = new Map<string, HistoricalTeamMember>();
+
+    for (const membership of memberships) {
+        const activeFrom = new Date(membership.activeFrom).getTime();
+        const activeUntil = new Date(membership.activeUntil).getTime();
+
+        if (!Number.isFinite(activeFrom) || !Number.isFinite(activeUntil)) {
+            continue;
+        }
+
+        if (activeUntil <= activeFrom) {
+            continue;
+        }
+
+        const existingMember = membersByUser.get(membership.userId) ?? {
+            userId: membership.userId,
+            firstName: membership.firstName,
+            lastName: membership.lastName,
+            image: membership.image,
+            intervals: [],
+            totalActiveMs: 0,
+            isCurrentMember: false,
+        };
+
+        existingMember.intervals.push({
+            activeFrom,
+            activeUntil,
+            leftAt: membership.leftAt ? new Date(membership.leftAt).getTime() : null,
+        });
+        existingMember.totalActiveMs += activeUntil - activeFrom;
+        existingMember.isCurrentMember ||= membership.leftAt === null;
+        existingMember.image ??= membership.image;
+
+        membersByUser.set(membership.userId, existingMember);
+    }
+
+    return [...membersByUser.values()]
+        .map((member) => ({
+            ...member,
+            intervals: member.intervals.sort(
+                (a, b) => a.activeFrom - b.activeFrom,
+            ),
+        }))
+        .sort(
+            (a, b) =>
+                Number(b.isCurrentMember) - Number(a.isCurrentMember) ||
+                b.totalActiveMs - a.totalActiveMs ||
+                `${a.firstName} ${a.lastName}`.localeCompare(
+                    `${b.firstName} ${b.lastName}`,
+                ),
+        );
+}
+
+function buildMembershipSeriesData(
+    points: HistoricalUserPointsEntry[],
+    intervals: HistoricalTeamMember["intervals"],
+) {
+    const sortedPoints = points
+        .map((point) => ({
+            time: new Date(point.time).getTime(),
+            points: point.points,
+        }))
+        .filter((point) => Number.isFinite(point.time))
+        .sort((a, b) => a.time - b.time);
+
+    const series: Array<[number, number | null]> = [];
+
+    for (const interval of intervals) {
+        let lastPointBeforeStart:
+            | {
+                  time: number;
+                  points: number;
+              }
+            | undefined;
+        let lastPointBeforeEnd:
+            | {
+                  time: number;
+                  points: number;
+              }
+            | undefined;
+        const intervalPoints: Array<[number, number]> = [];
+
+        for (const point of sortedPoints) {
+            if (point.time <= interval.activeFrom) {
+                lastPointBeforeStart = point;
+            }
+
+            if (point.time <= interval.activeUntil) {
+                lastPointBeforeEnd = point;
+            }
+
+            if (
+                point.time >= interval.activeFrom &&
+                point.time <= interval.activeUntil
+            ) {
+                intervalPoints.push([point.time, point.points]);
+            }
+        }
+
+        if (
+            !intervalPoints.some(([time]) => time === interval.activeFrom) &&
+            lastPointBeforeStart
+        ) {
+            intervalPoints.unshift([
+                interval.activeFrom,
+                lastPointBeforeStart.points,
+            ]);
+        }
+
+        const lastIntervalPoint = intervalPoints.at(-1);
+        if (
+            (!lastIntervalPoint ||
+                lastIntervalPoint[0] < interval.activeUntil) &&
+            lastPointBeforeEnd
+        ) {
+            intervalPoints.push([
+                interval.activeUntil,
+                lastPointBeforeEnd.points,
+            ]);
+        }
+
+        if (intervalPoints.length === 0) {
+            continue;
+        }
+
+        if (series.length > 0) {
+            series.push([interval.activeFrom, null]);
+        }
+
+        series.push(...intervalPoints);
+        series.push([interval.activeUntil, null]);
+    }
+
+    while (series.at(-1)?.[1] === null) {
+        series.pop();
+    }
+
+    return series;
+}
+
+function formatMembershipIntervals(
+    intervals: HistoricalTeamMember["intervals"],
+) {
+    return intervals
+        .map((interval) => {
+            const startLabel = membershipDateFormatter.format(interval.activeFrom);
+            const endLabel =
+                interval.leftAt === null
+                    ? "NOW"
+                    : membershipDateFormatter.format(interval.activeUntil);
+
+            return `${startLabel} - ${endLabel}`;
+        })
+        .join(" • ");
+}
+
+function formatDuration(durationMs: number) {
+    const totalMinutes = Math.max(0, Math.round(durationMs / (1000 * 60)));
+
+    if (totalMinutes < 60) {
+        return `${totalMinutes}m`;
+    }
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+
+    if (totalHours < 48) {
+        return remainingMinutes > 0
+            ? `${totalHours}h ${remainingMinutes}m`
+            : `${totalHours}h`;
+    }
+
+    const totalDays = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+
+    return remainingHours > 0
+        ? `${totalDays}d ${remainingHours}h`
+        : `${totalDays}d`;
 }

@@ -6,6 +6,7 @@ import {
   userActivityPoints,
   userActivityVisibility,
   userPoints,
+  userTeamMemberships,
 } from "../db/schema.ts";
 
 type LatestUserActivityPointsRow = {
@@ -40,6 +41,27 @@ type UserActivityVisibilityRow = {
   time: string;
   user_id: string;
   is_activity_public: boolean;
+};
+
+type UserTeamMembershipRow = {
+  time: string;
+  user_id: string;
+  team_id: string;
+  first_name: string;
+  last_name: string;
+  image: string | null;
+};
+
+type TeamMembershipIntervalRow = {
+  user_id: string;
+  team_id: string;
+  first_name: string;
+  last_name: string;
+  image: string | null;
+  joined_at: string;
+  left_at: string | null;
+  active_from: string;
+  active_until: string;
 };
 
 function getTimeBucket(start: Date, end: Date) {
@@ -299,6 +321,25 @@ export async function getLatestActivityVisibilityForUsers(userIds: string[]) {
   return result.rows;
 }
 
+export async function getLatestTeamMembershipsForUsers(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as UserTeamMembershipRow[];
+  }
+
+  const result = await db.execute<UserTeamMembershipRow>(sql`
+    select time, user_id, team_id, first_name, last_name, image
+    from user_team_memberships utm
+    where utm.time = (
+        select max(utm1.time)
+        from user_team_memberships utm1
+        where utm1.user_id = utm.user_id
+    )
+      and utm.user_id = any(${userIds})
+  `);
+
+  return result.rows;
+}
+
 export async function storeUserActivities(
   timestamp: number,
   activities: {
@@ -413,6 +454,50 @@ export async function storeUsersActivityVisibility(
   }
 }
 
+export async function storeUserTeamMemberships(
+  timestamp: number,
+  memberships: {
+    userId: string;
+    teamId: string;
+    firstName: string;
+    lastName: string;
+    image?: string;
+  }[]
+): Promise<void> {
+  if (memberships.length === 0) {
+    console.log("No user team memberships provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store ${
+      memberships.length
+    } user team memberships at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userTeamMemberships).values(
+        memberships.map((membership) => ({
+          time: insertTime,
+          userId: membership.userId,
+          teamId: membership.teamId,
+          firstName: membership.firstName,
+          lastName: membership.lastName,
+          image: membership.image,
+        }))
+      );
+    });
+
+    console.log(
+      `Successfully stored ${memberships.length} user team memberships using Drizzle.`
+    );
+  } catch (error) {
+    console.error("Error storing user team memberships:", error);
+  }
+}
+
 export async function storeTeamData(
   timestamp: number,
   teams: {
@@ -524,6 +609,47 @@ export async function getUsersActivityPointsByRange(
   ]);
 
   const result = await db.execute<UserActivityPointsRow>(query);
+
+  return result.rows;
+}
+
+export async function getTeamMembershipsByRange(
+  teamId: string,
+  start: Date,
+  end: Date
+) {
+  const result = await db.execute<TeamMembershipIntervalRow>(sql`
+    WITH relevant_users AS (
+      SELECT DISTINCT user_id
+      FROM user_team_memberships
+      WHERE team_id = ${teamId} AND "time" < ${end}
+    ),
+    ordered_memberships AS (
+      SELECT
+        user_id,
+        team_id,
+        first_name,
+        last_name,
+        image,
+        "time" AS joined_at,
+        LEAD("time") OVER (PARTITION BY user_id ORDER BY "time" ASC) AS left_at
+      FROM user_team_memberships
+      WHERE user_id IN (SELECT user_id FROM relevant_users) AND "time" < ${end}
+    )
+    SELECT
+      user_id,
+      team_id,
+      first_name,
+      last_name,
+      image,
+      joined_at,
+      left_at,
+      GREATEST(joined_at, ${start}) AS active_from,
+      LEAST(COALESCE(left_at, ${end}), ${end}) AS active_until
+    FROM ordered_memberships
+    WHERE team_id = ${teamId} AND COALESCE(left_at, ${end}) > ${start}
+    ORDER BY active_from ASC, user_id ASC;
+  `);
 
   return result.rows;
 }

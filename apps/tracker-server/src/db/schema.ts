@@ -60,3 +60,25 @@ export const userActivityVisibility = pgTable(
     ),
   ]
 );
+
+export const userTeamMemberships = pgTable(
+  "user_team_memberships",
+  {
+    time: timestamp("time", { mode: "date", withTimezone: true }).notNull(),
+    userId: text("user_id").notNull(),
+    teamId: text("team_id").notNull(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    image: text("image"),
+  },
+  (table) => [
+    index("ix_user_team_memberships_user_id_time").on(
+      table.userId,
+      table.time.desc()
+    ),
+    index("ix_user_team_memberships_team_id_time").on(
+      table.teamId,
+      table.time.desc()
+    ),
+  ]
+);

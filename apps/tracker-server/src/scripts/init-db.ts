@@ -56,6 +56,22 @@ SELECT create_hypertable('user_activity_visibility', 'time', if_not_exists => TR
 CREATE INDEX IF NOT EXISTS ix_user_activity_visibility_user_id_time ON user_activity_visibility (user_id, time DESC);
 `;
 
+const createUserTeamMembershipsTableSql = `
+CREATE TABLE IF NOT EXISTS user_team_memberships (
+  time TIMESTAMPTZ NOT NULL,
+  user_id TEXT NOT NULL,
+  team_id TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  image TEXT
+);
+
+SELECT create_hypertable('user_team_memberships', 'time', if_not_exists => TRUE);
+
+CREATE INDEX IF NOT EXISTS ix_user_team_memberships_user_id_time ON user_team_memberships (user_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_user_team_memberships_team_id_time ON user_team_memberships (team_id, time DESC);
+`;
+
 export async function initializeDatabase() {
   console.log("Attempting to initialize the database...");
 
@@ -94,6 +110,13 @@ export async function initializeDatabase() {
       );
       await tx.execute(sql.raw(createUserActivityVisibilityTableSql));
       console.log("createUserActivityVisibilityTableSql ensured");
+
+      console.log(
+        "executing createUserTeamMembershipsTableSql",
+        createUserTeamMembershipsTableSql
+      );
+      await tx.execute(sql.raw(createUserTeamMembershipsTableSql));
+      console.log("createUserTeamMembershipsTableSql ensured");
     });
 
     console.log("Transaction committed successfully.");

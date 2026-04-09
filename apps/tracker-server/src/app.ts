@@ -16,6 +16,7 @@ import { pool } from "./database.ts";
 import { isValidAccessToken } from "./api/accessToken.ts";
 import {
   getTeamPointsByRange,
+  getTeamMembershipsByRange,
   getUsersActivityPointsByRange,
   getUsersPointsByRange,
   testDbConnection,
@@ -72,6 +73,10 @@ const userParamsSchema = z.object({
   userId: z.string().min(1),
 });
 
+const teamParamsSchema = z.object({
+  teamId: z.string().min(1),
+});
+
 const errorResponseSchema = z.object({
   error: z.string(),
 });
@@ -104,6 +109,18 @@ const userActivityPointsResponseItemSchema = z.object({
   time: dateTimeStringSchema,
   value: z.number(),
   points: z.number(),
+});
+
+const teamMembershipResponseItemSchema = z.object({
+  teamId: z.string(),
+  userId: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  image: z.string().nullable(),
+  joinedAt: dateTimeStringSchema,
+  leftAt: dateTimeStringSchema.nullable(),
+  activeFrom: dateTimeStringSchema,
+  activeUntil: dateTimeStringSchema,
 });
 
 type PointsQueryString = z.infer<typeof pointsQuerySchema>;
@@ -372,6 +389,59 @@ fastify.after(() => {
             userId: x.user_id,
             time: new Date(x.time).toISOString(),
             points: x.points,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/team-memberships/:teamId",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get a team's user membership history",
+        security: bearerAuthSecurity,
+        params: teamParamsSchema,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(teamMembershipResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      const { teamId } = request.params;
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getTeamMembershipsByRange(teamId, start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            teamId: x.team_id,
+            userId: x.user_id,
+            firstName: x.first_name,
+            lastName: x.last_name,
+            image: x.image,
+            joinedAt: new Date(x.joined_at).toISOString(),
+            leftAt: x.left_at ? new Date(x.left_at).toISOString() : null,
+            activeFrom: new Date(x.active_from).toISOString(),
+            activeUntil: new Date(x.active_until).toISOString(),
           }))
         );
       } catch (error: unknown) {

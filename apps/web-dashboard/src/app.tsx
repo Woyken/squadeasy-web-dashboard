@@ -5,7 +5,7 @@ import "./resetCss.css";
 
 const router = createRouter({
     routeTree,
-    basepath: import.meta.env.SERVER_BASE_URL,
+    basepath: import.meta.env.BASE_URL,
 });
 
 declare module "@tanstack/solid-router" {

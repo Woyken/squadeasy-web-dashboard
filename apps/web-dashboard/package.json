@@ -2,25 +2,22 @@
     "name": "squadeasy-web-dashboard",
     "type": "module",
     "scripts": {
-        "build": "vinxi build",
-        "dev": "vinxi dev",
+        "build": "vite build && node ./scripts/copy-spa-fallback.mjs",
+        "dev": "vite",
         "generate-client": "openapi-typescript https://woyken.github.io/squadeasy-api/openapi.SquadEasyApi.yaml -o ./src/api/squadEasyApi.d.ts",
-        "serve": "vinxi serve --dir=.output/public/",
-        "start": "vinxi start"
+        "serve": "vite preview",
+        "start": "vite preview"
     },
     "dependencies": {
         "@solidjs/meta": "^0.29.4",
-        "@solidjs/start": "^1.1.4",
         "@tanstack/solid-form": "^1.11.3",
         "@tanstack/solid-query": "^5.77.1",
         "@tanstack/solid-router": "^1.120.10",
         "@tanstack/solid-router-devtools": "^1.120.10",
         "echarts": "^5.6.0",
-        "localforage": "^1.10.0",
         "openapi-fetch": "^0.14.0",
         "solid-js": "^1.9.7",
-        "valibot": "^1.1.0",
-        "vinxi": "^0.5.6"
+        "valibot": "^1.1.0"
     },
     "engines": {
         "node": ">=22"
@@ -32,9 +29,9 @@
         "daisyui": "^4.12.2",
         "openapi-typescript": "^6.7.6",
         "postcss": "^8.5.3",
-        "prettier": "^3.5.3",
-        "prettier-plugin-tailwindcss": "^0.6.11",
         "tailwindcss": "^3.4.3",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "vite": "^6.4.2",
+        "vite-plugin-solid": "^2.11.8"
     }
 }

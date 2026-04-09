@@ -33,9 +33,11 @@ This app is the only package deployed by the repository's GitHub Pages workflow.
 
 The tracker server lives in `apps/tracker-server` and is deployed separately.
 
+The dashboard is a client-only SolidJS SPA built with Vite. Production builds emit static files into `dist/`, and the build step also copies `index.html` to `404.html` so deep links keep working on GitHub Pages.
+
 ## Available Scripts
 
-- `dev` – Start the development server
-- `build` – Build the app for production
-- `start` – Start the production server
+- `dev` – Start the Vite development server
+- `build` – Build the static SPA for production
+- `start` – Preview the production build locally
 - `generate-client` – Regenerate TypeScript API types from the OpenAPI spec

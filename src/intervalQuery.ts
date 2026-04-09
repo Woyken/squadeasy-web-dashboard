@@ -7,13 +7,39 @@ import {
   queryUserStatisticsQuery,
 } from "./api/client.ts";
 import {
+  getLatestActivityVisibilityForUsers,
   getLatestPointsForTeams,
   getLatestPointsForUserActivities,
   getLatestPointsForUsers,
   storeTeamData,
   storeUserActivities,
+  storeUsersActivityVisibility,
   storeUsersPoints,
 } from "./services/pointsStorage.ts";
+import { emitPointsStreamEvent } from "./realtime/pointsEvents.ts";
+
+type UserActivitySnapshot = {
+  userId: string;
+  activityId: string;
+  value: number;
+  points: number;
+};
+
+type TeamUserSnapshot = {
+  id: string;
+  points?: number;
+  isActivityPublic?: boolean;
+};
+
+type LatestUserActivityRow = Awaited<
+  ReturnType<typeof getLatestPointsForUserActivities>
+>[number];
+
+type LatestUserPointsRow = Awaited<ReturnType<typeof getLatestPointsForUsers>>[number];
+type LatestUserActivityVisibilityRow = Awaited<
+  ReturnType<typeof getLatestActivityVisibilityForUsers>
+>[number];
+type LatestTeamPointsRow = Awaited<ReturnType<typeof getLatestPointsForTeams>>[number];
 
 async function handleFetchUserActivities(
   accessToken: string,
@@ -41,7 +67,7 @@ async function handleFetchUserActivities(
       if (!newActivity) return false;
 
       const lastPointsAndValue = lastUsersActivities.find(
-        (activity) =>
+        (activity: LatestUserActivityRow) =>
           activity.user_id === newActivity.userId &&
           activity.activity_id === newActivity.activityId
       );
@@ -58,11 +84,23 @@ async function handleFetchUserActivities(
   console.log("Changed users activities: ", onlyChangedUserActivities.length);
 
   await storeUserActivities(now, onlyChangedUserActivities);
+  emitPointsStreamEvent({
+    event: "user-activity-points",
+    data: {
+      time: new Date(now).toISOString(),
+      items: onlyChangedUserActivities.map((activity) => ({
+        userId: activity.userId,
+        activityId: activity.activityId,
+        value: activity.value,
+        points: activity.points,
+      })),
+    },
+  });
 }
 
 async function fetchTeamUsersPoints(accessToken: string, id: string) {
   const teamUsersPoints = await queryTeamById(accessToken, id);
-  const teamUsers = teamUsersPoints.users?.map((x) => ({
+  const teamUsers = teamUsersPoints.users?.map((x): TeamUserSnapshot => ({
     id: x.id,
     points: x.points,
     isActivityPublic: x.isActivityPublic,
@@ -91,13 +129,56 @@ async function handleFetchTeamsUsersPoints(
     teamsUsersFlat.map((x) => x.id)
   );
   console.log("Last users points fetched: ", lastUsersPoints.length);
+  const lastUsersActivityVisibility = await getLatestActivityVisibilityForUsers(
+    teamsUsersFlat.map((x) => x.id)
+  );
+  console.log(
+    "Last users activity visibility fetched: ",
+    lastUsersActivityVisibility.length
+  );
 
   const now = Date.now();
+
+  const onlyChangedUsersActivityVisibility = teamsUsersFlat.filter((newUser) => {
+    const lastVisibility = lastUsersActivityVisibility.find(
+      (x: LatestUserActivityVisibilityRow) => x.user_id === newUser.id
+    )?.is_activity_public;
+
+    if (lastVisibility === undefined) {
+      return typeof newUser.isActivityPublic === "boolean";
+    }
+
+    return newUser.isActivityPublic !== lastVisibility;
+  });
+
+  if (onlyChangedUsersActivityVisibility.length > 0) {
+    console.log(
+      "changed activity visibility for users: ",
+      onlyChangedUsersActivityVisibility.length
+    );
+    await storeUsersActivityVisibility(
+      now,
+      onlyChangedUsersActivityVisibility.map((user) => ({
+        id: user.id,
+        isActivityPublic: !!user.isActivityPublic,
+      }))
+    );
+    emitPointsStreamEvent({
+      event: "user-activity-visibility",
+      data: {
+        time: new Date(now).toISOString(),
+        items: onlyChangedUsersActivityVisibility.map((user) => ({
+          userId: user.id,
+          isActivityPublic: !!user.isActivityPublic,
+        })),
+      },
+    });
+  }
 
   const onlyChangedUsersScores = teamsUsersFlat
     .filter((newUser) => {
       const lastUserPoints = lastUsersPoints.find(
-        (x) => x.user_id === newUser.id
+        (x: LatestUserPointsRow) => x.user_id === newUser.id
       )?.points;
       if (newUser.points === undefined) return false;
 
@@ -126,6 +207,16 @@ async function handleFetchTeamsUsersPoints(
   );
 
   await storeUsersPoints(now, onlyChangedUsersScores);
+  emitPointsStreamEvent({
+    event: "user-points",
+    data: {
+      time: new Date(now).toISOString(),
+      items: onlyChangedUsersScores.map((user) => ({
+        userId: user.id,
+        points: user.points,
+      })),
+    },
+  });
 }
 
 async function* getAllTeamElements() {
@@ -186,9 +277,14 @@ async function handleScheduledTeamsFetch() {
 
   console.log("Teams total elements: ", teamsElements.length);
 
+  const allTeamIds = teamsElements.map((team) => team.id);
+  handleFetchTeamsUsersPoints(accessToken, allTeamIds).catch((e) =>
+    console.error("failed to update teams users", e)
+  );
+
   const onlyChangedTeamsScores = teamsElements?.filter((newTeam) => {
     const lastTeamScore = lastTeamsPoints.find(
-      (x) => x.team_id === newTeam.id
+      (x: LatestTeamPointsRow) => x.team_id === newTeam.id
     )?.points;
 
     if (newTeam.points !== lastTeamScore) return true;
@@ -202,12 +298,17 @@ async function handleScheduledTeamsFetch() {
 
   console.log("changed scores for teams: ", onlyChangedTeamsScores.length);
 
-  const changedTeamIds = onlyChangedTeamsScores.map((x) => x.id);
-  handleFetchTeamsUsersPoints(accessToken, changedTeamIds).catch((e) =>
-    console.error("failed to update teams users", e)
-  );
-
   await storeTeamData(now, onlyChangedTeamsScores);
+  emitPointsStreamEvent({
+    event: "team-points",
+    data: {
+      time: new Date(now).toISOString(),
+      items: onlyChangedTeamsScores.map((team) => ({
+        teamId: team.id,
+        points: team.points ?? 0,
+      })),
+    },
+  });
   console.log("scheduled task finished.");
 }
 

@@ -1,5 +1,16 @@
-import Fastify, { type FastifyInstance, type FastifySchema } from "fastify";
-import FastifyWebsocket from "@fastify/websocket";
+import type { ServerResponse } from "node:http";
+import Fastify, { type FastifyInstance } from "fastify";
+import FastifySwagger from "@fastify/swagger";
+import FastifySwaggerUi from "@fastify/swagger-ui";
+import {
+  createJsonSchemaTransform,
+  hasZodFastifySchemaValidationErrors,
+  jsonSchemaTransformObject,
+  serializerCompiler,
+  type ZodTypeProvider,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
+import { z } from "zod/v4";
 
 import { pool } from "./database.ts";
 import { isValidAccessToken } from "./api/accessToken.ts";
@@ -15,274 +26,410 @@ import {
 } from "./intervalQuery.ts";
 import { initializeDatabase } from "./scripts/init-db.ts";
 import cors from "@fastify/cors";
+import { subscribeToPointsStream } from "./realtime/pointsEvents.ts";
 
-interface PointsQueryString {
-  startDate: string;
-  endDate: string;
-}
+const dateTimeStringSchema = z
+  .iso.datetime({ offset: true })
+  .describe("ISO 8601 datetime with timezone offset");
 
-const teamPointsQuerySchema: FastifySchema = {
-  headers: {
-    type: "object",
-    required: ["authorization"],
-    properties: {
-      authorization: { type: "string" },
-    },
-  },
-  querystring: {
-    type: "object",
-    required: ["startDate", "endDate"],
-    properties: {
-      startDate: { type: "string", format: "date-time" },
-      endDate: { type: "string", format: "date-time" },
-    },
-  },
-};
+const pointsQuerySchema = z
+  .object({
+    startDate: dateTimeStringSchema,
+    endDate: dateTimeStringSchema,
+  })
+  .superRefine(({ startDate, endDate }, ctx) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const now = new Date();
 
-const activityPointsQuerySchema: FastifySchema = {
-  headers: {
-    type: "object",
-    required: ["authorization"],
-    properties: {
-      authorization: { type: "string" },
-    },
-  },
-  params: {
-    type: "object",
-    required: ["userId"],
-    properties: {
-      userId: { type: "string" },
-    },
-  },
-  querystring: {
-    type: "object",
-    required: ["startDate", "endDate"],
-    properties: {
-      startDate: { type: "string", format: "date-time" },
-      endDate: { type: "string", format: "date-time" },
-    },
-  },
-};
+    if (start >= end) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startDate"],
+        message: "startDate must be before endDate",
+      });
+    }
 
-const userPointsQuerySchema: FastifySchema = {
-  headers: {
-    type: "object",
-    required: ["authorization"],
-    properties: {
-      authorization: { type: "string" },
-    },
-  },
-  params: {
-    type: "object",
-    required: ["userId"],
-    properties: {
-      userId: { type: "string" },
-    },
-  },
-  querystring: {
-    type: "object",
-    required: ["startDate", "endDate"],
-    properties: {
-      startDate: { type: "string", format: "date-time" },
-      endDate: { type: "string", format: "date-time" },
-    },
-  },
-};
+    if (start > now) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startDate"],
+        message: "Dates cannot be in the future",
+      });
+    }
 
+    if (end > now) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endDate"],
+        message: "Dates cannot be in the future",
+      });
+    }
+  });
+
+const userParamsSchema = z.object({
+  userId: z.string().min(1),
+});
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+});
+
+const validationErrorResponseSchema = z.object({
+  error: z.literal("Request validation failed"),
+  details: z.array(
+    z.object({
+      path: z.string(),
+      message: z.string(),
+    })
+  ),
+});
+
+const teamPointsResponseItemSchema = z.object({
+  teamId: z.string(),
+  time: dateTimeStringSchema,
+  points: z.number(),
+});
+
+const userPointsResponseItemSchema = z.object({
+  userId: z.string(),
+  time: dateTimeStringSchema,
+  points: z.number(),
+});
+
+const userActivityPointsResponseItemSchema = z.object({
+  userId: z.string(),
+  activityId: z.string(),
+  time: dateTimeStringSchema,
+  value: z.number(),
+  points: z.number(),
+});
+
+type PointsQueryString = z.infer<typeof pointsQuerySchema>;
+
+const SSE_RETRY_DELAY_MS = 5000;
+const SSE_HEARTBEAT_INTERVAL_MS = 15000;
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
+const bearerAuthSecurity = [{ bearerAuth: [] }];
+
+function writeSseEvent(
+  raw: ServerResponse,
+  event: string,
+  data: unknown
+): void {
+  if (raw.writableEnded || raw.destroyed) {
+    return;
+  }
+
+  raw.write(`event: ${event}\n`);
+  raw.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function writeSseComment(raw: ServerResponse, comment: string): void {
+  if (raw.writableEnded || raw.destroyed) {
+    return;
+  }
+
+  raw.write(`: ${comment}\n\n`);
+}
 
 const fastify: FastifyInstance = Fastify({
   logger: process.env.NODE_ENV === "development",
+});
+const swaggerTransform = createJsonSchemaTransform({
+  skipList: ["/docs", "/docs/*", "/openapi.json"],
+});
+const api = fastify.withTypeProvider<ZodTypeProvider>();
+
+fastify.setValidatorCompiler(validatorCompiler);
+fastify.setSerializerCompiler(serializerCompiler);
+
+fastify.register(FastifySwagger, {
+  openapi: {
+    info: {
+      title: "SquadEasy Web Dashboard Tracker Server API",
+      version: "1.0.0",
+      description:
+        "Internal API for SquadEasy dashboard tracking and points queries.",
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Provide the access token as a Bearer token.",
+        },
+      },
+    },
+    tags: [
+      {
+        name: "Realtime",
+        description: "Realtime transport endpoints.",
+      },
+      {
+        name: "Points",
+        description: "Points query endpoints.",
+      },
+    ],
+  },
+  transform: swaggerTransform,
+  transformObject: jsonSchemaTransformObject,
+});
+
+fastify.register(FastifySwaggerUi, {
+  routePrefix: "/docs",
+});
+
+fastify.setErrorHandler((error, _request, reply) => {
+  if (hasZodFastifySchemaValidationErrors(error)) {
+    const details = error.validation.map((issue) => ({
+      path: issue.instancePath.replace(/^\//, "").replace(/\//g, "."),
+      message: issue.message,
+    }));
+
+    void reply.code(400).send({
+      error: "Request validation failed",
+      details,
+    });
+    return;
+  }
+
+  void reply.send(error);
 });
 
 fastify.register(cors, {
   origin: "*",
 });
-fastify.register(FastifyWebsocket, {
-  options: {
-    clientTracking: true,
-  },
+
+fastify.after(() => {
+  fastify.get(
+    "/api/points/stream",
+    {
+      schema: {
+        tags: ["Realtime"],
+        summary: "Stream live points updates over Server-Sent Events",
+        description:
+          "Use fetch with the standard Authorization header and read the text/event-stream response body incrementally on the client.",
+        security: bearerAuthSecurity,
+        response: {
+          401: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      reply.hijack();
+
+      const raw = reply.raw;
+      raw.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      raw.flushHeaders?.();
+      raw.write(`retry: ${SSE_RETRY_DELAY_MS}\n\n`);
+
+      writeSseEvent(raw, "connected", {
+        time: new Date().toISOString(),
+      });
+
+      fastify.log.info({ url: request.url }, "SSE client connected");
+
+      let closed = false;
+      const cleanup = () => {
+        if (closed) {
+          return;
+        }
+
+        closed = true;
+        clearInterval(heartbeatInterval);
+        unsubscribe();
+        request.raw.off("aborted", cleanup);
+        request.raw.off("close", cleanup);
+        raw.off("close", cleanup);
+        raw.off("error", cleanup);
+        fastify.log.info({ url: request.url }, "SSE client disconnected");
+      };
+
+      const unsubscribe = subscribeToPointsStream((event) => {
+        try {
+          writeSseEvent(raw, event.event, event.data);
+        } catch (error) {
+          fastify.log.warn({ err: error }, "Failed to write SSE event");
+          cleanup();
+        }
+      });
+
+      const heartbeatInterval = setInterval(() => {
+        writeSseComment(raw, `keepalive ${new Date().toISOString()}`);
+      }, SSE_HEARTBEAT_INTERVAL_MS);
+
+      request.raw.on("aborted", cleanup);
+      request.raw.on("close", cleanup);
+      raw.on("close", cleanup);
+      raw.on("error", cleanup);
+    },
+  );
+
+  api.get(
+    "/api/user-activity-points/:userId",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get a user's activity points",
+        security: bearerAuthSecurity,
+        params: userParamsSchema,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(userActivityPointsResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      const { userId } = request.params;
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getUsersActivityPointsByRange(userId, start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            userId: x.user_id,
+            activityId: x.activity_id,
+            time: new Date(x.time).toISOString(),
+            value: x.value,
+            points: x.points,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/user-points/:userId",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get a user's total points",
+        security: bearerAuthSecurity,
+        params: userParamsSchema,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(userPointsResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+      const { userId } = request.params;
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getUsersPointsByRange(userId, start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            points: x.points,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/team-points",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get team points over a time range",
+        security: bearerAuthSecurity,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(teamPointsResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getTeamPointsByRange(start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            teamId: x.team_id,
+            time: new Date(x.time).toISOString(),
+            points: x.points,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  fastify.get(
+    "/openapi.json",
+    {
+      schema: {
+        hide: true,
+      },
+    },
+    async (_request, reply) => {
+      await reply.code(200).send(fastify.swagger());
+    }
+  );
 });
-
-fastify.route({
-  method: "GET",
-  url: "/ws",
-  wsHandler: async (websocket, request) => {
-    websocket.close(401);
-    // TODO handle auth
-    // Probably another endpoint to get temporary key for ws, provide it via query string
-    // Connect to ws with that key, discard the key
-  },
-  handler: () => {},
-});
-
-interface UserActivityPointsResponse {
-  userId: string;
-  activityId: string;
-  time: Date;
-  value: number;
-  points: number;
-}
-
-fastify.get<{ Querystring: PointsQueryString; Params: { userId: string } }>(
-  "/api/user-activity-points/:userId",
-  { schema: activityPointsQuerySchema },
-  async (request, reply) => {
-    if (!(await isValidAccessToken(request.headers.authorization))) {
-      await reply.code(401).send({ error: "Unauthorized" });
-      return;
-    }
-
-    const { userId } = request.params;
-    const { startDate: startDateStr, endDate: endDateStr } = request.query;
-
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
-    const now = new Date();
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      await reply.code(400).send({
-        error:
-          "Invalid date format. Please use ISO 8601 format (e.g., YYYY-MM-DDTHH:mm:ssZ)",
-      });
-      return;
-    }
-    if (start >= end) {
-      await reply.code(400).send({ error: "startDate must be before endDate" });
-      return;
-    }
-    if (start > now || end > now) {
-      await reply.code(400).send({ error: "Dates cannot be in the future" });
-      return;
-    }
-
-    try {
-      const result = await getUsersActivityPointsByRange(userId, start, end);
-
-      await reply.code(200).send(
-        result.map<UserActivityPointsResponse>((x) => ({
-          userId: x.user_id,
-          activityId: x.activity_id,
-          time: x.time,
-          value: x.value,
-          points: x.points,
-        }))
-      );
-    } catch (error: unknown) {
-      fastify.log.error({ err: error }, "Error executing query:");
-      await reply.code(500).send({ error: "Failed to retrieve data." });
-    }
-  }
-);
-
-interface UserPointsResponse {
-  userId: string;
-  time: Date;
-  points: number;
-}
-
-fastify.get<{ Querystring: PointsQueryString; Params: { userId: string } }>(
-  "/api/user-points/:userId",
-  { schema: userPointsQuerySchema },
-  async (request, reply) => {
-    if (!(await isValidAccessToken(request.headers.authorization))) {
-      await reply.code(401).send({ error: "Unauthorized" });
-      return;
-    }
-    const { userId } = request.params;
-    const { startDate: startDateStr, endDate: endDateStr } = request.query;
-
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
-    const now = new Date();
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      await reply.code(400).send({
-        error:
-          "Invalid date format. Please use ISO 8601 format (e.g., YYYY-MM-DDTHH:mm:ssZ)",
-      });
-      return;
-    }
-    if (start >= end) {
-      await reply.code(400).send({ error: "startDate must be before endDate" });
-      return;
-    }
-    if (start > now || end > now) {
-      await reply.code(400).send({ error: "Dates cannot be in the future" });
-      return;
-    }
-
-    try {
-      const result = await getUsersPointsByRange(userId, start, end);
-
-      await reply.code(200).send(
-        result.map<UserPointsResponse>((x) => ({
-          userId: x.user_id,
-          time: x.time,
-          points: x.points,
-        }))
-      );
-    } catch (error: unknown) {
-      fastify.log.error({ err: error }, "Error executing query:");
-      await reply.code(500).send({ error: "Failed to retrieve data." });
-    }
-  }
-);
-
-interface TeamPointsResponse {
-  time: Date;
-  teamId: string;
-  points: number;
-}
-
-fastify.get<{ Querystring: PointsQueryString }>(
-  "/api/team-points",
-  { schema: teamPointsQuerySchema },
-  async (request, reply) => {
-    if (!(await isValidAccessToken(request.headers.authorization))) {
-      await reply.code(401).send({ error: "Unauthorized" });
-      return;
-    }
-
-    const { startDate: startDateStr, endDate: endDateStr } = request.query;
-
-    const start = new Date(startDateStr);
-    const end = new Date(endDateStr);
-    const now = new Date();
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      await reply.code(400).send({
-        error:
-          "Invalid date format. Please use ISO 8601 format (e.g., YYYY-MM-DDTHH:mm:ssZ)",
-      });
-      return;
-    }
-    if (start >= end) {
-      await reply.code(400).send({ error: "startDate must be before endDate" });
-      return;
-    }
-    if (start > now || end > now) {
-      await reply.code(400).send({ error: "Dates cannot be in the future" });
-      return;
-    }
-
-    try {
-      const result = await getTeamPointsByRange(start, end);
-
-      await reply.code(200).send(
-        result.map<TeamPointsResponse>((x) => ({
-          teamId: x.team_id,
-          time: x.time,
-          points: x.points,
-        }))
-      );
-    } catch (error: unknown) {
-      fastify.log.error({ err: error }, "Error executing query:");
-      await reply.code(500).send({ error: "Failed to retrieve data." });
-    }
-  }
-);
 
 async function startServer(): Promise<void> {
   try {

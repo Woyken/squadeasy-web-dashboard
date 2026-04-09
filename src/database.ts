@@ -1,5 +1,8 @@
 // src/database.ts
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolConfig } from "pg";
+
+import * as schema from "./db/schema.ts";
 
 // --- Database Configuration for node-postgres ---
 const dbConfig: PoolConfig = {
@@ -30,6 +33,7 @@ pool.on("error", (err, client) => {
 // --- Export the Pool ---
 // Your application code will import this pool to interact with the DB
 export { pool };
+export const db = drizzle({ client: pool, schema });
 
 // You can also add helper functions here if needed, e.g., a function
 // to easily run queries, but exporting the pool directly is common.

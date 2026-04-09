@@ -1,53 +1,301 @@
-import type { QueryResult } from "pg";
-import { pool } from "../database.ts";
+import { sql, type SQL } from "drizzle-orm";
+
+import { db } from "../database.ts";
+import {
+  teamPoints,
+  userActivityPoints,
+  userActivityVisibility,
+  userPoints,
+} from "../db/schema.ts";
+
+type LatestUserActivityPointsRow = {
+  time: string;
+  user_id: string;
+  activity_id: string;
+  value: number;
+  points: number;
+};
+
+type UserPointsRow = {
+  time: string;
+  user_id: string;
+  points: number;
+};
+
+type TeamPointsRow = {
+  time: string;
+  team_id: string;
+  points: number;
+};
+
+type UserActivityPointsRow = {
+  time: string;
+  user_id: string;
+  activity_id: string;
+  value: number;
+  points: number;
+};
+
+type UserActivityVisibilityRow = {
+  time: string;
+  user_id: string;
+  is_activity_public: boolean;
+};
+
+function getTimeBucket(start: Date, end: Date) {
+  const entriesExpected = 50;
+  const timeDifference = end.getTime() - start.getTime();
+  const hoursForExpectedEntries = Math.floor(
+    timeDifference / (1000 * 60 * 60) / entriesExpected
+  );
+  const minutesForExpectedEntries = Math.floor(
+    timeDifference / (1000 * 60) / entriesExpected
+  );
+
+  if (hoursForExpectedEntries > 0) {
+    return `${hoursForExpectedEntries} hours`;
+  }
+
+  if (minutesForExpectedEntries >= 10) {
+    return `${minutesForExpectedEntries} minutes`;
+  }
+
+  return undefined;
+}
+
+function getTeamPointsByRangeQuery(start: Date, end: Date, timeBucket?: string): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", team_id, LAST(points, "time") AS points
+        FROM team_points WHERE "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, team_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+        FROM team_points
+        WHERE "time" <= ${start}
+        ORDER BY team_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+        FROM team_points
+        WHERE "time" >= ${end}
+        ORDER BY team_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, team_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, team_id, points FROM team_points
+      WHERE "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+      FROM team_points
+      WHERE "time" <= ${start}
+      ORDER BY team_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+      FROM team_points
+      WHERE "time" >= ${end}
+      ORDER BY team_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, team_id ASC;
+  `;
+}
+
+function getUsersPointsByRangeQuery(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeBucket?: string
+): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", user_id, LAST(points, "time") AS points
+        FROM user_points WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, user_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+        FROM user_points
+        WHERE user_id = ${userId} AND "time" <= ${start}
+        ORDER BY user_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+        FROM user_points
+        WHERE user_id = ${userId} AND "time" >= ${end}
+        ORDER BY user_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, user_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, user_id, points FROM user_points
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+      FROM user_points
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+      FROM user_points
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, user_id ASC;
+  `;
+}
+
+function getUsersActivityPointsByRangeQuery(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeBucket?: string
+): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", user_id, activity_id, LAST(value, "time") AS value, LAST(points, "time") AS points
+        FROM user_activity_points WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, user_id, activity_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+        FROM user_activity_points
+        WHERE user_id = ${userId} AND "time" <= ${start}
+        ORDER BY user_id, activity_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+        FROM user_activity_points
+        WHERE user_id = ${userId} AND "time" >= ${end}
+        ORDER BY user_id, activity_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, user_id ASC, activity_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, user_id, activity_id, value, points FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+      FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, activity_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+      FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, activity_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, user_id ASC, activity_id ASC;
+  `;
+}
 
 export async function getLatestPointsForUserActivities(userIds: string[]) {
-  const queryString = `
-  select time, user_id, activity_id, value, points
-  from user_activity_points up
-  where up.time = (
-      select max(up1.time)
-      from user_activity_points up1
-      where up1.user_id = up.user_id
-      and up1.activity_id = up.activity_id
-      )
-    and up.user_id = any($1)`;
-  const result: QueryResult<{
-    time: string;
-    user_id: string;
-    activity_id: string;
-    value: number;
-    points: number;
-  }> = await pool.query(queryString, [[...userIds]]);
+  const result = await db.execute<LatestUserActivityPointsRow>(sql`
+    select time, user_id, activity_id, value, points
+    from user_activity_points up
+    where up.time = (
+        select max(up1.time)
+        from user_activity_points up1
+        where up1.user_id = up.user_id
+        and up1.activity_id = up.activity_id
+        )
+      and up.user_id = any(${userIds})
+  `);
   return result.rows;
 }
 
 export async function getLatestPointsForUsers(userIds: string[]) {
-  const queryString = `
-  select time, user_id, points
-  from user_points up
-  where up.time = (
-      select max(up1.time)
-      from user_points up1
-      where up1.user_id = up.user_id
-      )
-    and up.user_id = any($1)`;
-  const result: QueryResult<{ time: Date; user_id: string; points: number }> =
-    await pool.query(queryString, [[...userIds]]);
+  const result = await db.execute<UserPointsRow>(sql`
+    select time, user_id, points
+    from user_points up
+    where up.time = (
+        select max(up1.time)
+        from user_points up1
+        where up1.user_id = up.user_id
+        )
+      and up.user_id = any(${userIds})
+  `);
   return result.rows;
 }
 
 export async function getLatestPointsForTeams() {
-  const queryString = `
-select time, team_id, points
-from team_points tp
-where tp.time = (
-    select max(tp1.time)
-    from team_points tp1
-    where tp1.team_id = tp.team_id
-)`;
-  const result: QueryResult<{ time: Date; team_id: string; points: number }> =
-    await pool.query(queryString);
+  const result = await db.execute<TeamPointsRow>(sql`
+    select time, team_id, points
+    from team_points tp
+    where tp.time = (
+        select max(tp1.time)
+        from team_points tp1
+        where tp1.team_id = tp.team_id
+    )
+  `);
+  return result.rows;
+}
+
+export async function getLatestActivityVisibilityForUsers(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as UserActivityVisibilityRow[];
+  }
+
+  const result = await db.execute<UserActivityVisibilityRow>(sql`
+    select time, user_id, is_activity_public
+    from user_activity_visibility uav
+    where uav.time = (
+        select max(uav1.time)
+        from user_activity_visibility uav1
+        where uav1.user_id = uav.user_id
+    )
+      and uav.user_id = any(${userIds})
+  `);
+
   return result.rows;
 }
 
@@ -69,36 +317,25 @@ export async function storeUserActivities(
   console.log(
     `Attempting to store data for ${
       activities.length
-    } activities at ${insertTime.toISOString()} using pg pool.`
+    } activities at ${insertTime.toISOString()} using Drizzle.`
   );
 
-  const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
+    await db.transaction(async (tx) => {
+      await tx.insert(userActivityPoints).values(
+        activities.map((activity) => ({
+          time: insertTime,
+          userId: activity.userId,
+          activityId: activity.activityId,
+          value: activity.value,
+          points: activity.points,
+        }))
+      );
+    });
 
-    const insertQuery =
-      "INSERT INTO user_activity_points(time, user_id, activity_id, value, points) VALUES($1, $2, $3, $4, $5)";
-
-    for (const activity of activities) {
-      await client.query(insertQuery, [
-        insertTime.toISOString(),
-        activity.userId,
-        activity.activityId,
-        activity.value,
-        activity.points,
-      ]);
-    }
-
-    await client.query("COMMIT");
-    console.log(
-      `Successfully stored ${activities.length} records using pg pool.`
-    );
+    console.log(`Successfully stored ${activities.length} records using Drizzle.`);
   } catch (error) {
-    await client.query("ROLLBACK");
     console.error("Error storing data:", error);
-  } finally {
-    client.release();
   }
 }
 
@@ -118,32 +355,61 @@ export async function storeUsersPoints(
   console.log(
     `Attempting to store data for ${
       users.length
-    } users at ${insertTime.toISOString()} using pg pool.`
+    } users at ${insertTime.toISOString()} using Drizzle.`
   );
 
-  const client = await pool.connect();
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userPoints).values(
+        users.map((user) => ({
+          time: insertTime,
+          userId: user.id,
+          points: user.points,
+        }))
+      );
+    });
+
+    console.log(`Successfully stored ${users.length} records using Drizzle.`);
+  } catch (error) {
+    console.error("Error storing data:", error);
+  }
+}
+
+export async function storeUsersActivityVisibility(
+  timestamp: number,
+  users: {
+    id: string;
+    isActivityPublic: boolean;
+  }[]
+): Promise<void> {
+  if (users.length === 0) {
+    console.log("No user activity visibility data provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store visibility data for ${
+      users.length
+    } users at ${insertTime.toISOString()} using Drizzle.`
+  );
 
   try {
-    await client.query("BEGIN");
+    await db.transaction(async (tx) => {
+      await tx.insert(userActivityVisibility).values(
+        users.map((user) => ({
+          time: insertTime,
+          userId: user.id,
+          isActivityPublic: user.isActivityPublic,
+        }))
+      );
+    });
 
-    const insertQuery =
-      "INSERT INTO user_points(time, user_id, points) VALUES($1, $2, $3)";
-
-    for (const user of users) {
-      await client.query(insertQuery, [
-        insertTime.toISOString(),
-        user.id,
-        user.points,
-      ]);
-    }
-
-    await client.query("COMMIT");
-    console.log(`Successfully stored ${users.length} records using pg pool.`);
+    console.log(
+      `Successfully stored visibility data for ${users.length} users using Drizzle.`
+    );
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error storing data:", error);
-  } finally {
-    client.release();
+    console.error("Error storing user activity visibility data:", error);
   }
 }
 
@@ -163,7 +429,7 @@ export async function storeTeamData(
   console.log(
     `Attempting to store data for ${
       teams.length
-    } teams at ${insertTime.toISOString()} using pg pool.`
+    } teams at ${insertTime.toISOString()} using Drizzle.`
   );
 
   const validTeams = teams.filter(
@@ -175,132 +441,44 @@ export async function storeTeamData(
     return;
   }
 
-  const client = await pool.connect();
-
   try {
-    await client.query("BEGIN");
+    await db.transaction(async (tx) => {
+      await tx.insert(teamPoints).values(
+        validTeams.map((team) => ({
+          time: insertTime,
+          teamId: team.id,
+          points: team.points ?? 0,
+        }))
+      );
+    });
 
-    const insertQuery =
-      "INSERT INTO team_points(time, team_id, points) VALUES($1, $2, $3)";
-
-    for (const team of validTeams) {
-      await client.query(insertQuery, [
-        insertTime.toISOString(),
-        team.id,
-        team.points,
-      ]);
-    }
-
-    await client.query("COMMIT");
-    console.log(
-      `Successfully stored ${validTeams.length} records using pg pool.`
-    );
+    console.log(`Successfully stored ${validTeams.length} records using Drizzle.`);
   } catch (error) {
-    await client.query("ROLLBACK");
     console.error("Error storing data:", error);
-  } finally {
-    client.release();
   }
 }
 
 export async function testDbConnection(): Promise<void> {
-  let client;
   try {
-    client = await pool.connect();
-    await client.query("SELECT NOW()");
-    console.log(
-      "Successfully connected to TimescaleDB via node-postgres pool."
-    );
+    await db.execute(sql`SELECT NOW()`);
+    console.log("Successfully connected to TimescaleDB via Drizzle.");
   } catch (error) {
-    console.error(
-      "Unable to connect to the database via node-postgres pool:",
-      error
-    );
+    console.error("Unable to connect to the database via Drizzle:", error);
     process.exit(1);
-  } finally {
-    if (client) {
-      client.release();
-    }
   }
 }
 
 export async function getTeamPointsByRange(start: Date, end: Date) {
-  const entriesExpected = 50;
-  const timeDifference = end.getTime() - start.getTime();
-  let timeBucket: string | undefined = undefined;
-  const hoursForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60 * 60) / entriesExpected
-  );
-  const minutesForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60) / entriesExpected
-  );
-  if (hoursForExpectedEntries > 0) {
-    timeBucket = `${hoursForExpectedEntries} hours`;
-  } else if (minutesForExpectedEntries >= 10) {
-    timeBucket = `${minutesForExpectedEntries} minutes`;
-  }
+  const timeBucket = getTimeBucket(start, end);
+  const query = getTeamPointsByRangeQuery(start, end, timeBucket);
 
-  let queryString = "";
-  if (timeBucket) {
-    queryString = `
-      WITH main_points AS (
-        SELECT time_bucket('${timeBucket}', "time") AS "time", team_id, LAST(points, "time") AS points
-        FROM team_points WHERE "time" >= $1 AND "time" < $2
-        GROUP BY 1, team_id
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
-        FROM team_points
-        WHERE "time" <= $1
-        ORDER BY team_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
-        FROM team_points
-        WHERE "time" >= $2
-        ORDER BY team_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, team_id ASC;
-    `;
-  } else {
-    queryString = `
-      WITH main_points AS (
-        SELECT time, team_id, points FROM team_points
-        WHERE "time" >= $1 AND "time" < $2
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
-        FROM team_points
-        WHERE "time" <= $1
-        ORDER BY team_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
-        FROM team_points
-        WHERE "time" >= $2
-        ORDER BY team_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, team_id ASC;
-    `;
-  }
+  console.info("Executing team points query with params:", [
+    start.toISOString(),
+    end.toISOString(),
+    ...(timeBucket ? [timeBucket] : []),
+  ]);
 
-  console.info(
-    `Executing query: ${queryString.replace(/\s+/g, " ").trim()} with params:`,
-    [start.toISOString(), end.toISOString()]
-  );
-
-  const result: QueryResult<{ time: Date; team_id: string; points: number }> =
-    await pool.query(queryString, [start.toISOString(), end.toISOString()]);
+  const result = await db.execute<TeamPointsRow>(query);
 
   return result.rows;
 }
@@ -310,86 +488,17 @@ export async function getUsersPointsByRange(
   start: Date,
   end: Date
 ) {
-  const entriesExpected = 50;
-  const timeDifference = end.getTime() - start.getTime();
-  let timeBucket: string | undefined = undefined;
-  const hoursForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60 * 60) / entriesExpected
-  );
-  const minutesForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60) / entriesExpected
-  );
-  if (hoursForExpectedEntries > 0) {
-    timeBucket = `${hoursForExpectedEntries} hours`;
-  } else if (minutesForExpectedEntries >= 10) {
-    timeBucket = `${minutesForExpectedEntries} minutes`;
-  }
+  const timeBucket = getTimeBucket(start, end);
+  const query = getUsersPointsByRangeQuery(userId, start, end, timeBucket);
 
-  let queryString = "";
-  if (timeBucket) {
-    queryString = `
-      WITH main_points AS (
-        SELECT time_bucket('${timeBucket}', "time") AS "time", user_id, LAST(points, "time") AS points
-        FROM user_points WHERE user_id = $3 AND "time" >= $1 AND "time" < $2
-        GROUP BY 1, user_id
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
-        FROM user_points
-        WHERE user_id = $3 AND "time" <= $1
-        ORDER BY user_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
-        FROM user_points
-        WHERE user_id = $3 AND "time" >= $2
-        ORDER BY user_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, user_id ASC;
-    `;
-  } else {
-    queryString = `
-      WITH main_points AS (
-        SELECT time, user_id, points FROM user_points
-        WHERE user_id = $3 AND "time" >= $1 AND "time" < $2
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
-        FROM user_points
-        WHERE user_id = $3 AND "time" <= $1
-        ORDER BY user_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
-        FROM user_points
-        WHERE user_id = $3 AND "time" >= $2
-        ORDER BY user_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, user_id ASC;
-    `;
-  }
+  console.info("Executing user points query with params:", [
+    start.toISOString(),
+    end.toISOString(),
+    userId,
+    ...(timeBucket ? [timeBucket] : []),
+  ]);
 
-  console.info(
-    `Executing query: ${queryString.replace(/\s+/g, " ").trim()} with params:`,
-    [start.toISOString(), end.toISOString(), userId]
-  );
-
-  const result: QueryResult<{ time: Date; user_id: string; points: number }> =
-    await pool.query(queryString, [
-      start.toISOString(),
-      end.toISOString(),
-      userId,
-    ]);
+  const result = await db.execute<UserPointsRow>(query);
 
   return result.rows;
 }
@@ -399,91 +508,22 @@ export async function getUsersActivityPointsByRange(
   start: Date,
   end: Date
 ) {
-  const entriesExpected = 50;
-  const timeDifference = end.getTime() - start.getTime();
-  let timeBucket: string | undefined = undefined;
-  const hoursForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60 * 60) / entriesExpected
-  );
-  const minutesForExpectedEntries = Math.floor(
-    timeDifference / (1000 * 60) / entriesExpected
-  );
-  if (hoursForExpectedEntries > 0) {
-    timeBucket = `${hoursForExpectedEntries} hours`;
-  } else if (minutesForExpectedEntries >= 10) {
-    timeBucket = `${minutesForExpectedEntries} minutes`;
-  }
-
-  let queryString = "";
-  if (timeBucket) {
-    queryString = `
-      WITH main_points AS (
-        SELECT time_bucket('${timeBucket}', "time") AS "time", user_id, activity_id, LAST(value, "time") AS value, LAST(points, "time") AS points
-        FROM user_activity_points WHERE user_id = $3 AND "time" >= $1 AND "time" < $2
-        GROUP BY 1, user_id, activity_id
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
-        FROM user_activity_points
-        WHERE user_id = $3 AND "time" <= $1
-        ORDER BY user_id, activity_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
-        FROM user_activity_points
-        WHERE user_id = $3 AND "time" >= $2
-        ORDER BY user_id, activity_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, user_id ASC, activity_id ASC;
-    `;
-  } else {
-    queryString = `
-      WITH main_points AS (
-        SELECT time, user_id, activity_id, value, points FROM user_activity_points
-        WHERE user_id = $3 AND "time" >= $1 AND "time" < $2
-      ),
-      before_points AS (
-        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
-        FROM user_activity_points
-        WHERE user_id = $3 AND "time" <= $1
-        ORDER BY user_id, activity_id, "time" DESC
-      ),
-      after_points AS (
-        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
-        FROM user_activity_points
-        WHERE user_id = $3 AND "time" >= $2
-        ORDER BY user_id, activity_id, "time" ASC
-      )
-      SELECT * FROM before_points
-      UNION ALL
-      SELECT * FROM main_points
-      UNION ALL
-      SELECT * FROM after_points
-      ORDER BY "time" ASC, user_id ASC, activity_id ASC;
-    `;
-  }
-
-  console.info(
-    `Executing query: ${queryString.replace(/\s+/g, " ").trim()} with params:`,
-    [start.toISOString(), end.toISOString(), userId]
+  const timeBucket = getTimeBucket(start, end);
+  const query = getUsersActivityPointsByRangeQuery(
+    userId,
+    start,
+    end,
+    timeBucket
   );
 
-  const result: QueryResult<{
-    time: Date;
-    user_id: string;
-    activity_id: string;
-    value: number;
-    points: number;
-  }> = await pool.query(queryString, [
+  console.info("Executing user activity points query with params:", [
     start.toISOString(),
     end.toISOString(),
     userId,
+    ...(timeBucket ? [timeBucket] : []),
   ]);
+
+  const result = await db.execute<UserActivityPointsRow>(query);
 
   return result.rows;
 }

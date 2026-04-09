@@ -203,7 +203,8 @@ export interface components {
         ChatConversationDetailsRemoteEntity: {
             createdAt?: string;
             updatedAt?: string;
-            type: string;
+            /** @enum {string} */
+            type: "DIRECT" | "TEAM" | "BROADCAST";
             members?: components["schemas"]["SquadEasyApi.UserRemoteEntity"][];
             messages?: components["schemas"]["ChatMessageRemoteEntity"][];
         };
@@ -215,12 +216,14 @@ export interface components {
             updatedAt: string;
             isRead: boolean;
             isMuted?: boolean;
-            type: string;
+            /** @enum {string} */
+            type: "DIRECT" | "TEAM" | "BROADCAST";
             lastMessage?: string;
         };
         ChatMessageRemoteEntity: {
             id: string;
-            type: string;
+            /** @enum {string} */
+            type: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO";
             message?: string;
             mediaUrl?: string;
             senderId: string;
@@ -288,7 +291,7 @@ export interface components {
         };
         NotificationTokenBodyRemoteEntity: {
             deviceId: string;
-            token: string;
+            token?: string;
         };
         "SquadEasyApi.UserRemoteEntity": {
             id: string;
@@ -305,16 +308,17 @@ export interface components {
             languageCode?: string;
             teamId?: string;
             teamName?: string;
+            /** Format: double */
             points?: number;
             entityId?: string;
         };
         UserNotificationBodyRemoteEntity: {
-            id?: string;
-            enabled?: boolean;
+            id: string;
+            isEnabled: boolean;
         };
         UserNotificationRemoteEntity: {
             id: string;
-            isEnabled: string;
+            isEnabled: boolean;
             title: string;
         };
     };
@@ -451,7 +455,7 @@ export interface operations {
                 "client-white-label-id": components["parameters"]["CommonMsParams"];
             };
             path: {
-                chatType: string;
+                chatType: "DIRECT" | "TEAM" | "BROADCAST";
             };
             cookie?: never;
         };
@@ -479,7 +483,7 @@ export interface operations {
                 "client-white-label-id": components["parameters"]["CommonMsParams"];
             };
             path: {
-                chatType: string;
+                chatType: "DIRECT" | "TEAM" | "BROADCAST";
             };
             cookie?: never;
         };
@@ -505,7 +509,7 @@ export interface operations {
                 "client-white-label-id": components["parameters"]["CommonMsParams"];
             };
             path: {
-                chatType: string;
+                chatType: "DIRECT" | "TEAM" | "BROADCAST";
                 id: string;
             };
             cookie?: never;
@@ -604,7 +608,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserNotificationBodyRemoteEntity"];
+                "application/json": components["schemas"]["UserNotificationBodyRemoteEntity"][];
             };
         };
         responses: {
@@ -630,7 +634,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ChunkRemoteEntity"];
+                "application/json": components["schemas"]["ChunkRemoteEntity"][];
             };
         };
         responses: {

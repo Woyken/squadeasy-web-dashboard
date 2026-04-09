@@ -148,54 +148,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/2.0/my/activities/mission/{activityID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ActivityService_getActivityMissions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2.0/my/activities/quiz/{activityID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ActivityService_getActivityQuizHistory"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/2.0/my/activities/walk/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["SportService_addWalkActivity"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/2.0/my/activities/{activityID}": {
         parameters: {
             query?: never;
@@ -203,7 +155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["ActivityService_getActivityGpsHistory"];
+        get: operations["ActivityService_getActivityMissions_ActivityService_getActivityGpsHistory_ActivityService_getDeclaredActivityHistory_ActivityService_getActivityQuizHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -237,7 +189,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["SportService_addSportGpsData"];
+        post: operations["SportService_addSportGpsData_SportService_addWalkActivity"];
         delete?: never;
         options?: never;
         head?: never;
@@ -335,6 +287,38 @@ export interface paths {
         put?: never;
         post: operations["UserService_uploadCurrentUserImage"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/2.0/my/integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TrackerService_getIntegrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/2.0/my/integrations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TrackerService_connectGarmin_TrackerService_connectStrava_TrackerService_connectFitbit"];
+        delete: operations["TrackerService_deleteIntegration"];
         options?: never;
         head?: never;
         patch?: never;
@@ -846,6 +830,22 @@ export interface paths {
         get: operations["ActivityService_getActivities"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/3.0/activities/declared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ActivityService_postDeclaredActivity"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1752,11 +1752,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ActivitiesDeclarableRemoteEntity: {
+            iconUrl?: string;
+            canDeclare?: boolean;
+            /** Format: int32 */
+            minDuration?: number;
+            /** Format: int32 */
+            maxDuration?: number;
+            activities?: components["schemas"]["ActivityDeclarableRemoteEntity"][];
+        };
         ActivitiesHistoryFiltersRemoteEntity: {
             filterBy: string;
             sinceDate: string;
-            minDatePossible: string;
-            maxDatePossible: string;
+            minDatePossible?: string;
+            maxDatePossible?: string;
         };
         ActivitiesHistoryHighlightRemoteEntity: {
             name: string;
@@ -1767,11 +1776,12 @@ export interface components {
         ActivitiesHistoryRemoteEntity: {
             filters: components["schemas"]["ActivitiesHistoryFiltersRemoteEntity"];
             highlights?: components["schemas"]["ActivitiesHistoryHighlightRemoteEntity"][];
-            activities: components["schemas"]["LegacyActivityHistoryRemoteEntity"][];
+            activities?: components["schemas"]["LegacyActivityHistoryRemoteEntity"][];
         };
         ActivitiesRemoteEntity: {
             categories?: components["schemas"]["ActivityCategoryRemoteEntity"][];
             activities?: components["schemas"]["ActivityRemoteEntity"][];
+            declarableActivities?: components["schemas"]["ActivitiesDeclarableRemoteEntity"];
             mobilityReasons?: components["schemas"]["ActivityMobilityReasonRemoteEntity"][];
         };
         ActivityCategoryRemoteEntity: {
@@ -1781,6 +1791,20 @@ export interface components {
             /** Format: int32 */
             defaultOrder: number;
             activityIds?: string[];
+        };
+        ActivityDeclarableRemoteEntity: {
+            id?: string;
+            name?: string;
+            iconUrl?: string;
+        };
+        ActivityDeclaredHistoryRemoteEntity: {
+            id: string;
+            type: string;
+            date: string;
+            value: string;
+            /** Format: int32 */
+            points: number;
+            activityName: string;
         };
         ActivityGpsBodyRemoteEntity: {
             isMobility?: boolean;
@@ -1803,7 +1827,7 @@ export interface components {
             isMobility?: boolean;
             /** Format: double */
             co2?: number;
-            isSharable: boolean;
+            isSharable?: boolean;
         };
         ActivityGpsHistoryRemoteEntity: {
             id: string;
@@ -1879,7 +1903,8 @@ export interface components {
         };
         ActivityMissionHistoryRemoteEntity: {
             id: string;
-            type: string;
+            /** @enum {string} */
+            type: "activitygroup" | "gps" | "walk" | "mission" | "quiz" | "bonus" | "media" | "socialtag" | "declared" | "unknown";
             name: string;
             date: string;
             /** Format: int32 */
@@ -2028,20 +2053,21 @@ export interface components {
             icon: string;
         };
         CO2ReferencesRemoteEntity: {
-            type: string;
+            /** @enum {string} */
+            type: "french_citizen" | "default";
             /** Format: double */
             value: number;
             source?: string;
         };
         CO2kpiRemoteEntity: {
             totalSaved: components["schemas"]["Co2DetailSavedRemoteEntity"];
-            equivalences: components["schemas"]["CO2EquivalenceRemoteEntity"][];
+            equivalences?: components["schemas"]["CO2EquivalenceRemoteEntity"][];
         };
         ChallengeMarqueeRemoteEntity: {
             title: string;
             description: string;
             status: string;
-            hasGlobalMission: boolean;
+            hasGlobalMission?: boolean;
         };
         ChallengeOverRemoteEntity: {
             image?: string;
@@ -2054,7 +2080,7 @@ export interface components {
             missionSummaryUrl?: string;
             /** Format: int32 */
             missionsSucceededCount?: number;
-            missions?: components["schemas"]["MissionSolidaryRemoteEntity"][];
+            missions?: components["schemas"]["LegacyMissionSolidaryRemoteEntity"][];
             statistics: components["schemas"]["ChallengeOverStatisticsRemoteEntity"];
             /** Format: int32 */
             rank?: number;
@@ -2108,6 +2134,11 @@ export interface components {
             name: string;
             code: string;
         };
+        DeclaredActivityRemoteEntity: {
+            id: string;
+            /** Format: int32 */
+            duration: number;
+        };
         EditTeamRemoteEntity: {
             name?: string;
             code?: string;
@@ -2115,6 +2146,12 @@ export interface components {
         EmailConfirmationRemoteEntity: {
             code?: string;
             email?: string;
+        };
+        FitbitLoginBodyRemoteEntity: {
+            accessToken: string;
+            refreshToken: string;
+            /** Format: int32 */
+            expiresIn: number;
         };
         ForgotPasswordRemoteEntity: {
             email: string;
@@ -2136,7 +2173,8 @@ export interface components {
             maximumBoost: number;
         };
         HomeCarouselRemoteEntity: {
-            type: string;
+            /** @enum {string} */
+            type: "team" | "user" | "co2" | "challenge" | "global_mission" | "announcement" | "default";
             id?: string;
             title?: string;
             subtitle?: string;
@@ -2180,7 +2218,7 @@ export interface components {
         };
         HomeUserActivityGroupStatusRemoteEntity: {
             commands?: components["schemas"]["CommandRemoteEntity"][];
-            retryAt: string;
+            retryAt?: string;
         };
         IdRemoteEntity: {
             id: string;
@@ -2197,7 +2235,7 @@ export interface components {
             command?: components["schemas"]["CommandRemoteEntity"];
         };
         JoinTeamRemote: {
-            code: string;
+            code?: string;
         };
         LanguageRemoteEntity: {
             languageCode: string;
@@ -2205,8 +2243,8 @@ export interface components {
         };
         LegacyActivityHistoryRemoteEntity: {
             id: string;
-            name: string;
-            icon: string;
+            name?: string;
+            icon?: string;
             date: string;
             /** Format: int32 */
             duration: number;
@@ -2214,8 +2252,9 @@ export interface components {
             distance: number;
             /** Format: int32 */
             points: number;
-            status: string;
-            command: components["schemas"]["CommandRemoteEntity"];
+            /** @enum {string} */
+            status: "ok" | "cheated" | "pending" | "rejected" | "unknown";
+            command?: components["schemas"]["CommandRemoteEntity"];
         };
         LegacyActivityRemoteEntity: {
             id: string;
@@ -2234,10 +2273,11 @@ export interface components {
             endAt: string;
             title: string;
             description: string;
-            missions?: components["schemas"]["MissionSolidaryRemoteEntity"][];
+            missions?: components["schemas"]["LegacyMissionSolidaryRemoteEntity"][];
         };
         LegacyMissionRemoteEntity: {
-            type: string;
+            /** @enum {string} */
+            type: "SOLO" | "TEAM" | "ACTIVITY_MISSION" | "SOCIAL_MISSION" | "MOBILITY_MISSION";
             isOneShot: boolean;
             /** Format: int32 */
             goalProgress: number;
@@ -2249,6 +2289,31 @@ export interface components {
             /** Format: int32 */
             points: number;
             isSucceeded: boolean;
+        };
+        LegacyMissionSolidaryRemoteEntity: {
+            title: string;
+            description: string;
+            successDescription: string;
+            failureDescription: string;
+            startAt: string;
+            endAt: string;
+            type: string;
+            /** Format: double */
+            objective: number;
+            /** Format: double */
+            progression: number;
+            status: string;
+            mainGoal: string;
+            steps?: components["schemas"]["LegacyMissionSolidaryStepRemoteEntity"][];
+        };
+        LegacyMissionSolidaryStepRemoteEntity: {
+            /** Format: int32 */
+            index: number;
+            goal: string;
+            /** Format: double */
+            progression: number;
+            /** Format: double */
+            objective: number;
         };
         LegacyRankingMedalRemoteEntity: {
             id: string;
@@ -2302,7 +2367,8 @@ export interface components {
             progress: number;
             /** Format: int32 */
             percentage: number;
-            type: string;
+            /** @enum {string} */
+            type: "steps" | "distance" | "points" | "default";
             endAt: string;
             steps?: components["schemas"]["MissionSolidaryStepRemoteEntity"][];
             statistics?: components["schemas"]["MissionSolidaryStatisticsRemoteEntity"];
@@ -2443,7 +2509,7 @@ export interface components {
             command?: components["schemas"]["CommandRemoteEntity"];
         };
         SearchCourseBodyRemoteEntity: {
-            points: number[];
+            points: number[][];
             difficulties: number[];
             sources: string[];
         };
@@ -2456,7 +2522,8 @@ export interface components {
             max: number;
         };
         SettingsFeaturesRemoteEntity: {
-            registrationType: string;
+            /** @enum {string} */
+            registrationType: "forbidden" | "public" | "mandatory_code" | "optional_code" | "undefined";
             isSocialWallEnabled?: boolean;
             isSocialtagEnabled?: boolean;
             isBlogEnabled?: boolean;
@@ -2543,7 +2610,8 @@ export interface components {
         };
         SocialTagDetailsRemoteEntity: {
             id: string;
-            availability?: string;
+            /** @enum {string} */
+            availability?: "daily" | "weekly" | "monthly" | "yearly" | "unknown";
             /** Format: int32 */
             occurrence: number;
             /** Format: int32 */
@@ -2562,8 +2630,10 @@ export interface components {
         SocialTagRemoteEntity: {
             id: string;
             name: string;
-            type?: string;
-            availability?: string;
+            /** @enum {string} */
+            type?: "image" | "text" | "socialtag" | "default" | "unknown";
+            /** @enum {string} */
+            availability?: "daily" | "weekly" | "monthly" | "yearly" | "unknown";
             /** Format: int32 */
             occurrence?: number;
             /** Format: int32 */
@@ -2614,7 +2684,7 @@ export interface components {
             comments?: components["schemas"]["SocialWallPostCommentRemoteEntity"][];
         };
         SocialWallPostsRemoteEntity: {
-            filtersAvailable: components["schemas"]["SocialTagRemoteEntity"][];
+            filtersAvailable?: components["schemas"]["SocialTagRemoteEntity"][];
             filters: string[];
             offsetQueryParams?: components["schemas"]["OffsetQueryParamsRemoteEntity"];
             isSocialtagAvailable: boolean;
@@ -2664,8 +2734,8 @@ export interface components {
             /** Format: int32 */
             totalStep: number;
             polyline: string;
-            startLatlng: number[];
-            endLatlng: number[];
+            startLatLng: number[];
+            endLatLng: number[];
             pauses: components["schemas"]["SportGpsPauseRemoteEntity"][];
             stepsWhenGPSLost: components["schemas"]["SportGpsSignalLostRemoteEntity"][];
         };
@@ -2688,8 +2758,8 @@ export interface components {
             /** Format: int64 */
             pauseDuration: number;
             polyline: string;
-            startLatlng: number[];
-            endLatlng: number[];
+            startLatLng: number[];
+            endLatLng: number[];
             activityId: string;
         };
         SportSessionBodyRemoteEntity: {
@@ -2811,13 +2881,13 @@ export interface components {
         SurveyOptionsRemoteEntity: {
             id: string;
             option: string;
-            str?: string;
+            iconUrl?: string;
         };
         SurveyRemoteEntity: {
             id: string;
-            str?: string;
+            imageUrl?: string;
             description: string;
-            list?: components["schemas"]["SurveyOptionsRemoteEntity"][];
+            options?: components["schemas"]["SurveyOptionsRemoteEntity"][];
         };
         TeamActivityStatsRemoteEntity: {
             activityId: string;
@@ -2900,6 +2970,27 @@ export interface components {
             accessToken: string;
             refreshToken: string;
         };
+        TrackerGarminLoginBodyRemoteEntity: {
+            accessToken: string;
+            secret: string;
+        };
+        TrackerLoginBodyRemoteEntity: {
+            id: string;
+            accessToken: string;
+            refreshToken: string;
+            /** Format: int32 */
+            expiresAt: number;
+        };
+        TrackerRemoteEntity: {
+            /** @enum {string} */
+            tracker: "strava" | "google fit" | "garmin" | "fitbit" | "unknown";
+            isActive: boolean;
+            trackerSecret?: string;
+            trackerId?: string;
+            trackerUri?: string;
+            image?: string;
+            notes?: string;
+        };
         TutorialRemoteEntity: {
             image?: string;
             title?: string;
@@ -2954,6 +3045,7 @@ export interface components {
         UserProfileActivityRemoteEntity: {
             id: string;
             name: string;
+            /** Format: double */
             value: number;
             SIType: string;
         };
@@ -2994,6 +3086,7 @@ export interface components {
             languageCode?: string;
             teamId?: string;
             teamName?: string;
+            /** Format: double */
             points?: number;
             entityId?: string;
         };
@@ -3241,7 +3334,7 @@ export interface operations {
             };
         };
     };
-    ActivityService_getActivityMissions: {
+    ActivityService_getActivityMissions_ActivityService_getActivityGpsHistory_ActivityService_getDeclaredActivityHistory_ActivityService_getActivityQuizHistory: {
         parameters: {
             query?: never;
             header?: never;
@@ -3258,75 +3351,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ActivityMissionHistoryRemoteEntity"][];
-                };
-            };
-        };
-    };
-    ActivityService_getActivityQuizHistory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                activityID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActivityQuizHistoryRemoteEntity"][];
-                };
-            };
-        };
-    };
-    SportService_addWalkActivity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StepsRemoteEntity"][];
-            };
-        };
-        responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ActivityService_getActivityGpsHistory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                activityID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActivityGpsHistoryRemoteEntity"][];
+                    "application/json": components["schemas"]["ActivityMissionHistoryRemoteEntity"][] | components["schemas"]["ActivityGpsHistoryRemoteEntity"][] | components["schemas"]["ActivityDeclaredHistoryRemoteEntity"][] | components["schemas"]["ActivityQuizHistoryRemoteEntity"][];
                 };
             };
         };
@@ -3381,7 +3406,7 @@ export interface operations {
             };
         };
     };
-    SportService_addSportGpsData: {
+    SportService_addSportGpsData_SportService_addWalkActivity: {
         parameters: {
             query?: never;
             header?: never;
@@ -3392,7 +3417,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SportGpsRemoteEntity"];
+                "application/json": components["schemas"]["SportGpsRemoteEntity"] | components["schemas"]["StepsRemoteEntity"][];
             };
         };
         responses: {
@@ -3404,6 +3429,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IdRemoteEntity"];
                 };
+            };
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3523,10 +3555,74 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    part: unknown;
+                    image: unknown;
                 };
             };
         };
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TrackerService_getIntegrations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerRemoteEntity"][];
+                };
+            };
+        };
+    };
+    TrackerService_connectGarmin_TrackerService_connectStrava_TrackerService_connectFitbit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: "garmin" | "strava" | "fitbit";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackerGarminLoginBodyRemoteEntity"] | components["schemas"]["TrackerLoginBodyRemoteEntity"] | components["schemas"]["FitbitLoginBodyRemoteEntity"];
+            };
+        };
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TrackerService_deleteIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description There is no content to send for this request, but the headers may be useful.  */
             204: {
@@ -3693,7 +3789,7 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    part: unknown;
+                    image: unknown;
                 };
             };
         };
@@ -4291,6 +4387,28 @@ export interface operations {
             };
         };
     };
+    ActivityService_postDeclaredActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclaredActivityRemoteEntity"];
+            };
+        };
+        responses: {
+            /** @description There is no content to send for this request, but the headers may be useful.  */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     SportService_getGpsActivityGroups: {
         parameters: {
             query?: never;
@@ -4742,8 +4860,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: string;
-                seasonId: string;
+                type: "season" | "global" | "groups";
+                seasonId: "current" | string;
             };
             cookie?: never;
         };
@@ -4804,7 +4922,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RankingElementRemoteEntity"];
+                    "application/json": components["schemas"]["RankingElementRemoteEntity"][];
                 };
             };
         };
@@ -4814,7 +4932,7 @@ export interface operations {
             query: {
                 name: string;
                 limit: number;
-                offsetId: string;
+                offsetId?: string;
             };
             header?: never;
             path: {
@@ -4870,17 +4988,17 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": {
-                    part: unknown;
-                    part2: unknown;
+                    image: unknown;
+                    message: string;
                 } | {
-                    part: unknown;
-                    part2: unknown;
+                    image: unknown;
+                    socialtagId: string;
                 } | {
-                    part: unknown;
-                    part2: unknown;
-                    part3: unknown;
+                    message: string;
+                    image: unknown;
+                    socialtagId: string;
                 } | {
-                    part: unknown;
+                    message: string;
                 };
                 "application/json": components["schemas"]["SocialPostMessageBodyRemoteEntity"];
             };
@@ -5106,7 +5224,7 @@ export interface operations {
             header?: never;
             path: {
                 post_id: string;
-                actionId: string;
+                actionId: "hide" | "hide_for_user_only" | "removeSocialtag" | "pin" | "unpin";
             };
             cookie?: never;
         };
@@ -5368,7 +5486,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SportSegmentRemoteEntity"];
+                "application/json": components["schemas"]["SportSegmentRemoteEntity"][];
             };
         };
         responses: {
@@ -5664,9 +5782,9 @@ export interface operations {
     };
     SocialWallService_getSocialPosts: {
         parameters: {
-            query: {
-                date: string;
-                filters: string;
+            query?: {
+                date?: string;
+                filters?: string;
             };
             header?: never;
             path?: never;

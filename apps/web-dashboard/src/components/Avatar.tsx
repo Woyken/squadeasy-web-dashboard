@@ -11,7 +11,7 @@ export function Avatar(props: { userId: string; size?: number }) {
       (data.firstName[0] ?? "") + (data.lastName?.[0] ?? "")
     ).toUpperCase();
   });
-  const imageUrl = createMemo(() => query.data?.imageUrl);
+  const imageUrl = createMemo(() => query.data?.imageUrl ?? undefined);
 
   return (
     <div

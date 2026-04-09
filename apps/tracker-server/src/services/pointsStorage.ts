@@ -2,6 +2,8 @@ import { sql, type SQL } from "drizzle-orm";
 
 import { db } from "../database.ts";
 import {
+  latestTeamProfiles,
+  latestUserProfiles,
   teamPoints,
   userActivityPoints,
   userActivityVisibility,
@@ -62,6 +64,23 @@ type TeamMembershipIntervalRow = {
   left_at: string | null;
   active_from: string;
   active_until: string;
+};
+
+type LatestTeamProfileRow = {
+  team_id: string;
+  name: string;
+  image: string | null;
+  updated_at: string;
+};
+
+type LatestUserProfileRow = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  image: string | null;
+  team_id: string;
+  team_name: string | null;
+  updated_at: string;
 };
 
 function getTimeBucket(start: Date, end: Date) {
@@ -340,6 +359,40 @@ export async function getLatestTeamMembershipsForUsers(userIds: string[]) {
   return result.rows;
 }
 
+export async function getLatestTeamProfile(teamId: string) {
+  const result = await db.execute<LatestTeamProfileRow>(sql`
+    select
+      ltp.team_id,
+      ltp.name,
+      ltp.image,
+      ltp.updated_at
+    from latest_team_profiles ltp
+    where ltp.team_id = ${teamId}
+    limit 1
+  `);
+
+  return result.rows[0];
+}
+
+export async function getLatestUserProfile(userId: string) {
+  const result = await db.execute<LatestUserProfileRow>(sql`
+    select
+      lup.user_id,
+      lup.first_name,
+      lup.last_name,
+      lup.image,
+      lup.team_id,
+      ltp.name as team_name,
+      lup.updated_at
+    from latest_user_profiles lup
+    left join latest_team_profiles ltp on ltp.team_id = lup.team_id
+    where lup.user_id = ${userId}
+    limit 1
+  `);
+
+  return result.rows[0];
+}
+
 export async function storeUserActivities(
   timestamp: number,
   activities: {
@@ -495,6 +548,122 @@ export async function storeUserTeamMemberships(
     );
   } catch (error) {
     console.error("Error storing user team memberships:", error);
+  }
+}
+
+export async function storeLatestUserProfiles(
+  timestamp: number,
+  users: {
+    id: string;
+    teamId: string;
+    firstName: string;
+    lastName: string;
+    image?: string;
+  }[]
+): Promise<void> {
+  if (users.length === 0) {
+    console.log("No user profiles provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to upsert ${users.length} user profiles at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  const uniqueUsers = Array.from(
+    new Map(
+      users.map((user) => [
+        user.id,
+        {
+          userId: user.id,
+          teamId: user.teamId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          image: user.image,
+          updatedAt: insertTime,
+        },
+      ])
+    ).values()
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(latestUserProfiles)
+        .values(uniqueUsers)
+        .onConflictDoUpdate({
+          target: latestUserProfiles.userId,
+          set: {
+            teamId: sql`excluded.team_id`,
+            firstName: sql`excluded.first_name`,
+            lastName: sql`excluded.last_name`,
+            image: sql`excluded.image`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    });
+
+    console.log(
+      `Successfully upserted ${uniqueUsers.length} user profiles using Drizzle.`
+    );
+  } catch (error) {
+    console.error("Error storing user profiles:", error);
+  }
+}
+
+export async function storeLatestTeamProfiles(
+  timestamp: number,
+  teams: {
+    id: string;
+    name: string;
+    image?: string;
+  }[]
+): Promise<void> {
+  if (teams.length === 0) {
+    console.log("No team profiles provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to upsert ${teams.length} team profiles at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  const uniqueTeams = Array.from(
+    new Map(
+      teams.map((team) => [
+        team.id,
+        {
+          teamId: team.id,
+          name: team.name,
+          image: team.image,
+          updatedAt: insertTime,
+        },
+      ])
+    ).values()
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(latestTeamProfiles)
+        .values(uniqueTeams)
+        .onConflictDoUpdate({
+          target: latestTeamProfiles.teamId,
+          set: {
+            name: sql`excluded.name`,
+            image: sql`excluded.image`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    });
+
+    console.log(
+      `Successfully upserted ${uniqueTeams.length} team profiles using Drizzle.`
+    );
+  } catch (error) {
+    console.error("Error storing team profiles:", error);
   }
 }
 

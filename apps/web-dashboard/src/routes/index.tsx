@@ -8,9 +8,11 @@ import {
     Suspense,
 } from "solid-js";
 import {
+    mergeSeasonTeams,
     useHistoricalTeamPointsQuery,
     useMyChallengeQuery,
     useSeasonRankingQuery,
+    useStoredTeamQueries,
 } from "~/api/client";
 import {
     getDefaultHistoricalTimeWindow,
@@ -78,10 +80,44 @@ function DashboardPage() {
     const seconds = createMemo(() => pad(Math.floor((absDiffMs() % (60 * 1000)) / 1000)));
 
     const teamsQuery = useSeasonRankingQuery();
+    const historicalTimeWindow = createMemo(() => {
+        const startAt = startAtTimestamp() ?? Date.now() - 86400000;
+        const endAt = endAtTimestamp() ?? Date.now();
+
+        return getDefaultHistoricalTimeWindow(startAt, endAt);
+    });
+    const historicalTeamPointsQuery = useHistoricalTeamPointsQuery(
+        () => historicalTimeWindow().start,
+        () => historicalTimeWindow().end,
+    );
+    const missingHistoricalTeamIds = createMemo(() => {
+        if (phase() !== "ended") {
+            return [];
+        }
+
+        const liveTeamIds = new Set((teamsQuery.data?.data?.teams ?? []).map((team) => team.id));
+        const trackedTeamIds = new Set(
+            (historicalTeamPointsQuery.data ?? []).map((team) => team.teamId),
+        );
+
+        return [...trackedTeamIds].filter((teamId) => !liveTeamIds.has(teamId));
+    });
+    const storedTeamQueries = useStoredTeamQueries(missingHistoricalTeamIds);
+    const storedTeams = createMemo(() =>
+        storedTeamQueries
+            .map((query) => query.data)
+            .filter((team): team is NonNullable<typeof team> => !!team),
+    );
     const sortedTeams = createMemo(() =>
-        teamsQuery.data?.data?.teams
-            .slice()
-            .sort((a, b) => b.points - a.points) ?? [],
+        phase() === "ended"
+            ? mergeSeasonTeams(
+                  teamsQuery.data?.data?.teams ?? [],
+                  storedTeams(),
+                  historicalTeamPointsQuery.data ?? [],
+              )
+            : (teamsQuery.data?.data?.teams
+                  .slice()
+                  .sort((a, b) => b.points - a.points) ?? []),
     );
 
     const countdownLabel = createMemo(() => {
@@ -149,8 +185,12 @@ function DashboardPage() {
                     >
                         <Show when={startAtTimestamp() && endAtTimestamp()}>
                             <TeamScoreChart
+                                phase={phase()}
                                 startAt={startAtTimestamp()!}
                                 endsAt={endAtTimestamp()!}
+                                historicalPoints={historicalTeamPointsQuery.data ?? []}
+                                teams={sortedTeams()}
+                                currentSnapshotTime={teamsQuery.data?.time ?? Date.now()}
                             />
                         </Show>
                     </Suspense>
@@ -237,36 +277,25 @@ function DashboardPage() {
     );
 }
 
-function TeamScoreChart(props: { endsAt: number; startAt: number }) {
-    const teamsQuery = useSeasonRankingQuery();
-    const teamsMetadata = createMemo(() => {
-        return {
-            timestamp: teamsQuery.data?.time ?? Date.now(),
-            data: teamsQuery.data?.data?.teams.slice().sort((a, b) => b.points - a.points),
-        };
-    });
-
-    const timeWindow = createMemo(() =>
-        getDefaultHistoricalTimeWindow(props.startAt, props.endsAt),
-    );
-
-    const historicalQuery = useHistoricalTeamPointsQuery(
-        () => timeWindow().start,
-        () => timeWindow().end,
-    );
-
+function TeamScoreChart(props: {
+    phase: ChallengePhase;
+    endsAt: number;
+    historicalPoints: { teamId: string; time: string; points: number }[];
+    startAt: number;
+    teams: { id: string; name: string; points: number }[];
+    currentSnapshotTime: number;
+}) {
     const teamColors = [
         "#000", "#ff0000", "#0000ff", "#008800", "#ff8800", "#8800ff",
         "#00aaaa", "#aa0088", "#888", "#446600", "#004488", "#cc4400",
     ];
 
     const chartOptions = createMemo(() => {
-        const meta = teamsMetadata();
-        const currentData = meta.data?.reduce(
+        const currentData = props.teams.reduce(
             (acc, t) => { acc[t.id] = t.points; return acc; },
             {} as Record<string, number>,
         );
-        const historical = historicalQuery.data ?? [];
+        const historical = props.historicalPoints;
 
         // Build per-team data series
         const byTeam: Record<string, { t: number; p: number }[]> = {};
@@ -277,14 +306,14 @@ function TeamScoreChart(props: { endsAt: number; startAt: number }) {
             byTeam[entry.teamId]!.push({ t: ts, p: entry.points });
         }
         // Add current points
-        if (currentData) {
+        if (props.phase !== "ended") {
             for (const [teamId, points] of Object.entries(currentData)) {
                 if (!byTeam[teamId]) byTeam[teamId] = [];
-                byTeam[teamId]!.push({ t: meta.timestamp, p: points });
+                byTeam[teamId]!.push({ t: props.currentSnapshotTime, p: points });
             }
         }
 
-        const series = (meta.data ?? []).map((team, i) => {
+        const series = props.teams.map((team, i) => {
             const data = (byTeam[team.id] ?? [])
                 .sort((a, b) => a.t - b.t)
                 .map((d) => [d.t, d.p]);

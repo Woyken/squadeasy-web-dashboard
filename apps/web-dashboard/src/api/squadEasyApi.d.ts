@@ -5,70 +5,347 @@
 
 
 export interface paths {
-  "/": {
-    get: operations["Ranking_rankingGlobal"];
+  "/api/2.0/auth/forgot-password": {
+    post: operations["AuthService_forgotPassword"];
+  };
+  "/api/2.0/blogs/posts/{post_id}": {
+    get: operations["SocialWallService_getBlogPost"];
+  };
+  "/api/2.0/courses/search": {
+    post: operations["CourseService_searchCourses"];
+  };
+  "/api/2.0/courses/sources": {
+    get: operations["CourseService_getCourseSources"];
+  };
+  "/api/2.0/entities/{spaceId}": {
+    get: operations["EnvironmentService_getSpaceGroups"];
+  };
+  "/api/2.0/event": {
+    post: operations["AnalyticsService_postEvent"];
+  };
+  "/api/2.0/landing/spaces/validate": {
+    post: operations["EnvironmentService_validateSpaceCode"];
+  };
+  "/api/2.0/languages": {
+    get: operations["EnvironmentService_getLanguages"];
+  };
+  "/api/2.0/my/activities": {
+    get: operations["ActivityService_getMyActivities"];
+  };
+  "/api/2.0/my/activities/{activityID}": {
+    get: operations["ActivityService_getActivityMissions_ActivityService_getActivityGpsHistory_ActivityService_getDeclaredActivityHistory_ActivityService_getActivityQuizHistory"];
+  };
+  "/api/2.0/my/activities/{activityID}/{id}": {
+    get: operations["ActivityService_getActivityQuiz"];
+    post: operations["ActivityService_postActivityQuizAnswer"];
+  };
+  "/api/2.0/my/activities/{id}": {
+    post: operations["SportService_addSportGpsData_SportService_addWalkActivity"];
+  };
+  "/api/2.0/my/activities/{id}/manual": {
+    post: operations["SportService_addManualSteps"];
+  };
+  "/api/2.0/my/challenge": {
+    get: operations["ChallengeService_getLegacyMyChallenge"];
+  };
+  "/api/2.0/my/challenge/marquee": {
+    get: operations["ChallengeService_getMyChallengeMarquee"];
+  };
+  "/api/2.0/my/challenge/over": {
+    get: operations["ChallengeService_getLegacyMyChallengeOver"];
+  };
+  "/api/2.0/my/courses": {
+    post: operations["CourseService_submitMyCourse"];
   };
   "/api/2.0/my/image": {
-    post: operations["User_uploadImage"];
+    post: operations["UserService_uploadCurrentUserImage"];
   };
-  "/api/2.0/my/ranking/season": {
-    get: operations["Ranking_rankingSeason"];
+  "/api/2.0/my/integrations": {
+    get: operations["TrackerService_getIntegrations"];
+  };
+  "/api/2.0/my/integrations/{id}": {
+    post: operations["TrackerService_connectGarmin_TrackerService_connectStrava_TrackerService_connectFitbit"];
+    delete: operations["TrackerService_deleteIntegration"];
+  };
+  "/api/2.0/my/password": {
+    patch: operations["UserService_updatePassword"];
+  };
+  "/api/2.0/my/quiz": {
+    get: operations["ActivityService_getMyQuizzes"];
+  };
+  "/api/2.0/my/socialtags/available": {
+    get: operations["SocialWallService_getMyAvailableSocialTags"];
+  };
+  "/api/2.0/my/statistics": {
+    get: operations["UserService_getCurrentUserStatistics"];
   };
   "/api/2.0/my/team": {
-    get: operations["TeamService_myTeam"];
+    get: operations["TeamService_getMyTeam"];
+    patch: operations["TeamService_updateMyTeam"];
+  };
+  "/api/2.0/my/team/captain": {
+    patch: operations["TeamService_updateTeamCaptain"];
+  };
+  "/api/2.0/my/team/image": {
+    post: operations["TeamService_uploadMyTeamImage"];
+  };
+  "/api/2.0/my/team/kick": {
+    post: operations["TeamService_kickTeamMember"];
+  };
+  "/api/2.0/my/team/leave": {
+    post: operations["TeamService_leaveMyTeam"];
+  };
+  "/api/2.0/my/team/statistics": {
+    get: operations["TeamService_getMyTeamStatistics"];
   };
   "/api/2.0/my/user": {
-    get: operations["User_user"];
-    patch: operations["User_updateUser"];
+    get: operations["UserService_getCurrentUser"];
+    delete: operations["UserService_deleteCurrentUser"];
+    patch: operations["UserService_updateCurrentUser"];
+  };
+  "/api/2.0/rating/store/accept": {
+    post: operations["MainService_acceptStoreRating"];
+  };
+  "/api/2.0/rating/store/decline": {
+    post: operations["MainService_declineStoreRating"];
+  };
+  "/api/2.0/social/posts/report-reasons": {
+    get: operations["SocialWallService_getReportReasons"];
+  };
+  "/api/2.0/social/posts/{post_id}/liked-by": {
+    get: operations["SocialWallService_getSocialPostLikes"];
+  };
+  "/api/2.0/social/posts/{post_id}/report": {
+    post: operations["SocialWallService_reportSocialPost"];
   };
   "/api/2.0/socialTags/list": {
-    get: operations["Social_getSocialTags"];
+    get: operations["SocialWallService_getSocialTagList"];
+  };
+  "/api/2.0/socialtags": {
+    get: operations["SocialWallService_getSocialTags"];
   };
   "/api/2.0/teams": {
-    get: operations["TeamService_teams"];
+    get: operations["TeamService_getTeams"];
+    post: operations["TeamService_createTeam"];
+  };
+  "/api/2.0/teams/search": {
+    post: operations["TeamService_searchTeams"];
   };
   "/api/2.0/teams/{id}": {
-    get: operations["TeamService_teamDetails"];
+    get: operations["TeamService_getTeam"];
+  };
+  "/api/2.0/teams/{id}/join": {
+    post: operations["TeamService_joinTeam"];
   };
   "/api/2.0/users": {
-    get: operations["User_getAllUsers"];
+    get: operations["UserService_getUsers"];
+  };
+  "/api/2.0/users/search": {
+    post: operations["UserService_searchUsers"];
+  };
+  "/api/2.0/users/validate-account/code": {
+    post: operations["AuthService_validateAccountCode"];
+  };
+  "/api/2.0/users/validate-account/send-email": {
+    post: operations["AuthService_sendAccountValidationEmail"];
   };
   "/api/2.0/users/{id}": {
-    get: operations["User_getUser"];
+    get: operations["UserService_getUser"];
+  };
+  "/api/2.0/users/{id}/block": {
+    post: operations["UserService_blockUser"];
   };
   "/api/2.0/users/{id}/boost": {
-    post: operations["User_boostUser"];
+    post: operations["UserService_boostUser"];
   };
   "/api/2.0/users/{id}/statistics": {
-    get: operations["User_getUserStatistics"];
+    get: operations["UserService_getUserStatistics"];
+  };
+  "/api/2.0/users/{id}/unblock": {
+    post: operations["UserService_unblockUser"];
+  };
+  "/api/3.0/activities": {
+    get: operations["ActivityService_getActivities"];
+  };
+  "/api/3.0/activities/declared": {
+    post: operations["ActivityService_postDeclaredActivity"];
+  };
+  "/api/3.0/activity-groups/gps": {
+    get: operations["SportService_getGpsActivityGroups"];
+  };
+  "/api/3.0/activity-groups/mobility-reasons": {
+    get: operations["SportService_getMobilityReasons"];
   };
   "/api/3.0/auth/login": {
-    post: operations["Authentication_login"];
+    post: operations["AuthService_login"];
   };
   "/api/3.0/auth/refresh-token": {
-    post: operations["Authentication_refreshToken"];
+    post: operations["AuthService_refreshToken"];
+  };
+  "/api/3.0/auth/register": {
+    post: operations["AuthService_register"];
+  };
+  "/api/3.0/badges": {
+    get: operations["HomeService_getBadges"];
+  };
+  "/api/3.0/blogs/posts": {
+    get: operations["SocialWallService_getBlogPosts_SocialWallService_getBlogPostsNoParams"];
+  };
+  "/api/3.0/boosts/received": {
+    get: operations["HomeService_getReceivedBoosts"];
+  };
+  "/api/3.0/bottom-nav": {
+    get: operations["MainService_getBottomNav_MainService_getBottomNavNoParams"];
+  };
+  "/api/3.0/global-missions/active": {
+    get: operations["ChallengeService_getActiveGlobalMissions"];
+  };
+  "/api/3.0/global-missions/over": {
+    get: operations["ChallengeService_getOverGlobalMissions"];
+  };
+  "/api/3.0/missions/activities/ongoing": {
+    get: operations["HomeService_getOngoingMissions"];
+  };
+  "/api/3.0/missions/activities/over": {
+    get: operations["HomeService_getOverMissions"];
+  };
+  "/api/3.0/missions/activities/upcoming": {
+    get: operations["HomeService_getUpcomingMissions"];
+  };
+  "/api/3.0/my/activities/{activityID}/{id}": {
+    get: operations["ActivityService_getActivityGpsDetails"];
+    patch: operations["ActivityService_updateActivityGpsDetails"];
   };
   "/api/3.0/my/challenge": {
-    get: operations["ChallengeService_myChallenge"];
+    get: operations["ChallengeService_getMyChallenge"];
+  };
+  "/api/3.0/my/home": {
+    get: operations["HomeService_getMyHome"];
+  };
+  "/api/3.0/onboarding/discover": {
+    get: operations["AuthService_getOnboardingDiscover"];
+  };
+  "/api/3.0/quizzes/answered": {
+    get: operations["ActivityService_getAnsweredQuizzes"];
+  };
+  "/api/3.0/quizzes/un-answered": {
+    get: operations["ActivityService_getUnansweredQuizzes"];
+  };
+  "/api/3.0/ranking/{type}/{seasonId}": {
+    get: operations["RankingService_getRanking"];
+  };
+  "/api/3.0/ranking/{type}/{seasonId}/elements": {
+    get: operations["RankingService_getRankingElements"];
+  };
+  "/api/3.0/ranking/{type}/{seasonId}/elements/me": {
+    get: operations["RankingService_getMyRankingElement"];
+  };
+  "/api/3.0/ranking/{type}/{seasonId}/elements/search": {
+    get: operations["RankingService_searchRankingElements"];
+  };
+  "/api/3.0/settings": {
+    get: operations["EnvironmentService_getSettings"];
   };
   "/api/3.0/social/posts": {
-    get: operations["Social_posts"];
-    post: operations["Social_createPost"];
+    post: operations["SocialWallService_createSocialPostWithMedia_SocialWallService_createSocialPostWith2Params_SocialWallService_createSocialPostWith3Params_SocialWallService_createSocialPostWithMessage_SocialWallService_createSocialPostWithOnePart"];
+  };
+  "/api/3.0/social/posts/{post_id}": {
+    get: operations["SocialWallService_getSocialPost"];
+    post: operations["SocialWallService_createSocialPostById"];
+    delete: operations["SocialWallService_deleteSocialPost"];
+    patch: operations["SocialWallService_updateSocialPost"];
+  };
+  "/api/3.0/social/posts/{post_id}/comments/{comment_id}": {
+    delete: operations["SocialWallService_deleteSocialPostComment"];
+  };
+  "/api/3.0/social/posts/{post_id}/comments/{comment_id}/like": {
+    put: operations["SocialWallService_likeSocialPostComment"];
+    delete: operations["SocialWallService_deleteSocialPostCommentLike"];
   };
   "/api/3.0/social/posts/{post_id}/like": {
-    put: operations["Social_likePost"];
+    put: operations["SocialWallService_likeSocialPost"];
+    delete: operations["SocialWallService_unlikeSocialPost"];
+  };
+  "/api/3.0/social/posts/{post_id}/moderate/{actionId}": {
+    post: operations["SocialWallService_moderateSocialPost"];
+  };
+  "/api/3.0/survey/{id}": {
+    get: operations["HomeService_getSurvey"];
+  };
+  "/api/3.0/survey/{id}/answer": {
+    post: operations["HomeService_answerSurvey"];
+  };
+  "/api/3.0/team-detail/{id}": {
+    get: operations["TeamService_getTeamDetails"];
+  };
+  "/api/3.0/teams/management": {
+    get: operations["TeamService_getTeamManagement"];
+  };
+  "/api/3.0/tutorials/{helpId}": {
+    get: operations["TutorialsService_getTutorials"];
+  };
+  "/api/3.0/user-activity-groups": {
+    get: operations["ActivityService_getUserActivityGroups"];
+  };
+  "/api/3.0/user-activity-groups/start": {
+    post: operations["SportService_startSportSession"];
+  };
+  "/api/3.0/user-activity-groups/{userActivityGroupId}": {
+    patch: operations["ActivityService_updateUserActivityGroup_SportService_updateUserActivityGroupMobilityReason"];
+  };
+  "/api/3.0/user-activity-groups/{userActivityGroupId}/end": {
+    post: operations["SportService_endUserActivityGroup"];
+  };
+  "/api/3.0/user-activity-groups/{userActivityGroupId}/ping": {
+    post: operations["SportService_pingUserActivityGroup"];
+  };
+  "/api/3.0/user-activity-groups/{userActivityGroupId}/segments": {
+    get: operations["ActivityService_getUserActivityGroupSegments"];
+    post: operations["SportService_addSportSegments"];
+  };
+  "/api/3.0/user-classifications": {
+    get: operations["UserService_getUserClassifications"];
+    post: operations["UserService_setUserClassifications"];
+  };
+  "/api/3.0/user-profile/{userId}": {
+    get: operations["UserService_getUserProfile"];
   };
   "/api/3.0/user-status": {
-    get: operations["User_userStatus"];
+    get: operations["UserService_getUserStatus"];
+  };
+  "/api/3.0/users/blocked-users": {
+    get: operations["UserService_getBlockedUsers"];
+  };
+  "/api/3.0/users/me/accept-legals-consent": {
+    get: operations["UserService_getAcceptedLegalConsents"];
+    post: operations["UserService_acceptLegalConsent"];
+  };
+  "/api/4.0/co2/summary": {
+    get: operations["CO2Service_getCo2Summary"];
+  };
+  "/api/4.0/histories/activity-gps/last-activity-command": {
+    get: operations["HomeService_getLastActivityCommand"];
+  };
+  "/api/4.0/histories/activity-gps/{id}": {
+    get: operations["ActivityService_getActivityGpsSummary"];
   };
   "/api/4.0/histories/gps": {
-    get: operations["Activity_activityHistoryList"];
+    get: operations["ActivityService_getGpsHistories"];
   };
-  "/api/4.0/histories/gps/{id}": {
-    get: operations["Activity_activityHistory"];
+  "/api/4.0/histories/{type}/{seasonId}": {
+    get: operations["ActivityService_getHistories"];
   };
-    "/api/3.0/user-profile/{userId}": {
-    get: operations["UserService_getUserProfile"];
+  "/api/4.0/home": {
+    get: operations["HomeService_getHome"];
+  };
+  "/api/4.0/social/posts": {
+    get: operations["SocialWallService_getSocialPosts"];
+  };
+  "/api/4.0/steps/updated-at": {
+    get: operations["SportService_getStepsUpdatedAt"];
+  };
+  "/api/4.0/weather": {
+    get: operations["WeatherService_getWeatherForecast"];
   };
 }
 
@@ -76,43 +353,1313 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    ActivityHistory: {
-      id: string;
-      name: ("Fast walking" | "Run") | string;
-      /** Format: uri */
-      icon: string;
-      /** Format: date-time */
-      startAt: string;
-      /** Format: date-time */
-      endAt: string;
-      polylines: string[];
+    ActivitiesDeclarableRemoteEntity: {
+      iconUrl?: string;
+      canDeclare?: boolean;
       /** Format: int32 */
+      minDuration?: number;
+      /** Format: int32 */
+      maxDuration?: number;
+      activities?: components["schemas"]["ActivityDeclarableRemoteEntity"][];
+    };
+    ActivitiesHistoryFiltersRemoteEntity: {
+      filterBy: string;
+      sinceDate: string;
+      minDatePossible?: string;
+      maxDatePossible?: string;
+    };
+    ActivitiesHistoryHighlightRemoteEntity: {
+      name: string;
+      /** Format: double */
+      value: number;
+      SIType: string;
+    };
+    ActivitiesHistoryRemoteEntity: {
+      filters: components["schemas"]["ActivitiesHistoryFiltersRemoteEntity"];
+      highlights?: components["schemas"]["ActivitiesHistoryHighlightRemoteEntity"][];
+      activities?: components["schemas"]["LegacyActivityHistoryRemoteEntity"][];
+    };
+    ActivitiesRemoteEntity: {
+      categories?: components["schemas"]["ActivityCategoryRemoteEntity"][];
+      activities?: components["schemas"]["ActivityRemoteEntity"][];
+      declarableActivities?: components["schemas"]["ActivitiesDeclarableRemoteEntity"];
+      mobilityReasons?: components["schemas"]["ActivityMobilityReasonRemoteEntity"][];
+    };
+    ActivityCategoryRemoteEntity: {
+      id: string;
+      name: string;
+      iconUrl?: string;
+      /** Format: int32 */
+      defaultOrder: number;
+      activityIds?: string[];
+    };
+    ActivityDeclarableRemoteEntity: {
+      id?: string;
+      name?: string;
+      iconUrl?: string;
+    };
+    ActivityDeclaredHistoryRemoteEntity: {
+      id: string;
+      type: string;
+      date: string;
+      value: string;
+      /** Format: int32 */
+      points: number;
+      activityName: string;
+    };
+    ActivityGpsBodyRemoteEntity: {
+      isMobility?: boolean;
+      isSharable?: boolean;
+    };
+    ActivityGpsDetailsRemoteEntity: {
+      type: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: int32 */
+      distance: number;
+      /** Format: int32 */
+      duration: number;
+      /** Format: double */
+      elevation: number;
+      /** Format: double */
+      speed: number;
+      gpsTrace?: components["schemas"]["SportGpsLocationRemoteEntity"][];
+      polyline?: string;
+      isMobility?: boolean;
+      /** Format: double */
+      co2?: number;
+      isSharable?: boolean;
+    };
+    ActivityGpsHistoryRemoteEntity: {
+      id: string;
+      type: string;
+      date: string;
+      /** Format: int32 */
+      value: number;
+      /** Format: int32 */
+      points: number;
+    };
+    ActivityGroupMobilityReasonsBodyRemoteEntity: {
+      mobilityReason?: string;
+    };
+    ActivityGroupMobilityReasonsRemoteEntity: {
+      id: string;
+      name: string;
+      isSelected: boolean;
+    };
+    ActivityGroupRemoteEntity: {
+      id: string;
+      name: string;
+      image?: string;
+    };
+    ActivityHistoryAchieversElementRemoteEntity: {
+      id: string;
+      image?: string;
+      firstName: string;
+      lastName: string;
+      isUserDeleted: boolean;
+    };
+    ActivityHistoryDetailsElementRemoteEntity: {
+      id: string;
+      name?: string;
+      icon?: string;
+      image?: string;
+      /** Format: double */
+      duration?: number;
+      /** Format: double */
+      distance?: number;
+      /** Format: double */
+      number?: number;
+      text?: string;
+      achievers?: components["schemas"]["ActivityHistoryAchieversElementRemoteEntity"][];
+    };
+    ActivityHistoryElementRemoteEntity: {
+      id: string;
+      date: string;
+      type: string;
+      missionType?: string;
+      /** Format: double */
+      points?: number;
+      isUserDeleted: boolean;
+      activityDetail: components["schemas"]["ActivityHistoryDetailsElementRemoteEntity"];
+      achievers?: components["schemas"]["ActivityHistoryAchieversElementRemoteEntity"][];
+    };
+    ActivityHistoryRemoteEntity: {
+      seasonAvailable?: components["schemas"]["RankingSeasonAvailableRemoteEntity"][];
+      season?: components["schemas"]["RankingSeasonAvailableRemoteEntity"];
+      offsetQueryParam?: components["schemas"]["OffsetQueryParamsRemoteEntity"];
+      elements: components["schemas"]["ActivityHistoryElementRemoteEntity"][];
+    };
+    ActivityHomeQuizRemoteEntity: {
+      id: string;
+      image?: string;
+      publicImage?: string;
+      question: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: int32 */
+      remainingTime?: number;
+      isAnswered: boolean;
+      correctAnswer: boolean;
+    };
+    ActivityMissionHistoryRemoteEntity: {
+      id: string;
+      /** @enum {string} */
+      type: "activitygroup" | "gps" | "walk" | "mission" | "quiz" | "bonus" | "media" | "socialtag" | "declared" | "unknown";
+      name: string;
+      date: string;
+      /** Format: int32 */
+      points: number;
+      isOneShot: boolean;
+      /** Format: int32 */
+      goalProgress: number;
+      isDuration: boolean;
+      /** Format: int32 */
+      goal: number;
+      isSucceeded: boolean;
+    };
+    ActivityMobilityReasonRemoteEntity: {
+      id: string;
+      name: string;
+      description?: string;
+      categoriesIdOrdered?: string[];
+      iconUrl?: string;
+    };
+    ActivityQuizAnswerRemoteEntity: {
+      id: string;
+      value: string;
+      isSelected?: boolean;
+      isCorrect?: boolean;
+    };
+    ActivityQuizHistoryRemoteEntity: {
+      id: string;
+      type: string;
+      date: string;
+      value: string;
+      /** Format: int32 */
+      points: number;
+    };
+    ActivityQuizPostAnswerRemoteEntity: {
+      answer?: string;
+      answers?: string[];
+    };
+    ActivityQuizRemoteEntity: {
+      id: string;
+      image?: string;
+      question: string;
+      description: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: int32 */
+      remainingTime?: number;
+      isAnswered: boolean;
+      correctAnswer: boolean;
+      urlAnswer?: string;
+      type: string;
+      answers?: components["schemas"]["ActivityQuizAnswerRemoteEntity"][];
+    };
+    ActivityRemoteEntity: {
+      id: string;
+      name: string;
+      iconUrl?: string;
+      highQualityIconUrl?: string;
+      /** Format: double */
+      distanceOfStep?: number;
+      /** Format: double */
+      maxStrideBySecond?: number;
+      type: string;
+      /** Format: int32 */
+      autopauseInterval?: number;
+      mobilityReasonIds?: string[];
+    };
+    AirQualityRemoteEntity: {
+      /** Format: int32 */
+      aqi: number;
+      /** Format: int32 */
+      api?: number;
+      /** Format: int64 */
+      dt: number;
+      /** Format: double */
+      co?: number;
+      /** Format: double */
+      no?: number;
+      /** Format: double */
+      no2?: number;
+      /** Format: double */
+      o3?: number;
+      /** Format: double */
+      so2?: number;
+      /** Format: double */
+      pm2_5?: number;
+      /** Format: double */
+      pm10?: number;
+      /** Format: double */
+      nh3?: number;
+    };
+    AnalyticsRemoteEntity: {
+      type: string;
+      value: string;
+    };
+    BadgesRemoteEntity: {
+      /** Format: int32 */
+      social?: number;
+    };
+    BlogPostContentRemoteEntity: {
+      tag?: string;
+      image?: string;
+      title?: string;
+      html?: string;
+    };
+    BlogPostRemoteEntity: {
+      id: string;
+      createdAt: string;
+      content: components["schemas"]["BlogPostContentRemoteEntity"];
+    };
+    BodyRemoteEntity: {
+      id: string;
+      title?: string;
+      titleArgs?: string[];
+      presentationStyle: string;
+      rows?: components["schemas"]["RowRemoteEntity"][];
+    };
+    BottomBarColorsRemoteEntity: {
+      selected?: string;
+      unSelected?: string;
+    };
+    BottomBarRemoteEntity: {
+      colors: components["schemas"]["BottomBarColorsRemoteEntity"];
+      tabs: components["schemas"]["BottomBarTabRemoteEntity"][];
+    };
+    BottomBarTabRemoteEntity: {
+      iconSelected: string;
+      iconUnselected: string;
+      titleLocalised: string;
+      command: components["schemas"]["CommandRemoteEntity"];
+      isSpecial: boolean;
+      isDefault: boolean;
+      /** Format: int32 */
+      badgeCount?: number;
+    };
+    CO2DetailsRemoteEntity: {
+      icon?: string;
+      reference: components["schemas"]["CO2ReferencesRemoteEntity"];
+      user: components["schemas"]["CO2kpiRemoteEntity"];
+      team: components["schemas"]["CO2kpiRemoteEntity"];
+      challenge?: components["schemas"]["CO2kpiRemoteEntity"];
+    };
+    CO2EquivalenceRemoteEntity: {
+      /** Format: double */
+      value: number;
+      title: string;
+      icon: string;
+    };
+    CO2ReferencesRemoteEntity: {
+      /** @enum {string} */
+      type: "french_citizen" | "default";
+      /** Format: double */
+      value: number;
+      source?: string;
+    };
+    CO2kpiRemoteEntity: {
+      totalSaved: components["schemas"]["Co2DetailSavedRemoteEntity"];
+      equivalences?: components["schemas"]["CO2EquivalenceRemoteEntity"][];
+    };
+    ChallengeMarqueeRemoteEntity: {
+      title: string;
+      description: string;
+      status: string;
+      hasGlobalMission?: boolean;
+    };
+    ChallengeOverRemoteEntity: {
+      image?: string;
+      publicImage?: string;
+      spaceImage?: string;
+      deletionDate: string;
+      title: string;
+      description: string;
+      missionSummaryDescription?: string;
+      missionSummaryUrl?: string;
+      /** Format: int32 */
+      missionsSucceededCount?: number;
+      missions?: components["schemas"]["LegacyMissionSolidaryRemoteEntity"][];
+      statistics: components["schemas"]["ChallengeOverStatisticsRemoteEntity"];
+      /** Format: int32 */
+      rank?: number;
+      medal?: components["schemas"]["LegacyRankingMedalRemoteEntity"];
+    };
+    ChallengeOverStatisticsRemoteEntity: {
+      /** Format: int32 */
+      usersCount: number;
+      /** Format: double */
+      distanceSum: number;
+      /** Format: int32 */
+      answersCount: number;
+      /** Format: double */
+      stepCount: number;
+    };
+    ChallengeRemoteEntity: {
+      image?: string;
+      spaceImage?: string;
+      startAt?: string;
+      endAt?: string;
+      title?: string;
+      tagline?: string;
+      description?: string;
+      deletionDate?: string;
+      statistics?: components["schemas"]["ChallengeOverStatisticsRemoteEntity"];
+    };
+    Co2DetailSavedRemoteEntity: {
+      /** Format: double */
+      value: number;
+      SIType: string;
+    };
+    CommandRemoteEntity: {
+      name: string;
+      params?: Record<string, never>;
+    };
+    CourseRemoteEntity: {
+      coordinates: number[];
+      source: string;
+      type: string;
+      title?: string;
+      description?: string;
+      polyline?: string;
+      /** Format: int32 */
+      difficulty?: number;
+      /** Format: int32 */
+      duration?: number;
+      /** Format: double */
+      distance?: number;
+    };
+    CreateTeamRemote: {
+      name: string;
+      code: string;
+    };
+    DeclaredActivityRemoteEntity: {
+      id: string;
+      /** Format: int32 */
+      duration: number;
+    };
+    EditTeamRemoteEntity: {
+      name?: string;
+      code?: string;
+    };
+    EmailConfirmationRemoteEntity: {
+      code?: string;
+      email?: string;
+    };
+    FitbitLoginBodyRemoteEntity: {
+      accessToken: string;
+      refreshToken: string;
+      /** Format: int32 */
+      expiresIn: number;
+    };
+    ForgotPasswordRemoteEntity: {
+      email: string;
+    };
+    GroupRemoteEntity: {
+      id: string;
+      name: string;
+    };
+    HeadRemoteEntity: {
+      title: string;
+      leftItems?: components["schemas"]["ItemRemoteEntity"][];
+      rightItems?: components["schemas"]["ItemRemoteEntity"][];
+    };
+    HomeBoostRemoteEntity: {
+      boosts?: string[];
+      /** Format: int32 */
+      percentage: number;
+      /** Format: int32 */
+      maximumBoost: number;
+    };
+    HomeCarouselRemoteEntity: {
+      /** @enum {string} */
+      type: "team" | "user" | "co2" | "challenge" | "global_mission" | "announcement" | "default";
+      id?: string;
+      title?: string;
+      subtitle?: string;
+      description?: string;
+      image?: string;
+      overImageText?: string;
+      /** Format: int32 */
+      ordinalNumber?: number;
+    };
+    HomeModeMissionRemoteEntity: {
+      /** Format: int32 */
+      count: number;
+      images?: string[];
+    };
+    HomeModeRemoteEntity: {
+      id: string;
+      image?: string;
+      title: string;
+      subtitle: string;
+      missions?: components["schemas"]["HomeModeMissionRemoteEntity"];
+      popupDescription: string;
+    };
+    HomeRemoteEntity: {
+      challengeTitle?: string;
+      /** Format: int32 */
+      globalMissionProgress?: number;
+      carousels?: components["schemas"]["HomeCarouselRemoteEntity"][];
+      steps?: components["schemas"]["HomeStepsRemoteEntity"];
+      modes?: components["schemas"]["HomeModeRemoteEntity"][];
+      modeBackgroundIcon?: string;
+      helpText?: string;
+    };
+    HomeResponseRemoteEntity: {
+      head: components["schemas"]["HeadRemoteEntity"];
+      body?: components["schemas"]["BodyRemoteEntity"][];
+    };
+    HomeStepsRemoteEntity: {
+      /** Format: int32 */
+      value: number;
+      updatedAt: string;
+    };
+    HomeUserActivityGroupStatusRemoteEntity: {
+      commands?: components["schemas"]["CommandRemoteEntity"][];
+      retryAt?: string;
+    };
+    IdRemoteEntity: {
+      id: string;
+    };
+    IdRemoteEntityUpdate: {
+      id?: string;
+    };
+    ItemRemoteEntity: {
+      iconName?: string;
+      iconUrl?: string;
+      title?: string;
+      /** Format: int32 */
+      badgeValue?: number;
+      command?: components["schemas"]["CommandRemoteEntity"];
+    };
+    JoinTeamRemote: {
+      code?: string;
+    };
+    LanguageRemoteEntity: {
+      languageCode: string;
+      languageName: string;
+    };
+    LegacyActivityHistoryRemoteEntity: {
+      id: string;
+      name?: string;
+      icon?: string;
+      date: string;
+      /** Format: int32 */
+      duration: number;
+      /** Format: double */
+      distance: number;
+      /** Format: int32 */
+      points: number;
+      /** @enum {string} */
+      status: "ok" | "cheated" | "pending" | "rejected" | "unknown";
+      command?: components["schemas"]["CommandRemoteEntity"];
+    };
+    LegacyActivityRemoteEntity: {
+      id: string;
+      type: string;
+      image?: string;
+      publicImage?: string;
+      /** Format: int32 */
+      value: number;
+      missions?: components["schemas"]["LegacyMissionRemoteEntity"][];
+    };
+    LegacyChallengeRemoteEntity: {
+      image?: string;
+      publicImage?: string;
+      spaceImage?: string;
+      startAt: string;
+      endAt: string;
+      title: string;
+      description: string;
+      missions?: components["schemas"]["LegacyMissionSolidaryRemoteEntity"][];
+    };
+    LegacyMissionRemoteEntity: {
+      /** @enum {string} */
+      type: "SOLO" | "TEAM" | "ACTIVITY_MISSION" | "SOCIAL_MISSION" | "MOBILITY_MISSION";
+      isOneShot: boolean;
+      /** Format: int32 */
+      goalProgress: number;
+      isDuration: boolean;
+      /** Format: int32 */
+      goal: number;
+      /** Format: int32 */
+      remainingDuration: number;
+      /** Format: int32 */
+      points: number;
+      isSucceeded: boolean;
+    };
+    LegacyMissionSolidaryRemoteEntity: {
+      title: string;
+      description: string;
+      successDescription: string;
+      failureDescription: string;
+      startAt: string;
+      endAt: string;
+      type: string;
+      /** Format: double */
+      objective: number;
+      /** Format: double */
+      progression: number;
+      status: string;
+      mainGoal: string;
+      steps?: components["schemas"]["LegacyMissionSolidaryStepRemoteEntity"][];
+    };
+    LegacyMissionSolidaryStepRemoteEntity: {
+      /** Format: int32 */
+      index: number;
+      goal: string;
+      /** Format: double */
+      progression: number;
+      /** Format: double */
+      objective: number;
+    };
+    LegacyRankingMedalRemoteEntity: {
+      id: string;
+      /** Format: int32 */
+      minimalRank: number;
+      image?: string;
+      publicImage?: string;
+      defaultImage?: string;
+      color: string;
+      name: string;
+      description: string;
+    };
+    Login: {
+      email: string;
+      password: string;
+    };
+    MissionRemoteEntity: {
+      id: string;
+      activityIcon: string;
+      activityName: string;
+      command?: components["schemas"]["CommandRemoteEntity"];
+      date?: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: double */
+      goal: number;
+      unit: string;
+      isTeam: boolean;
+      /** Format: double */
+      progress: number;
+      /** Format: double */
+      percentage: number;
+      isOver: boolean;
+      isSuccess: boolean;
+      isOneShot: boolean;
+    };
+    MissionSolidaryRemoteEntity: {
+      id: string;
+      title: string;
+      /** Format: int32 */
+      index: number;
+      description: string;
+      overDescription?: string;
+      /** Format: int32 */
+      reward: number;
+      rewardUnit: string;
+      resources: components["schemas"]["MissionSolidaryResourcesRemoteEntity"];
+      /** Format: double */
+      objective: number;
+      /** Format: double */
+      progress: number;
+      /** Format: int32 */
+      percentage: number;
+      /** @enum {string} */
+      type: "steps" | "distance" | "points" | "default";
+      endAt: string;
+      steps?: components["schemas"]["MissionSolidaryStepRemoteEntity"][];
+      statistics?: components["schemas"]["MissionSolidaryStatisticsRemoteEntity"];
+    };
+    MissionSolidaryResourcesRemoteEntity: {
+      lottie?: string;
+      image?: string;
+    };
+    MissionSolidaryStatisticRemoteEntity: {
+      image?: string;
+      /** Format: double */
+      members: number;
+      /** Format: double */
+      progress: number;
+      /** Format: double */
+      percentage: number;
+    };
+    MissionSolidaryStatisticsRemoteEntity: {
+      me: components["schemas"]["MissionSolidaryStatisticRemoteEntity"];
+      team?: components["schemas"]["MissionSolidaryStatisticRemoteEntity"];
+      total: components["schemas"]["MissionSolidaryStatisticRemoteEntity"];
+    };
+    MissionSolidaryStepRemoteEntity: {
+      success?: string;
+      /** Format: double */
+      goal: number;
+      /** Format: double */
+      progress?: number;
+    };
+    OffsetQueryParamsRemoteEntity: {
+      date: string;
+      page?: string;
+      filters?: string[];
+    };
+    OnBoardingDiscoverRemoteEntity: {
+      image?: string;
+      title?: string;
+      description?: string;
+    };
+    QuizSummaryRemoteEntity: {
+      id: string;
+      command?: components["schemas"]["CommandRemoteEntity"];
+      image?: string;
+      title: string;
+      /** Format: int32 */
+      points: number;
+      date: string;
+      isAnswered: boolean;
+      isSuccess: boolean;
+    };
+    RankingElementRemoteEntity: {
+      id: string;
+      image?: string;
+      name: string;
+      /** Format: double */
+      points?: number;
+      /** Format: int32 */
+      rank: number;
+      medals?: components["schemas"]["RankingMedalRemoteEntity"][];
+      isUser: boolean;
+    };
+    RankingMedalRemoteEntity: {
+      name: string;
+      image?: string;
+      /** Format: int32 */
+      count: number;
+    };
+    RankingPelotonRemoteEntity: {
+      /** Format: int32 */
+      rank: number;
+      /** Format: double */
+      points?: number;
+      medals?: components["schemas"]["RankingMedalRemoteEntity"][];
+      scale: components["schemas"]["RankingPelotonScaleRemoteEntity"];
+    };
+    RankingPelotonScaleRemoteEntity: {
+      last: components["schemas"]["RankingPelotonScaleTeamRemoteEntity"];
+      middle: components["schemas"]["RankingPelotonScaleTeamRemoteEntity"];
+      first: components["schemas"]["RankingPelotonScaleTeamRemoteEntity"];
+    };
+    RankingPelotonScaleTeamRemoteEntity: {
+      id: string;
+      image?: string;
+      name: string;
+      isUser: boolean;
+      /** Format: int32 */
+      rank: number;
+      /** Format: double */
+      pointsDiff?: number;
+    };
+    RankingRemoteEntity: {
+      seasonAvailable?: components["schemas"]["RankingSeasonAvailableRemoteEntity"][];
+      season?: components["schemas"]["RankingSeasonAvailableRemoteEntity"];
+      isRanked: boolean;
+      /** Format: int32 */
+      rankedElements: number;
+      elements?: components["schemas"]["RankingElementRemoteEntity"][];
+      peloton?: components["schemas"]["RankingPelotonRemoteEntity"];
+    };
+    RankingSeasonAvailableRemoteEntity: {
+      id: string;
+      /** Format: int32 */
+      number: number;
+      name?: string;
+      startDate: string;
+      endDate: string;
+      offSeason?: boolean;
+    };
+    RegisterRemoteEntity: {
+      email: string;
+      password: string;
+      passwordConfirmation: string;
+      firstName: string;
+      lastName: string;
+      spaceId: string;
+      /** @description groupId */
+      entity?: string;
+      languageCode: string;
+      isPublic: boolean;
+      consentBasics: boolean;
+      consentDataShare: boolean;
+    };
+    ReportReasonRemoteEntity: {
+      id: string;
+      title: string;
+    };
+    RowRemoteEntity: {
+      id: string;
+      type: string;
+      title?: string;
+      titleArgs?: string[];
+      subtitle?: string;
+      subtitleArgs?: string[];
+      description?: string;
+      descriptionArgs?: string[];
+      iconUrls?: string[];
+      overImageText?: string;
+      command?: components["schemas"]["CommandRemoteEntity"];
+    };
+    SearchCourseBodyRemoteEntity: {
+      points: number[][];
+      difficulties: number[];
+      sources: string[];
+    };
+    SettingsBoostsRemoteEntity: {
+      /** Format: int32 */
+      duration: number;
+      /** Format: int32 */
+      percentage: number;
+      /** Format: int32 */
+      max: number;
+    };
+    SettingsFeaturesRemoteEntity: {
+      /** @enum {string} */
+      registrationType: "forbidden" | "public" | "mandatory_code" | "optional_code" | "undefined";
+      isSocialWallEnabled?: boolean;
+      isSocialtagEnabled?: boolean;
+      isBlogEnabled?: boolean;
+      isItineraryEnabled?: boolean;
+      isAnalyticsEnabled?: boolean;
+      isUserClassificationEnabled?: boolean;
+    };
+    SettingsLinksRemoteEntity: {
+      faq?: string;
+      cgu?: string;
+      privacy?: string;
+    };
+    SettingsRemoteEntity: {
+      id: string;
+      features: components["schemas"]["SettingsFeaturesRemoteEntity"];
+      theme: components["schemas"]["SettingsThemeRemoteEntity"];
+      links: components["schemas"]["SettingsLinksRemoteEntity"];
+      boosts: components["schemas"]["SettingsBoostsRemoteEntity"];
+      support: components["schemas"]["SettingsSupportRemoteEntity"];
+      team: components["schemas"]["SettingsTeamRemoteEntity"];
+    };
+    SettingsSupportRemoteEntity: {
+      spaceId?: string;
+      email: string;
+      name: string;
+      isZendeskEnabled: boolean;
+    };
+    SettingsTeamRemoteEntity: {
+      /** Format: int32 */
+      maxMembers: number;
+      canCreate: boolean;
+    };
+    SettingsThemeAssetsRemoteEntity: {
+      iconPackName?: string;
+      appIconUrl?: string;
+      customFont?: string;
+      splashScreenUrl?: string;
+      mascotUrl?: string;
+    };
+    SettingsThemeColorsRemoteEntity: {
+      primary: string;
+      onPrimary: string;
+      secondary: string;
+      onSecondary: string;
+      textLight: string;
+      textDark: string;
+      background: string;
+      onBackground: string;
+      alert: string;
+      onAlert: string;
+    };
+    SettingsThemeRadiusRemoteEntity: {
+      /** Format: int32 */
+      small: number;
+      /** Format: int32 */
+      medium: number;
+    };
+    SettingsThemeRemoteEntity: {
+      colors: components["schemas"]["SettingsThemeColorsRemoteEntity"];
+      radius: components["schemas"]["SettingsThemeRadiusRemoteEntity"];
+      assets: components["schemas"]["SettingsThemeAssetsRemoteEntity"];
+    };
+    SocialPostEditBodyRemoteEntity: {
+      message?: string;
+    };
+    SocialPostMessageBodyRemoteEntity: {
+      message: string;
+    };
+    SocialPostUserLikeRemoteEntity: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      teamName?: string;
+      teamId?: string;
+      image?: string;
+    };
+    SocialSenderRemoteEntity: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      image?: string;
+      teamId?: string;
+      teamName?: string;
+    };
+    SocialTagDetailsRemoteEntity: {
+      id: string;
+      /** @enum {string} */
+      availability?: "daily" | "weekly" | "monthly" | "yearly" | "unknown";
+      /** Format: int32 */
+      occurrence: number;
+      /** Format: int32 */
+      remaining?: number;
+      name: string;
+      date: string;
+      /** Format: int32 */
+      points: number;
+      image?: string;
+      description?: string;
+    };
+    SocialTagListRemoteEntity: {
+      ongoing?: components["schemas"]["SocialTagDetailsRemoteEntity"][];
+      upcoming?: components["schemas"]["SocialTagDetailsRemoteEntity"][];
+    };
+    SocialTagRemoteEntity: {
+      id: string;
+      name: string;
+      /** @enum {string} */
+      type?: "image" | "text" | "socialtag" | "default" | "unknown";
+      /** @enum {string} */
+      availability?: "daily" | "weekly" | "monthly" | "yearly" | "unknown";
+      /** Format: int32 */
+      occurrence?: number;
+      /** Format: int32 */
+      points?: number;
+      image?: string;
+      description?: string;
+    };
+    SocialWallPostCommentContentRemoteEntity: {
+      message: string;
+    };
+    SocialWallPostCommentLikesRemoteEntity: {
+      isLikedByUser: boolean;
+      /** Format: double */
+      count: number;
+    };
+    SocialWallPostCommentRemoteEntity: {
+      id: string;
+      createdAt: string;
+      sender: components["schemas"]["SocialSenderRemoteEntity"];
+      content: components["schemas"]["SocialWallPostCommentContentRemoteEntity"];
+      likes: components["schemas"]["SocialWallPostCommentLikesRemoteEntity"];
+    };
+    SocialWallPostContentRemoteEntity: {
+      isEdited: boolean;
+      message?: string;
+      images?: string[];
+      socialtag?: string;
+      /** Format: double */
+      points?: number;
+    };
+    SocialWallPostLikesRemoteEntity: {
+      isLikedByUser: boolean;
+      /** Format: int32 */
+      count: number;
+      images?: string[];
+      firstName?: string;
+      lastName?: string;
+    };
+    SocialWallPostRemoteEntity: {
+      id: string;
+      createdAt: string;
+      updatedAt?: string;
+      hasModeratorRole?: boolean;
+      isPinned?: boolean;
+      sender: components["schemas"]["SocialSenderRemoteEntity"];
+      content: components["schemas"]["SocialWallPostContentRemoteEntity"];
+      likes: components["schemas"]["SocialWallPostLikesRemoteEntity"];
+      comments?: components["schemas"]["SocialWallPostCommentRemoteEntity"][];
+    };
+    SocialWallPostsRemoteEntity: {
+      filtersAvailable?: components["schemas"]["SocialTagRemoteEntity"][];
+      filters: string[];
+      offsetQueryParams?: components["schemas"]["OffsetQueryParamsRemoteEntity"];
+      isSocialtagAvailable: boolean;
+      elements?: components["schemas"]["SocialWallPostRemoteEntity"][];
+    };
+    SpaceCodeBodyRemoteEntity: {
+      code: string;
+    };
+    SportGpsElevationRemoteEntity: {
+      /** Format: double */
+      global: number;
+      /** Format: double */
+      average: number;
+      /** Format: double */
+      min: number;
+      /** Format: double */
+      max: number;
+      /** Format: double */
+      positiveCumulate: number;
+      /** Format: double */
+      negativeCumulate: number;
+      rawElevations: number[];
+    };
+    SportGpsLocationRemoteEntity: {
+      /** Format: double */
+      latitude: number;
+      /** Format: double */
+      longitude: number;
+      /** Format: double */
+      elevation: number;
+      time: string;
+    };
+    SportGpsPauseRemoteEntity: {
+      startAt: string;
+      endAt: string;
+    };
+    SportGpsRemoteEntity: {
+      startAt: string;
+      endAt: string;
+      /** Format: int64 */
       duration: number;
       /** Format: int32 */
       distance: number;
       /** Format: int32 */
       elevation: number;
+      elevations: components["schemas"]["SportGpsElevationRemoteEntity"];
+      /** Format: int32 */
+      totalStep: number;
+      polyline: string;
+      startLatLng: number[];
+      endLatLng: number[];
+      pauses: components["schemas"]["SportGpsPauseRemoteEntity"][];
+      stepsWhenGPSLost: components["schemas"]["SportGpsSignalLostRemoteEntity"][];
+    };
+    SportGpsSignalLostRemoteEntity: {
+      startAt: string;
+      endAt: string;
+      /** Format: int32 */
+      steps: number;
+    };
+    SportSegmentRemoteEntity: {
+      /** Format: int32 */
+      steps: number;
+      elevations: number[];
+      startAt: string;
+      endAt: string;
+      /** Format: int32 */
+      distance: number;
+      /** Format: int64 */
+      duration: number;
+      /** Format: int64 */
+      pauseDuration: number;
+      polyline: string;
+      startLatLng: number[];
+      endLatLng: number[];
+      activityId: string;
+    };
+    SportSessionBodyRemoteEntity: {
+      isSharable?: boolean;
+      mobilityReason?: string;
+      isMobility?: boolean;
+    };
+    SportSessionHistoryRemoteEntity: {
+      id: string;
+      date: string;
       /** Format: int32 */
       points: number;
-      source: "GARMIN" | string;
-      cheat: boolean;
-      co2ComparisonSource: "datagir" | string;
-      mobilityReason: "Recreational sports" | string;
+      /** Format: int32 */
+      value: number;
+      type: string;
+    };
+    SportSessionRemoteEntity: {
+      id: string;
+      /** Format: int32 */
+      pingFrequency: number;
+    };
+    SportSessionSummaryActivityRemoteEntity: {
+      id: string;
+      name: string;
+      icon?: string;
+      iconHighQuality?: string;
+      startAt: string;
+      endAt: string;
+      /** Format: double */
+      duration: number;
+      /** Format: double */
+      distance: number;
+      /** Format: double */
+      elevation?: number;
+      /** Format: double */
+      speed?: number;
+      /** Format: double */
+      pace?: number;
+      /** Format: double */
+      points?: number;
+      status: string;
+      /** Format: double */
+      co2Used?: number;
+      /** Format: double */
+      co2Saved?: number;
+    };
+    SportSessionSummaryRemoteEntity: {
+      id: string;
+      name?: string;
+      icon?: string;
+      startAt: string;
+      endAt: string;
+      polylines?: string[];
+      /** Format: double */
+      duration: number;
+      /** Format: double */
+      distance: number;
+      /** Format: double */
+      elevation?: number;
+      /** Format: double */
+      speed?: number;
+      /** Format: double */
+      pace?: number;
+      /** Format: int32 */
+      points?: number;
+      status: string;
+      source?: string;
+      externalActivityUrl?: string;
+      co2Icon?: string;
+      /** Format: double */
+      co2Used?: number;
+      /** Format: double */
+      co2Saved?: number;
+      co2ComparisonSource?: string;
+      mobilityReason?: string;
       isActivityShared: boolean;
-      activities: unknown[];
+      activities?: components["schemas"]["SportSessionSummaryActivityRemoteEntity"][];
+      cheatReason?: string;
+      cheatIconUrl?: string;
+    };
+    SportSessionSummarySegmentRemoteEntity: {
+      activityId: string;
+      name: string;
       /** Format: double */
-      speed: number;
+      duration: number;
       /** Format: double */
-      pace: number;
-      status: "OK" | string;
-      externalActivityUrl: unknown;
+      distance: number;
+      polyline?: string;
+      /** Format: double */
+      elevation: number;
+      /** Format: double */
+      speed?: number;
+      cheat?: boolean;
+      startDate: string;
+      endDate: string;
+      /** Format: int32 */
+      totalPoints: number;
+      /** Format: double */
+      co2Saved?: number;
+      /** Format: double */
+      co2Used?: number;
+    };
+    StepsInfoRemoteEntity: {
+      updatedAt: string;
+    };
+    StepsRemoteEntity: {
+      /** Format: int32 */
+      steps: number;
+      time: string;
+    };
+    SubmitCourseBodyRemoteEntity: {
+      id: string;
+      activityType: string;
+      /** Format: int32 */
+      difficulty: number;
+      title: string;
+      description: string;
+    };
+    SurveyOptionsRemoteEntity: {
+      id: string;
+      option: string;
+      iconUrl?: string;
+    };
+    SurveyRemoteEntity: {
+      id: string;
+      imageUrl?: string;
+      description: string;
+      options?: components["schemas"]["SurveyOptionsRemoteEntity"][];
+    };
+    TeamActivityStatsRemoteEntity: {
+      activityId: string;
+      type: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: int32 */
+      value: number;
+      title: string;
+    };
+    TeamDetailsRemoteEntity: {
+      id: string;
+      /** Format: double */
+      globalRank?: number;
+      /** Format: double */
+      seasonRank?: number;
+    };
+    TeamManagementPoliciesRemoteEntity: {
+      canEditName: boolean;
+      canEditImage: boolean;
+      canEditPassword: boolean;
+      canKick: boolean;
+      canPromote: boolean;
+    };
+    TeamManagementRemoteEntity: {
+      id: string;
+      image?: string;
+      name: string;
+      code: string;
+      users?: components["schemas"]["TeamManagementUserRemoteEntity"][];
+      policies: components["schemas"]["TeamManagementPoliciesRemoteEntity"];
+    };
+    TeamManagementUserRemoteEntity: {
+      id: string;
+      image?: string;
+      firstName: string;
+      lastName: string;
+      /** Format: double */
+      points?: number;
+      isCaptain: boolean;
+    };
+    TeamRemoteEntity: {
+      id: string;
+      name?: string;
+      teamName?: string;
+      code?: string;
+      isPrivate: boolean;
+      image?: string;
+      publicImage?: string;
+      users?: components["schemas"]["UserRemoteEntity"][];
+      captainId?: string;
+      /** Format: int32 */
+      rank?: number;
+      /** Format: int32 */
+      totalPoints: number;
+      boostAvailableAt?: string;
+    };
+    TeamSearchBodyRemoteEntity: {
+      spaceId?: string;
+      searchText?: string;
+      /** Format: int32 */
+      limit?: number;
+      /** Format: int32 */
+      offset?: number;
+      orderBy: string;
+      orderDirection: string;
+    };
+    TeamSearchRemoteEntity: {
+      id: string;
+      name?: string;
+      teamName?: string;
+      isPrivate: boolean;
+      image?: string;
+      publicImage?: string;
+      usersFirstNames?: string[];
+      /** Format: int32 */
+      nbMembers?: number;
+    };
+    TokenRemoteEntity: {
+      accessToken: string;
+      refreshToken: string;
+    };
+    TrackerGarminLoginBodyRemoteEntity: {
+      accessToken: string;
+      secret: string;
+    };
+    TrackerLoginBodyRemoteEntity: {
+      id: string;
+      accessToken: string;
+      refreshToken: string;
+      /** Format: int32 */
+      expiresAt: number;
+    };
+    TrackerRemoteEntity: {
+      /** @enum {string} */
+      tracker: "strava" | "google fit" | "garmin" | "fitbit" | "unknown";
+      isActive: boolean;
+      trackerSecret?: string;
+      trackerId?: string;
+      trackerUri?: string;
+      image?: string;
+      notes?: string;
+    };
+    TutorialRemoteEntity: {
+      image?: string;
+      title?: string;
+      description?: string;
+      buttonTitle?: string;
+    };
+    UserActivityStatsRemoteEntity: {
+      activityId: string;
+      type: string;
+      /** Format: int32 */
+      points: number;
+      /** Format: int32 */
+      value: number;
+      title: string;
+      isHistoryEmpty: boolean;
+    };
+    UserBlockedRemoteEntity: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      image?: string;
+    };
+    UserClassificationAnswerRemoteEntity: {
+      id: string;
+      option: string;
+    };
+    UserClassificationRemoteEntity: {
+      id: string;
+      question: string;
+      options?: components["schemas"]["UserClassificationAnswerRemoteEntity"][];
+      selectedOption?: string;
+    };
+    UserClassificationsRemoteEntity: {
+      isMandatory: boolean;
+      userClassifications?: components["schemas"]["UserClassificationRemoteEntity"][];
+    };
+    UserEditRemoteEntity: {
+      firstName?: string;
+      lastName?: string;
+      isActivityPublic?: boolean;
+      languageCode?: string;
+    };
+    UserLegalConsentRemoteEntity: {
+      consentBasics?: boolean;
+      consentDataShare?: boolean;
+      consentMarketing?: boolean;
+    };
+    UserPasswordRemoteEntity: {
+      newPassword?: string;
+      oldPassword?: string;
+    };
+    UserProfileActivityRemoteEntity: {
+      id: string;
+      name: string;
+      /** Format: double */
+      value: number;
+      SIType: string;
+    };
+    UserProfileBoostedByRemoteEntity: {
+      id: string;
+      imageUrl?: string;
+      firstName: string;
+      lastName: string;
     };
     UserProfileRemoteEntity: {
       id: string;
       isCurrentUser: boolean;
       name: string;
-      firstName: string;
-      lastName: string;
       teamName: string;
       entityName?: string;
       isInSameTeam: boolean;
@@ -122,243 +1669,67 @@ export interface components {
       isBoostable: boolean;
       canSendMessage: boolean;
       points?: string;
+      boostedBy?: components["schemas"]["UserProfileBoostedByRemoteEntity"][];
+      activities?: components["schemas"]["UserProfileActivityRemoteEntity"][];
     };
-    ActivityHistoryList: {
-      filters: {
-        filterBy: "MONTH" | string;
-        /** Format: date-time */
-        sinceDate: string;
-        /** Format: date-time */
-        minDatePossible: string;
-        /** Format: date-time */
-        maxDatePossible: string;
-      };
-      highlights: {
-          name: string;
-          /** Format: int32 */
-          value: number;
-          SIType: string;
-        }[];
-      activities: {
-          id: string;
-          name: string;
-          /** Format: uri */
-          icon: string;
-          /** Format: date-time */
-          date: string;
-          /** Format: int32 */
-          duration: number;
-          /** Format: int32 */
-          distance: number;
-          /** Format: int32 */
-          points: number;
-          status: string;
-          command: {
-            name: string;
-            params: {
-              ACTIVITY_ID: string;
-            };
-          };
-        }[];
-    };
-    ImageDataMultiPart: {
-      /** Format: binary */
-      image: string;
-    };
-    MyChallenge: {
-      /** Format: uri */
-      spaceImage: string;
-      /** Format: uri */
-      image: string;
-      /** Format: date-time */
-      startAt: string;
-      /** Format: date-time */
-      endAt: string;
-      title: string;
-      tagline: string;
-      description: string;
-      statistics: unknown;
-      /** Format: date-time */
-      deletionDate: string | null;
-    };
-    RankingMedal: {
+    UserRemoteEntity: {
       id: string;
+      email?: string;
+      firstName: string;
+      lastName: string;
+      image?: string;
+      publicImage?: string;
+      isActivityPublic?: boolean;
       /** Format: int32 */
-      minimalRank: number;
-      /** Format: uri */
-      image: string;
-      defaultImage: string;
-      color: string;
-      description: string;
-      name: string;
+      boostCount?: number;
+      isBoostable?: boolean;
+      isCaptain?: boolean;
+      languageCode?: string;
+      teamId?: string;
+      teamName?: string;
+      /** Format: double */
+      points?: number;
+      entityId?: string;
     };
-    RankingTeam: {
+    UserSearchRemoteEntity: {
       id: string;
-      name: string;
-      /** Format: int32 */
-      points: number;
-      /** Format: int32 */
-      rank: number;
-      /** Format: uri */
-      image: string | null;
+      fullName: string;
+      teamName?: string;
+      image?: string;
+      publicImage?: string;
     };
-    SocialPost: {
-      id: string;
-      createdAt: string;
-      updatedAt?: string;
-      hasModeratorRole: boolean;
-      isPinned: boolean;
-      sender: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        image?: string;
-        teamName: string;
-        teamId: string;
-      };
-      content: {
-        isEdited: boolean;
-        message?: string;
-        images: string[];
-        socialtag?: string;
-        /** Format: int32 */
-        points?: number;
-      };
-      likes: {
-        /** Format: int32 */
-        count: number;
-        isLikedByUser: boolean;
-        images?: string[];
-        firstName?: string;
-        lastName?: string;
-      };
-      comments: unknown[];
-    };
-    SocialTag: {
-      id: string;
-      /** Format: int32 */
-      remaining: number;
-      availability: ("WEEKLY" | "DAILY") | string;
-      /** Format: int32 */
-      occurrence: number;
-      /** Format: int32 */
-      points: number;
-      /** Format: date-time */
-      date: string;
-      /** Format: uri */
-      image: string;
-      name: string;
-      description: string;
-    };
-    Team: {
-      name: string;
-      id: string;
-      isDestructible: boolean;
-      spaceId: string;
-      captainId: string;
-      /** Format: uri */
-      image: string | null;
-      /** Format: int32 */
-      rank: number;
-      /** Format: int32 */
-      totalPoints: number | null;
-      users: string[];
-      isPrivate: boolean;
-    };
-    TeamDetails: {
-      id: string;
-      /** Format: int32 */
-      totalPoints: number;
-      /** Format: int32 */
-      rank: number;
-      /** Format: uri */
-      image: string | null;
-      name: string;
-      code: string;
-      captainId: string;
-      isPrivate: boolean;
-      users: ({
-          id: string;
-          /** Format: int32 */
-          points: number;
-          firstName: string;
-          lastName: string;
-          /** Format: uri */
-          image: string | null;
-          isActivityPublic: boolean;
-          isCaptain: boolean;
-          isBoostable: boolean;
-          /** Format: int32 */
-          boostCount: number;
-        })[];
-      /** Format: date-time */
-      boostAvailableAt?: string;
-    };
-    TokenResponse: {
-      accessToken: string;
-      refreshToken: string;
-    };
-    UserDetails: {
+    UserStatsRemoteEntity: {
       id: string;
       firstName: string;
       lastName: string;
-      email: string;
-      userRole: "user" | string;
-      userStatus: components["schemas"]["UserStatus"];
-      /** Format: date-time */
-      imageUpdatedAt: string;
-      isActivityPublic: boolean;
-      spaceId: string;
-      teamId: string;
-      languageCode: "en" | string;
-      entityId: string | null;
-      platform: "Android" | string;
-      platformVersion: string;
-      clientVersion: string;
-      platformName: string;
-      /** Format: date-time */
-      lastConnectionDate: string;
-      /** Format: date-time */
-      consentDataShareDate: string;
-      /** Format: date-time */
-      consentBasicsDate: string;
-      cheatLevel: "CLEAR" | string;
-      image: string;
-      isCaptain: boolean;
-      /** Format: int32 */
-      boostCount: number;
-    };
-    UserStatistics: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      entityName: unknown;
-      teamName: string;
-      teamId: string;
+      image?: string;
+      publicImage?: string;
+      teamId?: string;
+      teamName?: string;
       /** Format: int32 */
       totalPoints: number;
-      /** Format: uri */
-      image: string | null;
       isActivityPublic: boolean;
-      activities: ({
-          type: ("socialtag" | "quiz" | "mission" | "walk" | "gps") | string;
-          /** Format: int32 */
-          points: number;
-          activityId: ("socialtag" | "quiz" | "mission" | "walk" | "statistic_walk" | "statistic_run" | "active_walk" | "bike") | string;
-          /** Format: int32 */
-          value: number;
-          title: ("statistic_socialtag" | "statistic_quiz" | "statistic_mission" | "statistic_active_walk" | "statistic_bike") | string;
-          isHistoryEmpty: boolean;
-        })[];
-      isBoostable: boolean;
       boostedBy: string[];
-      /** Format: int32 */
-      boostCount: number;
-      boostEndAt: string[];
+      isBoostable: boolean;
+      activities?: components["schemas"]["UserActivityStatsRemoteEntity"][];
+      entityName?: string;
       isBlocked: boolean;
     };
-    /** @enum {string} */
-    UserStatus: "OK" | "NEED_UPDATE";
+    UserStatusRemoteEntity: {
+      status: string;
+    };
+    WeatherForecastRemoteEntity: {
+      weather?: components["schemas"]["WeatherRemoteEntity"][];
+      airQuality?: components["schemas"]["AirQualityRemoteEntity"][];
+    };
+    WeatherRemoteEntity: {
+      /** Format: int64 */
+      dt: number;
+      /** Format: double */
+      temp: number;
+      description: string;
+      icon: string;
+    };
   };
   responses: never;
   parameters: never;
@@ -373,280 +1744,20 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  Ranking_rankingGlobal: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": {
-            /** Format: int32 */
-            rank: number;
-            teams: components["schemas"]["RankingTeam"][];
-            medals: components["schemas"]["RankingMedal"][];
-          };
-        };
-      };
-    };
-  };
-  User_uploadImage: {
+  AuthService_forgotPassword: {
     requestBody: {
       content: {
-        "multipart/form-data": components["schemas"]["ImageDataMultiPart"];
+        "application/json": components["schemas"]["ForgotPasswordRemoteEntity"];
       };
     };
     responses: {
-      /** @description The request has succeeded and a new resource has been created as a result. */
-      201: {
-        content: {
-          "application/json": Record<string, never>;
-        };
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
       };
     };
   };
-  Ranking_rankingSeason: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": {
-            /** Format: int32 */
-            rank: number;
-            teams: components["schemas"]["RankingTeam"][];
-            medals: components["schemas"]["RankingMedal"][];
-          };
-        };
-      };
-    };
-  };
-  TeamService_myTeam: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["TeamDetails"];
-        };
-      };
-    };
-  };
-  User_user: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["UserDetails"];
-        };
-      };
-    };
-  };
-  User_updateUser: {
-    requestBody: {
-      content: {
-        "application/json": {
-          firstName?: string;
-          lastName?: string;
-          isActivityPublic?: boolean;
-          languageCode?: "en" | string;
-        };
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": {
-            firstName: string;
-            lastName: string;
-            email: string;
-            isActivityPublic: boolean;
-            languageCode: "en" | string;
-            id: string;
-            userRole: "user" | string;
-          };
-        };
-      };
-    };
-  };
-  Social_getSocialTags: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": {
-            ongoing: components["schemas"]["SocialTag"][];
-            upcoming: components["schemas"]["SocialTag"][];
-          };
-        };
-      };
-    };
-  };
-  TeamService_teams: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Team"][];
-        };
-      };
-    };
-  };
-  TeamService_teamDetails: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["TeamDetails"];
-        };
-      };
-    };
-  };
-  User_getAllUsers: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": ({
-              id: string;
-              firstName: string;
-              lastName: string;
-              isPublic: boolean;
-              teamId: string;
-              entityId: unknown;
-              /** Format: int32 */
-              boostCount: number;
-              entityName: unknown;
-              /** Format: uri */
-              image: string | null;
-            })[];
-        };
-      };
-    };
-  };
-  User_getUser: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["UserDetails"];
-        };
-      };
-    };
-  };
-  User_boostUser: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  User_getUserStatistics: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["UserStatistics"];
-        };
-      };
-    };
-  };
-  Authentication_login: {
-    requestBody: {
-      content: {
-        "application/json": {
-          email: string;
-          password: string;
-        };
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["TokenResponse"];
-        };
-      };
-    };
-  };
-  Authentication_refreshToken: {
-    parameters: {
-      header: {
-        "refresh-token": string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["TokenResponse"];
-        };
-      };
-    };
-  };
-  ChallengeService_myChallenge: {
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["MyChallenge"];
-        };
-      };
-    };
-  };
-  Social_posts: {
-    parameters: {
-      query?: {
-        sincePostId?: string;
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["SocialPost"][];
-        };
-      };
-    };
-  };
-  Social_createPost: {
-    requestBody: {
-      content: {
-        "application/json": {
-          message: string;
-        };
-      };
-    };
-    responses: {
-      /** @description The request has succeeded. */
-      200: {
-        content: {
-          "application/json": components["schemas"]["SocialPost"];
-        };
-      };
-    };
-  };
-  Social_likePost: {
+  SocialWallService_getBlogPost: {
     parameters: {
       path: {
         post_id: string;
@@ -656,24 +1767,1464 @@ export interface operations {
       /** @description The request has succeeded. */
       200: {
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["BlogPostRemoteEntity"];
         };
       };
     };
   };
-  User_userStatus: {
+  CourseService_searchCourses: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SearchCourseBodyRemoteEntity"];
+      };
+    };
     responses: {
       /** @description The request has succeeded. */
       200: {
         content: {
-          "application/json": {
-            status: components["schemas"]["UserStatus"];
-          };
+          "application/json": components["schemas"]["CourseRemoteEntity"][];
         };
       };
     };
   };
-    UserService_getUserProfile: {
+  CourseService_getCourseSources: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+    };
+  };
+  EnvironmentService_getSpaceGroups: {
+    parameters: {
+      path: {
+        spaceId: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["GroupRemoteEntity"][];
+        };
+      };
+    };
+  };
+  AnalyticsService_postEvent: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AnalyticsRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  EnvironmentService_validateSpaceCode: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SpaceCodeBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["IdRemoteEntity"];
+        };
+      };
+    };
+  };
+  EnvironmentService_getLanguages: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LanguageRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getMyActivities: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LegacyActivityRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getActivityMissions_ActivityService_getActivityGpsHistory_ActivityService_getDeclaredActivityHistory_ActivityService_getActivityQuizHistory: {
+    parameters: {
+      path: {
+        activityID: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityMissionHistoryRemoteEntity"][] | components["schemas"]["ActivityGpsHistoryRemoteEntity"][] | components["schemas"]["ActivityDeclaredHistoryRemoteEntity"][] | components["schemas"]["ActivityQuizHistoryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getActivityQuiz: {
+    parameters: {
+      path: {
+        activityID: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityQuizRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_postActivityQuizAnswer: {
+    parameters: {
+      path: {
+        activityID: string;
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActivityQuizPostAnswerRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityQuizRemoteEntity"];
+        };
+      };
+    };
+  };
+  SportService_addSportGpsData_SportService_addWalkActivity: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SportGpsRemoteEntity"] | components["schemas"]["StepsRemoteEntity"][];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["IdRemoteEntity"];
+        };
+      };
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SportService_addManualSteps: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StepsRemoteEntity"][];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  ChallengeService_getLegacyMyChallenge: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["LegacyChallengeRemoteEntity"];
+        };
+      };
+    };
+  };
+  ChallengeService_getMyChallengeMarquee: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ChallengeMarqueeRemoteEntity"];
+        };
+      };
+    };
+  };
+  ChallengeService_getLegacyMyChallengeOver: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ChallengeOverRemoteEntity"];
+        };
+      };
+    };
+  };
+  CourseService_submitMyCourse: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubmitCourseBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_uploadCurrentUserImage: {
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          image: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TrackerService_getIntegrations: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TrackerRemoteEntity"][];
+        };
+      };
+    };
+  };
+  TrackerService_connectGarmin_TrackerService_connectStrava_TrackerService_connectFitbit: {
+    parameters: {
+      path: {
+        id: "garmin" | "strava" | "fitbit";
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TrackerGarminLoginBodyRemoteEntity"] | components["schemas"]["TrackerLoginBodyRemoteEntity"] | components["schemas"]["FitbitLoginBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TrackerService_deleteIntegration: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_updatePassword: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserPasswordRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  ActivityService_getMyQuizzes: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityHomeQuizRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SocialWallService_getMyAvailableSocialTags: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialTagRemoteEntity"][];
+        };
+      };
+    };
+  };
+  UserService_getCurrentUserStatistics: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserStatsRemoteEntity"];
+        };
+      };
+    };
+  };
+  TeamService_getMyTeam: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamRemoteEntity"];
+        };
+      };
+    };
+  };
+  TeamService_updateMyTeam: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EditTeamRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_updateTeamCaptain: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IdRemoteEntityUpdate"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_uploadMyTeamImage: {
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          image: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_kickTeamMember: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IdRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_leaveMyTeam: {
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_getMyTeamStatistics: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamActivityStatsRemoteEntity"][];
+        };
+      };
+    };
+  };
+  UserService_getCurrentUser: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRemoteEntity"];
+        };
+      };
+    };
+  };
+  UserService_deleteCurrentUser: {
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_updateCurrentUser: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserEditRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  MainService_acceptStoreRating: {
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  MainService_declineStoreRating: {
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SocialWallService_getReportReasons: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ReportReasonRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SocialWallService_getSocialPostLikes: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialPostUserLikeRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SocialWallService_reportSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IdRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SocialWallService_getSocialTagList: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialTagListRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_getSocialTags: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialTagRemoteEntity"][];
+        };
+      };
+    };
+  };
+  TeamService_getTeams: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamSearchRemoteEntity"][];
+        };
+      };
+    };
+  };
+  TeamService_createTeam: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTeamRemote"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_searchTeams: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamSearchBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamSearchRemoteEntity"][];
+        };
+      };
+    };
+  };
+  TeamService_getTeam: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamRemoteEntity"];
+        };
+      };
+    };
+  };
+  TeamService_joinTeam: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JoinTeamRemote"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_getUsers: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRemoteEntity"][];
+        };
+      };
+    };
+  };
+  UserService_searchUsers: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamSearchBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserSearchRemoteEntity"][];
+        };
+      };
+    };
+  };
+  AuthService_validateAccountCode: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailConfirmationRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  AuthService_sendAccountValidationEmail: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["EmailConfirmationRemoteEntity"];
+        };
+      };
+    };
+  };
+  UserService_getUser: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserRemoteEntity"];
+        };
+      };
+    };
+  };
+  UserService_blockUser: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_boostUser: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_getUserStatistics: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserStatsRemoteEntity"];
+        };
+      };
+    };
+  };
+  UserService_unblockUser: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  ActivityService_getActivities: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivitiesRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_postDeclaredActivity: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeclaredActivityRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SportService_getGpsActivityGroups: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityGroupRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SportService_getMobilityReasons: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityGroupMobilityReasonsRemoteEntity"][];
+        };
+      };
+    };
+  };
+  AuthService_login: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Login"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TokenRemoteEntity"];
+        };
+      };
+    };
+  };
+  AuthService_refreshToken: {
+    parameters: {
+      header: {
+        Authorization: string;
+        "Refresh-Token": string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TokenRemoteEntity"];
+        };
+      };
+    };
+  };
+  AuthService_register: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegisterRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TokenRemoteEntity"];
+        };
+      };
+    };
+  };
+  HomeService_getBadges: {
+    parameters: {
+      query: {
+        social: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BadgesRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_getBlogPosts_SocialWallService_getBlogPostsNoParams: {
+    parameters: {
+      query?: {
+        sincePostId?: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BlogPostRemoteEntity"][];
+        };
+      };
+    };
+  };
+  HomeService_getReceivedBoosts: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["HomeBoostRemoteEntity"];
+        };
+      };
+    };
+  };
+  MainService_getBottomNav_MainService_getBottomNavNoParams: {
+    parameters: {
+      query?: {
+        socialWallSinceDate?: string;
+        chatSinceDate?: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BottomBarRemoteEntity"];
+        };
+      };
+    };
+  };
+  ChallengeService_getActiveGlobalMissions: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MissionSolidaryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ChallengeService_getOverGlobalMissions: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MissionSolidaryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  HomeService_getOngoingMissions: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MissionRemoteEntity"][];
+        };
+      };
+    };
+  };
+  HomeService_getOverMissions: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MissionRemoteEntity"][];
+        };
+      };
+    };
+  };
+  HomeService_getUpcomingMissions: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["MissionRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getActivityGpsDetails: {
+    parameters: {
+      path: {
+        activityID: string;
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityGpsDetailsRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_updateActivityGpsDetails: {
+    parameters: {
+      path: {
+        activityID: string;
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActivityGpsBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  ChallengeService_getMyChallenge: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ChallengeRemoteEntity"];
+        };
+      };
+    };
+  };
+  HomeService_getMyHome: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["HomeRemoteEntity"];
+        };
+      };
+    };
+  };
+  AuthService_getOnboardingDiscover: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["OnBoardingDiscoverRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getAnsweredQuizzes: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["QuizSummaryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getUnansweredQuizzes: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["QuizSummaryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  RankingService_getRanking: {
+    parameters: {
+      path: {
+        type: "season" | "global" | "groups";
+        seasonId: "current" | string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["RankingRemoteEntity"];
+        };
+      };
+    };
+  };
+  RankingService_getRankingElements: {
+    parameters: {
+      query: {
+        direction: "top" | "bottom";
+        offsetId: string;
+      };
+      path: {
+        type: "season";
+        seasonId: "current" | string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["RankingElementRemoteEntity"][];
+        };
+      };
+    };
+  };
+  RankingService_getMyRankingElement: {
+    parameters: {
+      path: {
+        type: "season";
+        seasonId: "current" | string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["RankingElementRemoteEntity"][];
+        };
+      };
+    };
+  };
+  RankingService_searchRankingElements: {
+    parameters: {
+      query: {
+        name: string;
+        limit: number;
+        offsetId?: string;
+      };
+      path: {
+        type: "season";
+        seasonId: "current" | string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["RankingElementRemoteEntity"][];
+        };
+      };
+    };
+  };
+  EnvironmentService_getSettings: {
+    parameters: {
+      query?: {
+        id?: string;
+      };
+      header: {
+        "Cache-Control": string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SettingsRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_createSocialPostWithMedia_SocialWallService_createSocialPostWith2Params_SocialWallService_createSocialPostWith3Params_SocialWallService_createSocialPostWithMessage_SocialWallService_createSocialPostWithOnePart: {
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          image: unknown;
+          message: string;
+        } | {
+          image: unknown;
+          socialtagId: string;
+        } | {
+          message: string;
+          image: unknown;
+          socialtagId: string;
+        } | {
+          message: string;
+        };
+        "application/json": components["schemas"]["SocialPostMessageBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SocialWallService_getSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_createSocialPostById: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SocialPostMessageBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["IdRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_deleteSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SocialWallService_updateSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SocialPostEditBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SocialWallService_deleteSocialPostComment: {
+    parameters: {
+      path: {
+        post_id: string;
+        comment_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_likeSocialPostComment: {
+    parameters: {
+      path: {
+        post_id: string;
+        comment_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_deleteSocialPostCommentLike: {
+    parameters: {
+      path: {
+        post_id: string;
+        comment_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_likeSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_unlikeSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_moderateSocialPost: {
+    parameters: {
+      path: {
+        post_id: string;
+        actionId: "hide" | "hide_for_user_only" | "removeSocialtag" | "pin" | "unpin";
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  HomeService_getSurvey: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SurveyRemoteEntity"];
+        };
+      };
+    };
+  };
+  HomeService_answerSurvey: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IdRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  TeamService_getTeamDetails: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamDetailsRemoteEntity"];
+        };
+      };
+    };
+  };
+  TeamService_getTeamManagement: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TeamManagementRemoteEntity"];
+        };
+      };
+    };
+  };
+  TutorialsService_getTutorials: {
+    parameters: {
+      path: {
+        helpId: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["TutorialRemoteEntity"][];
+        };
+      };
+    };
+  };
+  ActivityService_getUserActivityGroups: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SportSessionHistoryRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SportService_startSportSession: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SportSessionRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_updateUserActivityGroup_SportService_updateUserActivityGroupMobilityReason: {
+    parameters: {
+      path: {
+        userActivityGroupId: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SportSessionBodyRemoteEntity"] | components["schemas"]["ActivityGroupMobilityReasonsBodyRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SportService_endUserActivityGroup: {
+    parameters: {
+      path: {
+        userActivityGroupId: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  SportService_pingUserActivityGroup: {
+    parameters: {
+      path: {
+        userActivityGroupId: string;
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  ActivityService_getUserActivityGroupSegments: {
+    parameters: {
+      path: {
+        userActivityGroupId: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SportSessionSummarySegmentRemoteEntity"][];
+        };
+      };
+    };
+  };
+  SportService_addSportSegments: {
+    parameters: {
+      path: {
+        userActivityGroupId: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SportSegmentRemoteEntity"][];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_getUserClassifications: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserClassificationsRemoteEntity"];
+        };
+      };
+    };
+  };
+  UserService_setUserClassifications: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserClassificationAnswerRemoteEntity"][];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  UserService_getUserProfile: {
     parameters: {
       path: {
         userId: string;
@@ -688,17 +3239,75 @@ export interface operations {
       };
     };
   };
-  Activity_activityHistoryList: {
+  UserService_getUserStatus: {
     responses: {
       /** @description The request has succeeded. */
       200: {
         content: {
-          "application/json": components["schemas"]["ActivityHistoryList"];
+          "application/json": components["schemas"]["UserStatusRemoteEntity"];
         };
       };
     };
   };
-  Activity_activityHistory: {
+  UserService_getBlockedUsers: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserBlockedRemoteEntity"][];
+        };
+      };
+    };
+  };
+  UserService_getAcceptedLegalConsents: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+    };
+  };
+  UserService_acceptLegalConsent: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserLegalConsentRemoteEntity"];
+      };
+    };
+    responses: {
+      /** @description There is no content to send for this request, but the headers may be useful. */
+      204: {
+        content: never;
+      };
+    };
+  };
+  CO2Service_getCo2Summary: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["CO2DetailsRemoteEntity"];
+        };
+      };
+    };
+  };
+  HomeService_getLastActivityCommand: {
+    parameters: {
+      query: {
+        sinceDate: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["HomeUserActivityGroupStatusRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_getActivityGpsSummary: {
     parameters: {
       path: {
         id: string;
@@ -708,7 +3317,98 @@ export interface operations {
       /** @description The request has succeeded. */
       200: {
         content: {
-          "application/json": components["schemas"]["ActivityHistory"];
+          "application/json": components["schemas"]["SportSessionSummaryRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_getGpsHistories: {
+    parameters: {
+      query: {
+        "filter-by": string;
+        "since-date": string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivitiesHistoryRemoteEntity"];
+        };
+      };
+    };
+  };
+  ActivityService_getHistories: {
+    parameters: {
+      query?: {
+        date?: string;
+        page?: string;
+      };
+      header: {
+        "Cache-Control": string;
+      };
+      path: {
+        type: string;
+        seasonId: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ActivityHistoryRemoteEntity"];
+        };
+      };
+    };
+  };
+  HomeService_getHome: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["HomeResponseRemoteEntity"];
+        };
+      };
+    };
+  };
+  SocialWallService_getSocialPosts: {
+    parameters: {
+      query?: {
+        date?: string;
+        filters?: string;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SocialWallPostsRemoteEntity"];
+        };
+      };
+    };
+  };
+  SportService_getStepsUpdatedAt: {
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["StepsInfoRemoteEntity"];
+        };
+      };
+    };
+  };
+  WeatherService_getWeatherForecast: {
+    parameters: {
+      query: {
+        lat: number;
+        long: number;
+      };
+    };
+    responses: {
+      /** @description The request has succeeded. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["WeatherForecastRemoteEntity"];
         };
       };
     };

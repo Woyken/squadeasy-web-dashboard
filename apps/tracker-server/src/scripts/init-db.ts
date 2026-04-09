@@ -72,6 +72,28 @@ CREATE INDEX IF NOT EXISTS ix_user_team_memberships_user_id_time ON user_team_me
 CREATE INDEX IF NOT EXISTS ix_user_team_memberships_team_id_time ON user_team_memberships (team_id, time DESC);
 `;
 
+const createLatestTeamProfilesTableSql = `
+CREATE TABLE IF NOT EXISTS latest_team_profiles (
+  team_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  image TEXT,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+`;
+
+const createLatestUserProfilesTableSql = `
+CREATE TABLE IF NOT EXISTS latest_user_profiles (
+  user_id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  image TEXT,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_latest_user_profiles_team_id ON latest_user_profiles (team_id);
+`;
+
 export async function initializeDatabase() {
   console.log("Attempting to initialize the database...");
 
@@ -117,6 +139,20 @@ export async function initializeDatabase() {
       );
       await tx.execute(sql.raw(createUserTeamMembershipsTableSql));
       console.log("createUserTeamMembershipsTableSql ensured");
+
+      console.log(
+        "executing createLatestTeamProfilesTableSql",
+        createLatestTeamProfilesTableSql
+      );
+      await tx.execute(sql.raw(createLatestTeamProfilesTableSql));
+      console.log("createLatestTeamProfilesTableSql ensured");
+
+      console.log(
+        "executing createLatestUserProfilesTableSql",
+        createLatestUserProfilesTableSql
+      );
+      await tx.execute(sql.raw(createLatestUserProfilesTableSql));
+      console.log("createLatestUserProfilesTableSql ensured");
     });
 
     console.log("Transaction committed successfully.");

@@ -28,6 +28,162 @@ export const trackerServerClient = createClient<trackerServerPaths>({
 
 export type HistoricalTeamMembership =
     trackerServerPaths["/api/team-memberships/{teamId}"]["get"]["responses"][200]["content"]["application/json"][number];
+type HistoricalTeamPointsEntry =
+    trackerServerPaths["/api/team-points"]["get"]["responses"][200]["content"]["application/json"][number];
+type SquadEasyUserProfile =
+    paths["/api/3.0/user-profile/{userId}"]["get"]["responses"][200]["content"]["application/json"];
+type StoredUserProfile =
+    trackerServerPaths["/api/stored-user-profile/{userId}"]["get"]["responses"][200]["content"]["application/json"];
+export type StoredTeamProfile =
+    trackerServerPaths["/api/stored-team-profile/{teamId}"]["get"]["responses"][200]["content"]["application/json"];
+
+export type ResolvedUserProfile = {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    teamName?: string | null;
+    imageUrl?: string | null;
+};
+
+export type ResolvedSeasonTeam = {
+    id: string;
+    name: string;
+    image?: string | null;
+    points: number;
+};
+
+function splitFullName(name: string | undefined) {
+    const [firstName = "", ...rest] = (name ?? "").trim().split(/\s+/).filter(Boolean);
+    return {
+        firstName: firstName || undefined,
+        lastName: rest.length > 0 ? rest.join(" ") : undefined,
+    };
+}
+
+function mapSquadEasyUserProfile(profile: SquadEasyUserProfile): ResolvedUserProfile {
+    const { firstName, lastName } = splitFullName(profile.name);
+    return {
+        id: profile.id,
+        firstName,
+        lastName,
+        teamName: profile.teamName,
+        imageUrl: profile.imageUrl,
+    };
+}
+
+async function getStoredUserProfile(
+    accessToken: string,
+    userId: string,
+): Promise<StoredUserProfile | undefined> {
+    const result = await trackerServerClient.GET("/api/stored-user-profile/{userId}", {
+        params: {
+            path: {
+                userId,
+            },
+        },
+        headers: {
+            authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (result.response.status === 404) {
+        return undefined;
+    }
+
+    if (!result.data) {
+        throw new Error(
+            `Get stored user profile failed ${JSON.stringify(result.error)}`,
+        );
+    }
+
+    return result.data;
+}
+
+async function getStoredTeamProfile(
+    accessToken: string,
+    teamId: string,
+): Promise<StoredTeamProfile | undefined> {
+    const result = await trackerServerClient.GET("/api/stored-team-profile/{teamId}", {
+        params: {
+            path: {
+                teamId,
+            },
+        },
+        headers: {
+            authorization: `Bearer ${accessToken}`,
+        },
+    });
+
+    if (result.response.status === 404) {
+        return undefined;
+    }
+
+    if (!result.data) {
+        throw new Error(
+            `Get stored team profile failed ${JSON.stringify(result.error)}`,
+        );
+    }
+
+    return result.data;
+}
+
+function getLatestTrackedTeamPoints(
+    historicalPoints: ReadonlyArray<HistoricalTeamPointsEntry>,
+) {
+    const latestByTeam = new Map<string, { time: number; points: number }>();
+
+    for (const entry of historicalPoints) {
+        const timestamp = new Date(entry.time).getTime();
+        const current = latestByTeam.get(entry.teamId);
+
+        if (!current || timestamp >= current.time) {
+            latestByTeam.set(entry.teamId, { time: timestamp, points: entry.points });
+        }
+    }
+
+    return latestByTeam;
+}
+
+export function mergeSeasonTeams(
+    liveTeams: ReadonlyArray<{
+        id: string;
+        name: string;
+        image?: string | null;
+        points: number;
+    }>,
+    storedTeams: ReadonlyArray<StoredTeamProfile>,
+    historicalPoints: ReadonlyArray<HistoricalTeamPointsEntry>,
+): ResolvedSeasonTeam[] {
+    const trackedPoints = getLatestTrackedTeamPoints(historicalPoints);
+    const merged = new Map<string, ResolvedSeasonTeam>();
+
+    for (const team of liveTeams) {
+        merged.set(team.id, {
+            id: team.id,
+            name: team.name,
+            image: team.image ?? null,
+            points: team.points,
+        });
+    }
+
+    for (const team of storedTeams) {
+        const latestPoints = trackedPoints.get(team.teamId);
+        if (!latestPoints || merged.has(team.teamId)) {
+            continue;
+        }
+
+        merged.set(team.teamId, {
+            id: team.teamId,
+            name: team.name,
+            image: team.imageUrl,
+            points: latestPoints.points,
+        });
+    }
+
+    return [...merged.values()].sort(
+        (a, b) => b.points - a.points || a.name.localeCompare(b.name),
+    );
+}
 
 export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
     const getUserToken = useGetUserToken(userId);
@@ -55,7 +211,7 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
 export function useUserByIdQuery(userId: Accessor<string>) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    return useQuery(() => ({
+    return useQuery<ResolvedUserProfile>(() => ({
         queryKey: ["/api/3.0/user-profile/{userId}", userId()],
         queryFn: async () => {
             const token = await getToken();
@@ -76,11 +232,25 @@ export function useUserByIdQuery(userId: Accessor<string>) {
                     },
                 },
             );
-            if (!result.data)
+
+            if (result.data) {
+                return mapSquadEasyUserProfile(result.data);
+            }
+
+            const fallback = await getStoredUserProfile(token, userId());
+            if (!fallback) {
                 throw new Error(
                     `Request failed ${JSON.stringify(result.error)}`,
                 );
-            return result.data;
+            }
+
+            return {
+                id: fallback.userId,
+                firstName: fallback.firstName,
+                lastName: fallback.lastName,
+                teamName: fallback.teamName,
+                imageUrl: fallback.imageUrl,
+            };
         },
         staleTime: 5 * 60 * 1000,
         enabled: !!mainUser.mainUserId(),
@@ -168,8 +338,14 @@ export function useSeasonRankingQuery(
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
             const result = await squadEasyClient.GET(
-                "/api/2.0/my/ranking/season",
+                "/api/3.0/ranking/{type}/{seasonId}",
                 {
+                    params: {
+                        path: {
+                            type: "season",
+                            seasonId: "current",
+                        },
+                    },
                     headers: {
                         authorization: `Bearer ${accessToken}`,
                     },
@@ -179,13 +355,42 @@ export function useSeasonRankingQuery(
                 throw new Error(
                     `Get teams failed ${JSON.stringify(result.error)}`,
                 );
-            return { time: Date.now(), data: result.data };
+            return {
+                time: Date.now(),
+                data: {
+                    teams: (result.data.elements ?? []).map((team) => ({
+                        id: team.id,
+                        image: team.image,
+                        name: team.name,
+                        points: team.points ?? 0,
+                    })),
+                    raw: result.data,
+                },
+            };
         },
         staleTime: 5 * 60 * 1000,
         enabled: (enabled?.() ?? true) && !!mainUser.mainUserId(),
         refetchInterval,
         refetchIntervalInBackground,
         placeholderData: keepPreviousData,
+    }));
+}
+
+export function useStoredTeamQueries(teamIds: Accessor<string[]>) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    return useQueries(() => ({
+        queries: teamIds().map((teamId) => ({
+            queryKey: ["/api/stored-team-profile/{teamId}", teamId],
+            queryFn: async () => {
+                const accessToken = await getToken();
+                if (!accessToken) throw new Error("Missing token!");
+
+                return getStoredTeamProfile(accessToken, teamId);
+            },
+            staleTime: 5 * 60 * 1000,
+            enabled: !!teamId && !!mainUser.mainUserId(),
+        })),
     }));
 }
 
@@ -310,12 +515,7 @@ export function useSocialPostsQuery(
         queryFn: async () => {
             const token = await getToken();
             if (!token) throw new Error(`token missing for user ${userId()}`);
-            const result = await squadEasyClient.GET("/api/3.0/social/posts", {
-                params: {
-                    query: {
-                        sincePostId: sincePostId?.(),
-                    },
-                },
+            const result = await squadEasyClient.GET("/api/4.0/social/posts", {
                 headers: {
                     authorization: `Bearer ${token}`,
                 },
@@ -324,7 +524,7 @@ export function useSocialPostsQuery(
                 throw new Error(
                     `Request failed ${JSON.stringify(result.error)}`,
                 );
-            return result.data;
+            return result.data.elements ?? [];
         },
         staleTime:
             sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
@@ -385,7 +585,7 @@ export function useBoostMutation(userId: Accessor<string>) {
                     },
                 },
             );
-            if (!boostResult.data)
+            if (boostResult.response.status >= 400)
                 throw new Error(
                     `Boost failed ${JSON.stringify(boostResult.error)}`,
                 );
@@ -436,11 +636,9 @@ export function useRefreshTokenMutation() {
                 {
                     params: {
                         header: {
-                            "refresh-token": variables.refreshToken,
+                            Authorization: `Bearer ${variables.accessToken}`,
+                            "Refresh-Token": variables.refreshToken,
                         },
-                    },
-                    headers: {
-                        authorization: `Bearer ${variables.accessToken}`,
                     },
                 },
             );
@@ -695,6 +893,14 @@ export function getHistoricalUserPointsQueryOptions(
         placeholderData: keepPreviousData,
     });
     return options;
+}
+
+export function useHistoricalUserPointsQuery(
+    userId: Accessor<string>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+) {
+    return useQuery(() => getHistoricalUserPointsQueryOptions(userId, start, end));
 }
 
 export function useHistoricalUserActivityPointsQuery(

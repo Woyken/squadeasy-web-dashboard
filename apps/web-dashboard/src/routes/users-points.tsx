@@ -2,9 +2,12 @@ import { createMemo, createSignal, For, Show, Suspense } from "solid-js";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import {
     useHistoricalTeamMembershipsQuery,
+    useHistoricalTeamPointsQuery,
     useHistoricalUserPointsQueries,
     useMyChallengeQuery,
+    useStoredTeamQueries,
     useSeasonRankingQuery,
+    mergeSeasonTeams,
     type HistoricalTeamMembership,
 } from "~/api/client";
 import { useMainUser } from "~/components/MainUserProvider";
@@ -20,12 +23,68 @@ export const Route = createFileRoute("/users-points")({
 
 function UsersPointsPage() {
     const search = Route.useSearch();
+    const mainUser = useMainUser();
+    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
     const teamsQuery = useSeasonRankingQuery();
 
+    const phase = createMemo(() => {
+        const start = challengeQuery.data?.startAt
+            ? new Date(challengeQuery.data.startAt).getTime()
+            : undefined;
+        const end = challengeQuery.data?.endAt
+            ? new Date(challengeQuery.data.endAt).getTime()
+            : undefined;
+
+        if (!start || !end) return "upcoming" as const;
+
+        const now = Date.now();
+        if (now < start) return "upcoming" as const;
+        if (now >= end) return "ended" as const;
+        return "active" as const;
+    });
+    const historicalTimeWindow = createMemo(() => {
+        const startAt = challengeQuery.data?.startAt
+            ? new Date(challengeQuery.data.startAt).getTime()
+            : Date.now() - 86400000;
+        const endAt = challengeQuery.data?.endAt
+            ? new Date(challengeQuery.data.endAt).getTime()
+            : Date.now();
+
+        return getDefaultHistoricalTimeWindow(startAt, endAt);
+    });
+    const historicalTeamPointsQuery = useHistoricalTeamPointsQuery(
+        () => historicalTimeWindow().start,
+        () => historicalTimeWindow().end,
+    );
+    const missingHistoricalTeamIds = createMemo(() => {
+        if (phase() !== "ended") {
+            return [];
+        }
+
+        const liveTeamIds = new Set((teamsQuery.data?.data?.teams ?? []).map((team) => team.id));
+        const trackedTeamIds = new Set(
+            (historicalTeamPointsQuery.data ?? []).map((team) => team.teamId),
+        );
+
+        return [...trackedTeamIds].filter((teamId) => !liveTeamIds.has(teamId));
+    });
+    const storedTeamQueries = useStoredTeamQueries(missingHistoricalTeamIds);
+    const storedTeams = createMemo(() =>
+        storedTeamQueries
+            .map((query) => query.data)
+            .filter((team): team is NonNullable<typeof team> => !!team),
+    );
+
     const sortedTeams = createMemo(() =>
-        teamsQuery.data?.data?.teams
-            .slice()
-            .sort((a, b) => b.points - a.points) ?? [],
+        phase() === "ended"
+            ? mergeSeasonTeams(
+                  teamsQuery.data?.data?.teams ?? [],
+                  storedTeams(),
+                  historicalTeamPointsQuery.data ?? [],
+              )
+            : (teamsQuery.data?.data?.teams
+                  .slice()
+                  .sort((a, b) => b.points - a.points) ?? []),
     );
 
     const [expandedTeamId, setExpandedTeamId] = createSignal<string | null>(

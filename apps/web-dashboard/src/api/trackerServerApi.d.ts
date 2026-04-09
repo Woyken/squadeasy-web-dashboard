@@ -316,7 +316,7 @@ export interface paths {
         /** @description Default Response */
         200: {
           content: {
-            "application/json": {
+            "application/json": ({
                 teamId: string;
                 userId: string;
                 firstName: string;
@@ -342,7 +342,7 @@ export interface paths {
                  * @description ISO 8601 datetime with timezone offset
                  */
                 activeUntil: string;
-              }[];
+              })[];
           };
         };
         /** @description Default Response */
@@ -360,6 +360,111 @@ export interface paths {
         };
         /** @description Default Response */
         401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/stored-team-profile/{teamId}": {
+    /** Get the latest stored team profile */
+    get: {
+      parameters: {
+        path: {
+          teamId: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              teamId: string;
+              name: string;
+              imageUrl: string | null;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              updatedAt: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        404: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/stored-user-profile/{userId}": {
+    /** Get the latest stored user profile */
+    get: {
+      parameters: {
+        path: {
+          userId: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              userId: string;
+              firstName: string;
+              lastName: string;
+              imageUrl: string | null;
+              teamId: string;
+              teamName: string | null;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              updatedAt: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        404: {
           content: {
             "application/json": {
               error: string;

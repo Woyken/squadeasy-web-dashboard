@@ -1,6 +1,7 @@
 import { createSignal, createMemo, For, Show, Suspense } from "solid-js";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import {
+    useHistoricalUserPointsQuery,
     useUserByIdQuery,
     useUserStatisticsQuery,
     useMyChallengeQuery,
@@ -25,6 +26,26 @@ function UserPage() {
     const userQuery = useUserByIdQuery(userId);
     const statsQuery = useUserStatisticsQuery(userId);
     const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
+    const historicalTimeWindow = createMemo(() => {
+        const startAt = challengeQuery.data?.startAt
+            ? new Date(challengeQuery.data.startAt).getTime()
+            : Date.now() - 86400000;
+        const endAt = challengeQuery.data?.endAt
+            ? new Date(challengeQuery.data.endAt).getTime()
+            : Date.now();
+
+        return getDefaultHistoricalTimeWindow(startAt, endAt);
+    });
+    const historicalUserPointsQuery = useHistoricalUserPointsQuery(
+        userId,
+        () => historicalTimeWindow().start,
+        () => historicalTimeWindow().end,
+    );
+    const historicalUserActivityQuery = useHistoricalUserActivityPointsQuery(
+        userId,
+        () => historicalTimeWindow().start,
+        () => historicalTimeWindow().end,
+    );
 
     const userName = createMemo(() => {
         const data = userQuery.data;
@@ -33,9 +54,17 @@ function UserPage() {
     });
     const teamName = createMemo(() => userQuery.data?.teamName ?? "");
     const imageUrl = createMemo(() => userQuery.data?.imageUrl);
-    const totalPoints = createMemo(() => statsQuery.data?.totalPoints ?? 0);
+    const fallbackTotalPoints = createMemo(() =>
+        getLatestHistoricalPoints(historicalUserPointsQuery.data ?? []),
+    );
+    const totalPoints = createMemo(() =>
+        statsQuery.data?.totalPoints ?? fallbackTotalPoints(),
+    );
 
-    const activities = createMemo(() => statsQuery.data?.activities ?? []);
+    const fallbackActivities = createMemo(() =>
+        getLatestHistoricalActivities(historicalUserActivityQuery.data ?? []),
+    );
+    const activities = createMemo(() => statsQuery.data?.activities ?? fallbackActivities());
 
     return (
         <main class="mx-auto max-w-225 px-5 pb-20 pt-6 font-mono">
@@ -132,6 +161,42 @@ function UserPage() {
                 </Link>
             </div>
         </main>
+    );
+}
+
+function getLatestHistoricalPoints(points: { time: string; points: number }[]) {
+    return points.reduce((latest, entry) => {
+        const latestTime = latest ? new Date(latest.time).getTime() : -Infinity;
+        const entryTime = new Date(entry.time).getTime();
+
+        if (entryTime >= latestTime) {
+            return entry;
+        }
+
+        return latest;
+    }, undefined as { time: string; points: number } | undefined)?.points ?? 0;
+}
+
+function getLatestHistoricalActivities(
+    activities: { time: string; activityId: string; value: number; points: number }[],
+) {
+    const latestByActivity = new Map<
+        string,
+        { time: string; activityId: string; value: number; points: number }
+    >();
+
+    for (const activity of activities) {
+        const current = latestByActivity.get(activity.activityId);
+        if (
+            !current ||
+            new Date(activity.time).getTime() >= new Date(current.time).getTime()
+        ) {
+            latestByActivity.set(activity.activityId, activity);
+        }
+    }
+
+    return [...latestByActivity.values()].sort(
+        (a, b) => b.points - a.points || a.activityId.localeCompare(b.activityId),
     );
 }
 

@@ -15,6 +15,8 @@ import { z } from "zod/v4";
 import { pool } from "./database.ts";
 import { isValidAccessToken } from "./api/accessToken.ts";
 import {
+  getLatestTeamProfile,
+  getLatestUserProfile,
   getTeamPointsByRange,
   getTeamMembershipsByRange,
   getUsersActivityPointsByRange,
@@ -121,6 +123,23 @@ const teamMembershipResponseItemSchema = z.object({
   leftAt: dateTimeStringSchema.nullable(),
   activeFrom: dateTimeStringSchema,
   activeUntil: dateTimeStringSchema,
+});
+
+const storedTeamProfileResponseSchema = z.object({
+  teamId: z.string(),
+  name: z.string(),
+  imageUrl: z.string().nullable(),
+  updatedAt: dateTimeStringSchema,
+});
+
+const latestUserProfileResponseSchema = z.object({
+  userId: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  imageUrl: z.string().nullable(),
+  teamId: z.string(),
+  teamName: z.string().nullable(),
+  updatedAt: dateTimeStringSchema,
 });
 
 type PointsQueryString = z.infer<typeof pointsQuerySchema>;
@@ -444,6 +463,97 @@ fastify.after(() => {
             activeUntil: new Date(x.active_until).toISOString(),
           }))
         );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/stored-team-profile/:teamId",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get the latest stored team profile",
+        security: bearerAuthSecurity,
+        params: teamParamsSchema,
+        response: {
+          200: storedTeamProfileResponseSchema,
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      try {
+        const result = await getLatestTeamProfile(request.params.teamId);
+
+        if (!result) {
+          await reply.code(404).send({ error: "Stored team profile not found." });
+          return;
+        }
+
+        await reply.code(200).send({
+          teamId: result.team_id,
+          name: result.name,
+          imageUrl: result.image,
+          updatedAt: new Date(result.updated_at).toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/stored-user-profile/:userId",
+    {
+      schema: {
+        tags: ["Points"],
+        summary: "Get the latest stored user profile",
+        security: bearerAuthSecurity,
+        params: userParamsSchema,
+        response: {
+          200: latestUserProfileResponseSchema,
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      try {
+        const result = await getLatestUserProfile(request.params.userId);
+
+        if (!result) {
+          await reply.code(404).send({ error: "Stored user profile not found." });
+          return;
+        }
+
+        await reply.code(200).send({
+          userId: result.user_id,
+          firstName: result.first_name,
+          lastName: result.last_name,
+          imageUrl: result.image,
+          teamId: result.team_id,
+          teamName: result.team_name,
+          updatedAt: new Date(result.updated_at).toISOString(),
+        });
       } catch (error: unknown) {
         console.error("Error executing query:", error);
         fastify.log.error({ err: error }, "Error executing query:");

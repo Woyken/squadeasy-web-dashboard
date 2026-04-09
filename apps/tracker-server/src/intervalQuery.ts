@@ -13,6 +13,8 @@ import {
   getLatestPointsForUserActivities,
   getLatestPointsForUsers,
   storeTeamData,
+  storeLatestTeamProfiles,
+  storeLatestUserProfiles,
   storeUserActivities,
   storeUserTeamMemberships,
   storeUsersActivityVisibility,
@@ -162,6 +164,8 @@ async function handleFetchTeamsUsersPoints(
   );
 
   const now = Date.now();
+
+  await storeLatestUserProfiles(now, teamsUsersFlat);
 
   const onlyChangedUsersTeamMemberships = teamsUsersFlat.filter((newUser) => {
     const lastTeamMembership = lastUsersTeamMemberships.find(
@@ -327,6 +331,14 @@ async function handleScheduledTeamsFetch() {
   console.log("Teams total elements: ", teamsElements.length);
 
   const allTeamIds = teamsElements.map((team) => team.id);
+  await storeLatestTeamProfiles(
+    now,
+    teamsElements.map((team) => ({
+      id: team.id,
+      name: team.name,
+      image: team.image ?? undefined,
+    }))
+  );
   handleFetchTeamsUsersPoints(accessToken, allTeamIds).catch((e) =>
     console.error("failed to update teams users", e)
   );

@@ -1,0 +1,18 @@
+{
+    "name": "squadeasy-web-dashboard-monorepo",
+    "private": true,
+    "packageManager": "pnpm@10.10.0",
+    "scripts": {
+        "build": "pnpm run build:web",
+        "build:web": "pnpm --filter squadeasy-web-dashboard build",
+        "dev": "pnpm run dev:web",
+        "dev:web": "pnpm --filter squadeasy-web-dashboard dev",
+        "dev:tracker-server": "pnpm --filter squadeasy-web-dashboard-tracker-server dev",
+        "dev:tracker-server:watch": "pnpm --filter squadeasy-web-dashboard-tracker-server dev:watch",
+        "generate-client:web": "pnpm --filter squadeasy-web-dashboard generate-client",
+        "generate-client:tracker-server": "pnpm --filter squadeasy-web-dashboard-tracker-server generate-client",
+        "generate-ms-client:tracker-server": "pnpm --filter squadeasy-web-dashboard-tracker-server generate-ms-client",
+        "db:init": "pnpm --filter squadeasy-web-dashboard-tracker-server db:init",
+        "start:web": "pnpm --filter squadeasy-web-dashboard start"
+    }
+}

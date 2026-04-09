@@ -22,22 +22,20 @@ export function ToasterProvider(props: ParentProps) {
     return (
         <ctx.Provider
             value={(message) => {
-                const newToast = {
-                    message,
-                };
-                // Show toast
+                const newToast = { message };
                 setActiveToasts((old) => [...old, newToast]);
-                // Cleanup
                 return () =>
                     setActiveToasts((old) => old.filter((x) => x !== newToast));
             }}
         >
             <Show when={activeToasts().length > 0}>
-                <div class="toast toast-center">
+                <div class="fixed left-1/2 top-20 z-[100] flex -translate-x-1/2 flex-col gap-2">
                     <For each={activeToasts()}>
                         {(activeToast) => (
-                            <div class="alert alert-info">
-                                <span>{activeToast.message}</span>
+                            <div class="animate-slide-down rounded-xl border border-info/20 bg-base-200/95 px-4 py-2.5 shadow-lg backdrop-blur-xl">
+                                <span class="text-sm text-info">
+                                    {activeToast.message}
+                                </span>
                             </div>
                         )}
                     </For>

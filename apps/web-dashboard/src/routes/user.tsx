@@ -19,37 +19,46 @@ function RouteComponent() {
     const autoLikeTeamPosts = useAutoLikeTeamPosts();
     const mainUser = useMainUser();
     return (
-        <main class="flex items-center overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
-            <Title>User settings</Title>
-            <div class="card mx-auto mt-2 w-72 max-w-5xl bg-base-100 p-6 shadow-xl">
-                <div class="text-xl font-semibold">Settings</div>
-                <div class="divider mt-2" />
-                <Toggle
-                    checked={mainUser.mainUserId() === userId()}
-                    onChecked={(checked) =>
-                        checked
-                            ? mainUser.setMainUserId(userId())
-                            : mainUser.setMainUserId(undefined)
-                    }
-                    label="Set as main user (will be used for common queries)"
-                />
-                <Toggle
-                    checked={boost.autoBoost()}
-                    onChecked={(checked) => {
-                        boost.setAutoBoost(checked);
-                    }}
-                    label="Auto boost"
-                />
-                <Toggle
-                    checked={autoLikeTeamPosts.autoLikeTeamPosts(userId())}
-                    onChecked={(checked) => {
-                        autoLikeTeamPosts.setAutoLikeTeamPosts(
-                            userId(),
-                            checked,
-                        );
-                    }}
-                    label="Auto like team posts"
-                />
+        <main class="flex flex-1 items-start justify-center bg-base-200 bg-grid px-4 py-8 sm:px-6">
+            <div class="bg-glow absolute inset-0" />
+            <Title>User Settings — SquadEasy</Title>
+            <div class="relative z-10 w-full max-w-md animate-fade-in-up">
+                <div class="gradient-card p-6 sm:p-8">
+                    <h2 class="section-header mb-6">Settings</h2>
+                    <div class="flex flex-col gap-4">
+                        <Toggle
+                            checked={mainUser.mainUserId() === userId()}
+                            onChecked={(checked) =>
+                                checked
+                                    ? mainUser.setMainUserId(userId())
+                                    : mainUser.setMainUserId(undefined)
+                            }
+                            label="Main user"
+                            description="Used for common queries"
+                        />
+                        <Toggle
+                            checked={boost.autoBoost()}
+                            onChecked={(checked) => {
+                                boost.setAutoBoost(checked);
+                            }}
+                            label="Auto boost"
+                            description="Automatically boost highest-scoring teammate"
+                        />
+                        <Toggle
+                            checked={autoLikeTeamPosts.autoLikeTeamPosts(
+                                userId(),
+                            )}
+                            onChecked={(checked) => {
+                                autoLikeTeamPosts.setAutoLikeTeamPosts(
+                                    userId(),
+                                    checked,
+                                );
+                            }}
+                            label="Auto like posts"
+                            description="Automatically like team member posts"
+                        />
+                    </div>
+                </div>
             </div>
         </main>
     );

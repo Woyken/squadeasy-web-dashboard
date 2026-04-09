@@ -12,9 +12,13 @@ function FieldInfo(props: FieldInfoProps) {
     return (
         <>
             {props.field.state.meta.touchedErrors ? (
-                <em>{props.field.state.meta.touchedErrors}</em>
+                <em class="mt-1 text-xs text-error">
+                    {props.field.state.meta.touchedErrors}
+                </em>
             ) : null}
-            {props.field.state.meta.isValidating ? "Validating..." : null}
+            {props.field.state.meta.isValidating ? (
+                <span class="mt-1 text-xs text-info">Validating...</span>
+            ) : null}
         </>
     );
 }
@@ -22,7 +26,6 @@ function FieldInfo(props: FieldInfoProps) {
 export default function LoginForm() {
     const loginMutation = useLoginMutation();
     const navigate = useNavigate();
-    // bug, doesn't support ssr. https://github.com/TanStack/form/issues/698
     const form = createForm(() => ({
         defaultValues: {
             email: "",
@@ -38,135 +41,110 @@ export default function LoginForm() {
     }));
 
     return (
-        <div class="flex min-h-screen items-center bg-base-200">
-            <div class="card mx-auto w-full max-w-2xl shadow-xl">
-                <div class="grid grid-cols-1 rounded-xl bg-base-100 md:grid-cols-1">
-                    <div class="px-10 py-24">
-                        <h2 class="mb-2 text-center text-2xl font-semibold">
-                            Login
-                        </h2>
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                form.handleSubmit();
-                            }}
-                        >
-                            <div class="mb-4">
-                                <div class={`form-control w-full`}>
-                                    <label class="label">
-                                        <span
-                                            class={
-                                                "label-text text-base-content"
-                                            }
-                                        >
-                                            Email
-                                        </span>
-                                    </label>
-                                    <form.Field
-                                        name="email"
-                                        validators={{
-                                            onChange: pipe(string(), email()),
-                                        }}
-                                        children={(field) => {
-                                            return (
-                                                <>
-                                                    <input
-                                                        type="email"
-                                                        name={field().name}
-                                                        value={
-                                                            field().state.value
-                                                        }
-                                                        onBlur={
-                                                            field().handleBlur
-                                                        }
-                                                        onInput={(e) =>
-                                                            field().handleChange(
-                                                                e.currentTarget
-                                                                    .value,
-                                                            )
-                                                        }
-                                                        placeholder={
-                                                            "email@example.com"
-                                                        }
-                                                        class="input input-bordered w-full"
-                                                    />
-                                                    <FieldInfo
-                                                        field={field()}
-                                                    />
-                                                </>
-                                            );
-                                        }}
-                                    />
-                                </div>
-                                <div class={`form-control w-full`}>
-                                    <label class="label">
-                                        <span
-                                            class={
-                                                "label-text text-base-content"
-                                            }
-                                        >
-                                            Password
-                                        </span>
-                                    </label>
-                                    <form.Field
-                                        name="password"
-                                        validators={{
-                                            onChange: pipe(
-                                                string(),
-                                                minLength(3),
-                                            ),
-                                        }}
-                                        children={(field) => (
-                                            <>
-                                                <input
-                                                    type="password"
-                                                    name={field().name}
-                                                    value={field().state.value}
-                                                    onBlur={field().handleBlur}
-                                                    onInput={(e) =>
-                                                        field().handleChange(
-                                                            e.currentTarget
-                                                                .value,
-                                                        )
-                                                    }
-                                                    placeholder={"***********"}
-                                                    class="input input-bordered w-full"
-                                                />
-                                                <FieldInfo field={field()} />
-                                            </>
-                                        )}
-                                    />
-                                </div>
-                            </div>
-                            <p class={`text-center text-error`}>
-                                {loginMutation.error?.message}
-                            </p>
-                            <form.Subscribe
-                                selector={(state) => ({
-                                    canSubmit: state.canSubmit,
-                                    isSubmitting: state.isSubmitting,
-                                })}
-                                children={(state) => {
-                                    return (
-                                        <button
-                                            type="submit"
-                                            class={
-                                                "btn btn-primary mt-2 w-full"
-                                            }
-                                            disabled={!state().canSubmit}
-                                        >
-                                            {state().isSubmitting ? (
-                                                <span class="loading loading-spinner"></span>
-                                            ) : null}
-                                            Login
-                                        </button>
-                                    );
-                                }}
-                            />
-                        </form>
-                    </div>
+        <div class="relative z-10 w-full max-w-md px-4 animate-fade-in-up">
+            <div class="gradient-card p-8 sm:p-10">
+                {/* Logo */}
+                <div class="mb-8 text-center">
+                    <span class="text-3xl">⚡</span>
+                    <h2 class="mt-2 text-2xl font-bold text-gradient">
+                        SquadEasy
+                    </h2>
+                    <p class="mt-1 text-sm text-base-content/50">
+                        Sign in to your dashboard
+                    </p>
                 </div>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        form.handleSubmit();
+                    }}
+                    class="flex flex-col gap-5"
+                >
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-base-content/70">
+                            Email
+                        </label>
+                        <form.Field
+                            name="email"
+                            validators={{
+                                onChange: pipe(string(), email()),
+                            }}
+                            children={(field) => (
+                                <>
+                                    <input
+                                        type="email"
+                                        name={field().name}
+                                        value={field().state.value}
+                                        onBlur={field().handleBlur}
+                                        onInput={(e) =>
+                                            field().handleChange(
+                                                e.currentTarget.value,
+                                            )
+                                        }
+                                        placeholder="email@example.com"
+                                        class="w-full rounded-xl border border-white/10 bg-base-300/50 px-4 py-3 text-sm text-base-content outline-none transition-all placeholder:text-base-content/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                    />
+                                    <FieldInfo field={field()} />
+                                </>
+                            )}
+                        />
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium text-base-content/70">
+                            Password
+                        </label>
+                        <form.Field
+                            name="password"
+                            validators={{
+                                onChange: pipe(string(), minLength(3)),
+                            }}
+                            children={(field) => (
+                                <>
+                                    <input
+                                        type="password"
+                                        name={field().name}
+                                        value={field().state.value}
+                                        onBlur={field().handleBlur}
+                                        onInput={(e) =>
+                                            field().handleChange(
+                                                e.currentTarget.value,
+                                            )
+                                        }
+                                        placeholder="•••••••••"
+                                        class="w-full rounded-xl border border-white/10 bg-base-300/50 px-4 py-3 text-sm text-base-content outline-none transition-all placeholder:text-base-content/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                                    />
+                                    <FieldInfo field={field()} />
+                                </>
+                            )}
+                        />
+                    </div>
+
+                    <p class="text-center text-sm text-error">
+                        {loginMutation.error?.message}
+                    </p>
+
+                    <form.Subscribe
+                        selector={(state) => ({
+                            canSubmit: state.canSubmit,
+                            isSubmitting: state.isSubmitting,
+                        })}
+                        children={(state) => (
+                            <button
+                                type="submit"
+                                class="mt-1 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-content transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 disabled:opacity-50"
+                                disabled={!state().canSubmit}
+                            >
+                                {state().isSubmitting ? (
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                ) : null}
+                                Sign in
+                            </button>
+                        )}
+                    />
+                </form>
             </div>
         </div>
     );

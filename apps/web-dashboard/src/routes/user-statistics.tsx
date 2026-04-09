@@ -51,126 +51,140 @@ function RouteComponent() {
     });
 
     return (
-        <main class="flex-1 overflow-y-auto bg-base-200 px-6 pt-4 md:pt-4">
-            <Title>Users statistics</Title>
-            <div class="card mt-2 w-full bg-base-100 p-6 shadow-xl">
-                <div class="inline-block text-xl font-semibold">
-                    User statistics
-                </div>
-                <div class="divider mt-2" />
-                <div class="h-full w-full bg-base-100 pb-6">
-                    <Suspense fallback={<span>Loading...</span>}>
-                        <div class="w-full overflow-x-auto">
-                            <table class="table w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Points</th>
-                                        <th>
-                                            Step length (assuming every walk was
-                                            tracked)
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <Show when={teamQuery.isLoading}>
-                                        <tr>
-                                            <td>
-                                                <span class="loading loading-spinner"></span>
-                                            </td>
-                                        </tr>
-                                    </Show>
-                                    <Show when={!!teamQuery.data}>
-                                        <For
-                                            each={
-                                                teamQuery.data?.users.toSorted(
-                                                    (a, b) =>
-                                                        b.points - a.points,
-                                                ) ?? []
+        <main class="flex-1 overflow-y-auto bg-base-200 bg-grid">
+            <div class="bg-glow absolute inset-0" />
+            <Title>User Statistics — SquadEasy</Title>
+            <div class="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
+                <h1 class="section-header mb-6">User Statistics</h1>
+
+                <Suspense
+                    fallback={
+                        <div class="glass-card flex h-48 items-center justify-center">
+                            <span class="loading loading-ring loading-lg text-primary"></span>
+                        </div>
+                    }
+                >
+                    <div class="flex flex-col gap-3">
+                        <Show when={teamQuery.isLoading}>
+                            <div class="glass-card flex h-48 items-center justify-center">
+                                <span class="loading loading-ring loading-lg text-primary"></span>
+                            </div>
+                        </Show>
+                        <Show when={!!teamQuery.data}>
+                            <For
+                                each={
+                                    teamQuery.data?.users
+                                        .slice()
+                                        .sort(
+                                            (a, b) => b.points - a.points,
+                                        ) ?? []
+                                }
+                            >
+                                {(user, idx) => (
+                                    <div
+                                        class={`glass-card overflow-hidden transition-all duration-300 ${
+                                            showUserStatistics() === user.id
+                                                ? "ring-1 ring-primary/30"
+                                                : ""
+                                        }`}
+                                    >
+                                        {/* User row */}
+                                        <button
+                                            class="table-row-interactive flex w-full items-center gap-4 px-4 py-4 sm:px-6"
+                                            onClick={() =>
+                                                setShowUserStatistics(
+                                                    (old) =>
+                                                        old === user.id
+                                                            ? undefined
+                                                            : user.id,
+                                                )
                                             }
                                         >
-                                            {(user) => (
-                                                <>
-                                                    <tr>
-                                                        <td
-                                                            onclick={() =>
-                                                                setShowUserStatistics(
-                                                                    (old) =>
-                                                                        old ===
-                                                                        user.id
-                                                                            ? undefined
-                                                                            : user.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <div
-                                                                class="flex items-center space-x-3"
-                                                                id={user.id}
-                                                            >
-                                                                <Avatar
-                                                                    userId={
-                                                                        user.id
-                                                                    }
-                                                                />
-                                                                <div>
-                                                                    <div class="font-bold">
-                                                                        {getUserDisplayName(
-                                                                            {
-                                                                                email: "Unknown",
-                                                                                ...user,
-                                                                            },
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td>{user.points}</td>
-                                                        <UserStepLengthRow
-                                                            userId={user.id}
-                                                        />
-                                                    </tr>
-                                                    <Show
-                                                        when={
-                                                            showUserStatistics() ===
-                                                            user.id
+                                            {/* Rank */}
+                                            <span class="w-6 text-center text-sm font-medium text-base-content/40">
+                                                {idx() + 1}
+                                            </span>
+
+                                            {/* Avatar */}
+                                            <Avatar userId={user.id} />
+
+                                            {/* Name */}
+                                            <div class="min-w-0 flex-1 text-left">
+                                                <span class="block truncate text-sm font-semibold">
+                                                    {getUserDisplayName({
+                                                        email: "Unknown",
+                                                        ...user,
+                                                    })}
+                                                </span>
+                                                <UserStepLengthInline
+                                                    userId={user.id}
+                                                />
+                                            </div>
+
+                                            {/* Points */}
+                                            <span class="text-base font-bold text-primary sm:text-lg">
+                                                {user.points.toLocaleString()}
+                                            </span>
+
+                                            {/* Expand icon */}
+                                            <svg
+                                                class={`h-4 w-4 flex-shrink-0 text-base-content/30 transition-transform duration-200 ${
+                                                    showUserStatistics() ===
+                                                    user.id
+                                                        ? "rotate-180"
+                                                        : ""
+                                                }`}
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M19 9l-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </button>
+
+                                        {/* Expanded: Activity graphs */}
+                                        <Show
+                                            when={
+                                                showUserStatistics() ===
+                                                user.id
+                                            }
+                                        >
+                                            <div class="animate-slide-down border-t border-white/5 px-4 pb-4 pt-3 sm:px-6">
+                                                <Show
+                                                    when={
+                                                        endAtTimestamp() &&
+                                                        startAtTimestamp()
+                                                    }
+                                                >
+                                                    <UserStatisticsGraph
+                                                        userId={user.id}
+                                                        endsAt={
+                                                            endAtTimestamp()!
                                                         }
-                                                    >
-                                                        <div>
-                                                            <Show
-                                                                when={
-                                                                    endAtTimestamp() &&
-                                                                    startAtTimestamp()
-                                                                }
-                                                            >
-                                                                <UserStatisticsGraph
-                                                                    userId={
-                                                                        user.id
-                                                                    }
-                                                                    endsAt={
-                                                                        endAtTimestamp()!
-                                                                    }
-                                                                    startAt={
-                                                                        startAtTimestamp()!
-                                                                    }
-                                                                />
-                                                            </Show>
-                                                        </div>
-                                                    </Show>
-                                                </>
-                                            )}
-                                        </For>
-                                    </Show>
-                                </tbody>
-                            </table>
-                        </div>
-                    </Suspense>
-                </div>
+                                                        startAt={
+                                                            startAtTimestamp()!
+                                                        }
+                                                    />
+                                                </Show>
+                                            </div>
+                                        </Show>
+                                    </div>
+                                )}
+                            </For>
+                        </Show>
+                    </div>
+                </Suspense>
             </div>
         </main>
     );
 }
 
-function UserStepLengthRow(props: { userId: string }) {
+function UserStepLengthInline(props: { userId: string }) {
     const userStatisticsQuery = useUserStatisticsQuery(() => props.userId);
     const totalTrackedMovingDistance = createMemo(() => {
         if (!userStatisticsQuery.data) return;
@@ -194,8 +208,13 @@ function UserStepLengthRow(props: { userId: string }) {
         const distance = totalTrackedMovingDistance();
         const steps = stepsCount();
         if (!distance || !steps) return;
-        // meters per step
         return distance / steps;
     });
-    return <td>{stepLength()?.toFixed(2) ?? "-"}</td>;
+    return (
+        <Show when={stepLength()}>
+            <span class="text-xs text-base-content/40">
+                Step: {stepLength()?.toFixed(2)}m
+            </span>
+        </Show>
+    );
 }

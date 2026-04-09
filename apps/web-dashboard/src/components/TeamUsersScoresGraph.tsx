@@ -33,7 +33,13 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
 
     return (
         <Show when={startAtTimestamp() && endAtTimestamp()}>
-            <Suspense fallback={<span>Loading...</span>}>
+            <Suspense
+                fallback={
+                    <div class="flex h-full items-center justify-center">
+                        <span class="loading loading-ring loading-md text-primary"></span>
+                    </div>
+                }
+            >
                 <Show when={teamQuery.data}>
                     {(team) => (
                         <CanvasRenderer
@@ -53,6 +59,12 @@ export function TeamUsersScoresGraph(props: { teamId: string }) {
     );
 }
 
+const chartColors = [
+    "#818cf8", "#a78bfa", "#c084fc", "#e879f9", "#f472b6",
+    "#fb7185", "#f87171", "#fb923c", "#fbbf24", "#34d399",
+    "#2dd4bf", "#38bdf8", "#60a5fa", "#a3e635", "#facc15",
+];
+
 function CanvasRenderer(props: {
     users: { id: string; firstName: string; lastName: string; email: string }[];
     endsAt: number;
@@ -60,7 +72,7 @@ function CanvasRenderer(props: {
 }) {
     const [canvasContainer, setCanvasContainer] =
         createSignal<HTMLDivElement>();
-    const navigate = useNavigate(); // Add navigate for programmatic routing
+    const navigate = useNavigate();
 
     const [timeWindow, setTimeWindow] = createSignal<{
         start: number;
@@ -83,10 +95,6 @@ function CanvasRenderer(props: {
         historicalQueries.flatMap((query) => query.data ?? []),
     );
 
-    createEffect(() => {
-        console.log("usersScoresDataFlat.len", usersScoresDataFlat().length);
-    });
-
     const usersScoreData = createMemo(() => {
         const usersScoreData = usersScoresDataFlat();
         if (!usersScoreData) return {};
@@ -104,9 +112,7 @@ function CanvasRenderer(props: {
         return grouped;
     });
 
-    // Get user display names
     const userDisplayNames = createMemo(() => {
-        // Try to get from TeamScoreTracker or fallback to userId
         return props.users.reduce(
             (acc, user) => {
                 acc[user.id] =
@@ -123,13 +129,11 @@ function CanvasRenderer(props: {
 
     const datasets = createMemo(() => {
         const grouped = usersScoreData();
-        // For each user, get their data and last point
         const usersWithLast = props.users.map((user) => {
             const data = grouped[user.id] ?? [];
             const last = data.length > 0 ? data[data.length - 1]?.points : 0;
             return { id: user.id, data, last };
         });
-        // Sort so higher score users render last (on top)
         usersWithLast.sort((a, b) => (a.last ?? 0) - (b.last ?? 0));
         return usersWithLast;
     });
@@ -139,7 +143,6 @@ function CanvasRenderer(props: {
     createEffect(() => {
         if (props.endsAt <= Date.now()) setXAxisMaxDateNow(props.endsAt);
         else setXAxisMaxDateNow(Date.now());
-
         const i = setInterval(() => {
             if (props.endsAt <= Date.now()) setXAxisMaxDateNow(props.endsAt);
             else setXAxisMaxDateNow(Date.now());
@@ -160,7 +163,6 @@ function CanvasRenderer(props: {
 
     createEffect(() => {
         const sortedDatasets = datasets();
-
         const t = setTimeout(() => {
             lineChart()?.setOption({
                 legend: {
@@ -168,7 +170,7 @@ function CanvasRenderer(props: {
                         (x) => userDisplayNames()[x.id] || x.id,
                     ),
                 },
-                series: sortedDatasets.map((x, idx) => ({
+                series: sortedDatasets.map((x) => ({
                     name: userDisplayNames()[x.id] || x.id,
                     type: "line",
                     endLabel: {
@@ -176,22 +178,17 @@ function CanvasRenderer(props: {
                         formatter: (params: {
                             seriesName: string;
                             value: number[];
-                        }) => {
-                            return params.seriesName + ": " + params.value[1];
-                        },
+                        }) => params.seriesName + ": " + params.value[1],
                         distance: 20,
+                        fontSize: 11,
                     },
                     smooth: true,
-                    emphasis: {
-                        focus: "series",
-                    },
-                    lineStyle: {
-                        width: 4,
-                    },
-                    symbolSize: 10,
-                    itemStyle: {},
+                    emphasis: { focus: "series" },
+                    lineStyle: { width: 2.5 },
+                    symbolSize: 6,
+                    symbol: "circle",
                     data: x.data.map((d) => [d.timestamp, d.points]),
-                    userId: x.id, // Attach userId for click event
+                    userId: x.id,
                 })),
             });
         }, 100);
@@ -208,48 +205,55 @@ function CanvasRenderer(props: {
         });
 
         lineChart()?.setOption({
+            color: chartColors,
+            backgroundColor: "transparent",
             legend: {
-                inactiveColor: "#777",
-                textStyle: {
-                    color: "#fff",
-                },
+                inactiveColor: "rgba(255,255,255,0.15)",
+                textStyle: { color: "rgba(224,231,255,0.7)", fontSize: 11 },
             },
-            type: "line",
             tooltip: {
                 trigger: "axis",
+                backgroundColor: "rgba(15, 14, 26, 0.95)",
+                borderColor: "rgba(255, 255, 255, 0.1)",
+                textStyle: { color: "#e0e7ff", fontSize: 12 },
             },
             xAxis: {
                 min: xAxisMin(),
                 max: xAxisMax(),
                 type: "time",
+                axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+                axisLabel: { color: "rgba(224,231,255,0.5)", fontSize: 11 },
+                splitLine: { show: false },
             },
             yAxis: {
                 type: "value",
                 min: "dataMin",
+                axisLine: { show: false },
+                axisLabel: { color: "rgba(224,231,255,0.5)", fontSize: 11 },
+                splitLine: {
+                    lineStyle: { color: "rgba(255,255,255,0.04)" },
+                },
             },
             grid: {
                 containLabel: true,
+                left: 10,
+                right: 10,
+                top: 40,
+                bottom: 60,
             },
         });
 
-        // Add click event for navigation to user statistics
         lineChart()?.on("click", function (params: any) {
-            // params.seriesName gives the user display name
-            // Find the userId from the series
             const user = props.users.find(
                 (u) => userDisplayNames()[u.id] === params.seriesName,
             );
             if (user) {
-                // Find teamId from URL or props if needed
                 const urlParams = new URLSearchParams(window.location.search);
                 const teamId = urlParams.get("teamId");
                 if (teamId) {
                     navigate({
                         to: `/user-statistics`,
-                        search: {
-                            teamId: teamId,
-                            userId: user.id,
-                        },
+                        search: { teamId: teamId, userId: user.id },
                     });
                 }
             }
@@ -284,20 +288,13 @@ function CanvasRenderer(props: {
     createEffect(() => {
         const updateXAxisMax = () => {
             lineChart()?.setOption({
-                xAxis: {
-                    min: xAxisMin(),
-                    max: xAxisMax(),
-                },
+                xAxis: { min: xAxisMin(), max: xAxisMax() },
             });
         };
-
         updateXAxisMax();
-
         const a = new AbortController();
         window.addEventListener("focus", updateXAxisMax, { signal: a.signal });
-        onCleanup(() => {
-            a.abort();
-        });
+        onCleanup(() => a.abort());
     });
 
     createEffect(() => {
@@ -308,7 +305,12 @@ function CanvasRenderer(props: {
                     filterMode: "none",
                     startValue: untrack(() => timeWindow().start),
                     end: 100,
-                    minValueSpan: 5 * 60 * 1000, // No point in trying to zoom in more than few minutes
+                    minValueSpan: 5 * 60 * 1000,
+                    backgroundColor: "rgba(255,255,255,0.02)",
+                    borderColor: "rgba(255,255,255,0.05)",
+                    fillerColor: "rgba(129,140,248,0.08)",
+                    handleStyle: { color: "#818cf8", borderColor: "#818cf8" },
+                    textStyle: { color: "rgba(224,231,255,0.5)" },
                 },
                 { type: "inside" },
             ],
@@ -317,10 +319,8 @@ function CanvasRenderer(props: {
 
     createEffect(() => {
         const c = lineChart();
-        onCleanup(() => {
-            c?.dispose();
-        });
+        onCleanup(() => c?.dispose());
     });
 
-    return <div class="min-h-96" ref={setCanvasContainer}></div>;
+    return <div class="h-full w-full" ref={setCanvasContainer}></div>;
 }

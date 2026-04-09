@@ -8,8 +8,9 @@ export const Route = createFileRoute("/login")({
 
 function RouteComponent() {
     return (
-        <main>
-            <Title>Login</Title>
+        <main class="flex flex-1 items-center justify-center bg-base-200 bg-grid">
+            <div class="bg-glow absolute inset-0" />
+            <Title>Login — SquadEasy</Title>
             <LoginForm />
         </main>
     );

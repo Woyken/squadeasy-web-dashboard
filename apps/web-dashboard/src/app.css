@@ -1,3 +1,142 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+    /* Glass card effect */
+    .glass-card {
+        @apply rounded-2xl border border-white/10 bg-base-200/60 shadow-xl backdrop-blur-md;
+    }
+
+    /* Gradient border card */
+    .gradient-card {
+        @apply relative overflow-hidden rounded-2xl bg-base-200;
+    }
+    .gradient-card::before {
+        content: '';
+        @apply absolute inset-0 rounded-2xl;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(129, 140, 248, 0.4), rgba(167, 139, 250, 0.2), transparent);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+    }
+
+    /* Countdown digit box */
+    .countdown-box {
+        @apply flex flex-col items-center rounded-xl bg-neutral px-3 py-2 sm:px-4 sm:py-3;
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .countdown-box .digit {
+        @apply font-mono text-3xl font-bold tabular-nums text-primary sm:text-5xl;
+        text-shadow: 0 0 20px rgba(129, 140, 248, 0.5);
+    }
+    .countdown-box .unit {
+        @apply mt-1 text-[10px] font-medium uppercase tracking-widest text-base-content/50 sm:text-xs;
+    }
+
+    /* Leaderboard rank badges */
+    .rank-badge {
+        @apply flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold;
+    }
+    .rank-badge.gold {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #451a03;
+        box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+    }
+    .rank-badge.silver {
+        background: linear-gradient(135deg, #d1d5db, #9ca3af);
+        color: #1f2937;
+        box-shadow: 0 0 12px rgba(156, 163, 175, 0.4);
+    }
+    .rank-badge.bronze {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        color: #fff;
+        box-shadow: 0 0 12px rgba(217, 119, 6, 0.3);
+    }
+
+    /* Podium styling */
+    .podium-card {
+        @apply glass-card flex flex-col items-center p-4 transition-transform duration-300 hover:scale-105;
+    }
+
+    /* Stat card */
+    .stat-card {
+        @apply glass-card flex flex-col gap-1 p-4;
+    }
+    .stat-card .stat-label {
+        @apply text-xs font-medium uppercase tracking-wider text-base-content/50;
+    }
+    .stat-card .stat-value {
+        @apply text-2xl font-bold text-primary;
+    }
+
+    /* Chart container - responsive */
+    .chart-container {
+        @apply glass-card w-full overflow-hidden p-2 sm:p-4;
+    }
+    .chart-container .chart-inner {
+        @apply h-[300px] w-full sm:h-[400px] lg:h-[500px];
+    }
+
+    /* Table row hover effect */
+    .table-row-interactive {
+        @apply cursor-pointer transition-colors duration-200 hover:bg-white/5;
+    }
+
+    /* Glow text */
+    .glow-text {
+        text-shadow: 0 0 30px rgba(129, 140, 248, 0.3);
+    }
+
+    /* Section header */
+    .section-header {
+        @apply flex items-center gap-3 text-lg font-semibold text-base-content sm:text-xl;
+    }
+    .section-header::before {
+        content: '';
+        @apply h-5 w-1 rounded-full bg-primary;
+    }
+
+    /* Badge/pill */
+    .status-pill {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+    }
+    .status-pill.active {
+        @apply bg-success/20 text-success;
+    }
+    .status-pill.upcoming {
+        @apply bg-info/20 text-info;
+    }
+    .status-pill.ended {
+        @apply bg-base-content/10 text-base-content/50;
+    }
+
+    /* Responsive nav */
+    .nav-glass {
+        @apply sticky top-0 z-50 border-b border-white/5 bg-base-100/80 backdrop-blur-xl;
+    }
+}
+
+@layer utilities {
+    /* Gradient text */
+    .text-gradient {
+        @apply bg-clip-text text-transparent;
+        background-image: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
+    }
+
+    /* Subtle grid background */
+    .bg-grid {
+        background-image:
+            linear-gradient(rgba(129, 140, 248, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(129, 140, 248, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+
+    /* Radial glow overlay */
+    .bg-glow {
+        background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.08) 0%, transparent 60%);
+    }
+}

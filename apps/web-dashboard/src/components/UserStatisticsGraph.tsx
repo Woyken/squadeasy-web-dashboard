@@ -11,12 +11,17 @@ import {
 } from "solid-js";
 import { init as echartsInit, EChartsType } from "echarts";
 
+const chartColors = [
+    "#818cf8", "#a78bfa", "#c084fc", "#e879f9", "#f472b6",
+    "#fb7185", "#f87171", "#fb923c", "#fbbf24", "#34d399",
+    "#2dd4bf", "#38bdf8", "#60a5fa", "#a3e635", "#facc15",
+];
+
 export function UserStatisticsGraph(props: {
     userId: string;
     endsAt: number;
     startAt: number;
 }) {
-    // Shared timeWindow state
     const [timeWindow, setTimeWindow] = createSignal<{
         start: number;
         end: number;
@@ -29,34 +34,54 @@ export function UserStatisticsGraph(props: {
     );
 
     return (
-        <>
-            <div class="max-h-96">
-                <div class="inline-block text-xl font-semibold">Points</div>
-                <Suspense fallback={<div>Loading...</div>}>
-                    <UserChart
-                        type="points"
-                        endsAt={props.endsAt}
-                        startAt={props.startAt}
-                        userId={props.userId}
-                        timeWindow={timeWindow}
-                        setTimeWindow={setTimeWindow}
-                    />
-                </Suspense>
+        <div class="flex flex-col gap-4">
+            <div>
+                <h3 class="mb-2 text-sm font-semibold text-base-content/70">
+                    📈 Points by Activity
+                </h3>
+                <div class="chart-container !p-2">
+                    <Suspense
+                        fallback={
+                            <div class="flex h-[250px] items-center justify-center">
+                                <span class="loading loading-ring loading-md text-primary"></span>
+                            </div>
+                        }
+                    >
+                        <UserChart
+                            type="points"
+                            endsAt={props.endsAt}
+                            startAt={props.startAt}
+                            userId={props.userId}
+                            timeWindow={timeWindow}
+                            setTimeWindow={setTimeWindow}
+                        />
+                    </Suspense>
+                </div>
             </div>
-            <div class="max-h-96">
-                <div class="inline-block text-xl font-semibold">Values</div>
-                <Suspense fallback={<div>Loading...</div>}>
-                    <UserChart
-                        type="values"
-                        endsAt={props.endsAt}
-                        startAt={props.startAt}
-                        userId={props.userId}
-                        timeWindow={timeWindow}
-                        setTimeWindow={setTimeWindow}
-                    />
-                </Suspense>
+            <div>
+                <h3 class="mb-2 text-sm font-semibold text-base-content/70">
+                    📊 Activity Values
+                </h3>
+                <div class="chart-container !p-2">
+                    <Suspense
+                        fallback={
+                            <div class="flex h-[250px] items-center justify-center">
+                                <span class="loading loading-ring loading-md text-primary"></span>
+                            </div>
+                        }
+                    >
+                        <UserChart
+                            type="values"
+                            endsAt={props.endsAt}
+                            startAt={props.startAt}
+                            userId={props.userId}
+                            timeWindow={timeWindow}
+                            setTimeWindow={setTimeWindow}
+                        />
+                    </Suspense>
+                </div>
             </div>
-        </>
+        </div>
     );
 }
 
@@ -72,7 +97,6 @@ function UserChart(props: {
         createSignal<HTMLDivElement>();
     const [chart, setChart] = createSignal<EChartsType>();
 
-    // Only use useHistoricalUserActivityPointsQuery with shared timeWindow values
     const historicalActivityPointsQuery = useHistoricalUserActivityPointsQuery(
         () => props.userId,
         () => props.timeWindow().start,
@@ -111,7 +135,6 @@ function UserChart(props: {
 
     const series = createMemo(() => {
         const grouped = groupedByActivity();
-        // Compute max value for each activity
         const activityEntries = Object.entries(grouped).map(
             ([activityName, arr]) => {
                 const last =
@@ -123,27 +146,30 @@ function UserChart(props: {
                 return { activityName, arr, last };
             },
         );
-        // Sort so higher value activities render last (on top)
         activityEntries.sort((a, b) => (a.last ?? 0) - (b.last ?? 0));
         if (props.type === "points") {
             return activityEntries.map(({ activityName, arr }) => ({
                 name: `${activityName} Points`,
                 type: "line",
                 smooth: true,
-                symbolSize: 10,
+                symbolSize: 6,
+                symbol: "circle",
+                lineStyle: { width: 2 },
                 data: arr
                     .map((d) => [d.timestamp, d.points])
-                    .toSorted((a, b) => (a[0] ?? 0) - (b[0] ?? 0)),
+                    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0)),
             }));
         } else {
             return activityEntries.map(({ activityName, arr }) => ({
                 name: `${activityName} Value`,
                 type: "line",
                 smooth: true,
-                symbolSize: 10,
+                symbolSize: 6,
+                symbol: "circle",
+                lineStyle: { width: 2 },
                 data: arr
                     .map((d) => [d.timestamp, d.value])
-                    .toSorted((a, b) => (a[0] ?? 0) - (b[0] ?? 0)),
+                    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0)),
             }));
         }
     });
@@ -152,7 +178,6 @@ function UserChart(props: {
         if (typeof window === "undefined" || !canvasContainer()) return;
         const c = echartsInit(canvasContainer()!, null, { renderer: "canvas" });
         setChart(c);
-        // Finicky animation, force resize chart
         setTimeout(() => {
             c.resize();
             setTimeout(() => c.resize(), 0);
@@ -164,20 +189,43 @@ function UserChart(props: {
         const c = chart();
         if (!c) return;
         c.setOption({
+            color: chartColors,
+            backgroundColor: "transparent",
             legend: {
-                inactiveColor: "#777",
-                textStyle: {
-                    color: "#fff",
+                inactiveColor: "rgba(255,255,255,0.15)",
+                textStyle: { color: "rgba(224,231,255,0.7)", fontSize: 11 },
+            },
+            emphasis: { focus: "series" },
+            tooltip: {
+                trigger: "axis",
+                backgroundColor: "rgba(15, 14, 26, 0.95)",
+                borderColor: "rgba(255, 255, 255, 0.1)",
+                textStyle: { color: "#e0e7ff", fontSize: 12 },
+            },
+            xAxis: {
+                type: "time",
+                min: xAxisMin(),
+                max: xAxisMax(),
+                axisLine: { lineStyle: { color: "rgba(255,255,255,0.08)" } },
+                axisLabel: { color: "rgba(224,231,255,0.5)", fontSize: 11 },
+                splitLine: { show: false },
+            },
+            yAxis: {
+                type: "value",
+                min: "dataMin",
+                axisLine: { show: false },
+                axisLabel: { color: "rgba(224,231,255,0.5)", fontSize: 11 },
+                splitLine: {
+                    lineStyle: { color: "rgba(255,255,255,0.04)" },
                 },
             },
-            type: "line",
-            emphasis: {
-                focus: "series",
+            grid: {
+                containLabel: true,
+                left: 10,
+                right: 10,
+                top: 40,
+                bottom: 60,
             },
-            tooltip: { trigger: "axis" },
-            xAxis: { type: "time", min: xAxisMin(), max: xAxisMax() },
-            yAxis: { type: "value", min: "dataMin" },
-            grid: { containLabel: true },
         });
 
         c.on("dataZoom", function () {
@@ -192,9 +240,7 @@ function UserChart(props: {
     createEffect(() => {
         const c = chart();
         if (!c) return;
-        c.setOption({
-            series: series() ?? [],
-        });
+        c.setOption({ series: series() ?? [] });
     });
 
     const xAxisMin = createMemo(() => new Date(props.startAt).getTime());
@@ -202,7 +248,6 @@ function UserChart(props: {
     createEffect(() => {
         if (props.endsAt <= Date.now()) setXAxisMaxDateNow(props.endsAt);
         else setXAxisMaxDateNow(Date.now());
-
         const i = setInterval(() => {
             if (props.endsAt <= Date.now()) setXAxisMaxDateNow(props.endsAt);
             else setXAxisMaxDateNow(Date.now());
@@ -213,26 +258,18 @@ function UserChart(props: {
     createEffect(() => {
         const updateXAxisMax = () => {
             chart()?.setOption({
-                xAxis: {
-                    min: xAxisMin(),
-                    max: xAxisMax(),
-                },
+                xAxis: { min: xAxisMin(), max: xAxisMax() },
             });
-            // Update timeWindow end if it exceeds new xAxisMax
             const tw = props.timeWindow();
             const max = xAxisMax();
             if (tw.end > max) {
                 props.setTimeWindow({ start: tw.start, end: max });
             }
         };
-
         updateXAxisMax();
-
         const a = new AbortController();
         window.addEventListener("focus", updateXAxisMax, { signal: a.signal });
-        onCleanup(() => {
-            a.abort();
-        });
+        onCleanup(() => a.abort());
     });
 
     createEffect(() => {
@@ -244,11 +281,15 @@ function UserChart(props: {
                     startValue: untrack(() => props.timeWindow().start),
                     endValue: untrack(() => props.timeWindow().end),
                     minValueSpan: 5 * 60 * 1000,
+                    backgroundColor: "rgba(255,255,255,0.02)",
+                    borderColor: "rgba(255,255,255,0.05)",
+                    fillerColor: "rgba(129,140,248,0.08)",
+                    handleStyle: { color: "#818cf8", borderColor: "#818cf8" },
+                    textStyle: { color: "rgba(224,231,255,0.5)" },
                 },
                 { type: "inside" },
             ],
         });
-        // Do not update xAxis min/max here
     });
 
     createEffect(() => {
@@ -269,7 +310,6 @@ function UserChart(props: {
             if (!dz) return;
             const startTime = Math.floor(dz.startValue);
             const endTime = Math.floor(dz.endValue);
-
             const tw = props.timeWindow();
             if (tw.start !== startTime || tw.end !== endTime) {
                 props.setTimeWindow({ start: startTime, end: endTime });
@@ -280,7 +320,6 @@ function UserChart(props: {
     createEffect(() => {
         const c = chart();
         if (!c) return;
-
         const dz = (c.getOption().dataZoom as any)?.[0];
         const tw = props.timeWindow();
         if (!dz || dz.startValue !== tw.start || dz.endValue !== tw.end) {
@@ -299,5 +338,10 @@ function UserChart(props: {
         }
     });
 
-    return <div class="min-h-96" ref={setCanvasContainer}></div>;
+    return (
+        <div
+            class="h-[250px] w-full sm:h-[300px]"
+            ref={setCanvasContainer}
+        ></div>
+    );
 }

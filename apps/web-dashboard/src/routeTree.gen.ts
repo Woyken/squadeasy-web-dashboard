@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as UsersPointsImport } from './routes/users-points'
-import { Route as UserStatisticsImport } from './routes/user-statistics'
 import { Route as UserImport } from './routes/user'
 import { Route as LoginImport } from './routes/login'
 import { Route as R404Import } from './routes/404'
@@ -23,12 +22,6 @@ import { Route as IndexImport } from './routes/index'
 const UsersPointsRoute = UsersPointsImport.update({
   id: '/users-points',
   path: '/users-points',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const UserStatisticsRoute = UserStatisticsImport.update({
-  id: '/user-statistics',
-  path: '/user-statistics',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -88,13 +81,6 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof UserImport
       parentRoute: typeof rootRoute
     }
-    '/user-statistics': {
-      id: '/user-statistics'
-      path: '/user-statistics'
-      fullPath: '/user-statistics'
-      preLoaderRoute: typeof UserStatisticsImport
-      parentRoute: typeof rootRoute
-    }
     '/users-points': {
       id: '/users-points'
       path: '/users-points'
@@ -112,7 +98,6 @@ export interface FileRoutesByFullPath {
   '/404': typeof R404Route
   '/login': typeof LoginRoute
   '/user': typeof UserRoute
-  '/user-statistics': typeof UserStatisticsRoute
   '/users-points': typeof UsersPointsRoute
 }
 
@@ -121,7 +106,6 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/login': typeof LoginRoute
   '/user': typeof UserRoute
-  '/user-statistics': typeof UserStatisticsRoute
   '/users-points': typeof UsersPointsRoute
 }
 
@@ -131,29 +115,15 @@ export interface FileRoutesById {
   '/404': typeof R404Route
   '/login': typeof LoginRoute
   '/user': typeof UserRoute
-  '/user-statistics': typeof UserStatisticsRoute
   '/users-points': typeof UsersPointsRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/404'
-    | '/login'
-    | '/user'
-    | '/user-statistics'
-    | '/users-points'
+  fullPaths: '/' | '/404' | '/login' | '/user' | '/users-points'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/404' | '/login' | '/user' | '/user-statistics' | '/users-points'
-  id:
-    | '__root__'
-    | '/'
-    | '/404'
-    | '/login'
-    | '/user'
-    | '/user-statistics'
-    | '/users-points'
+  to: '/' | '/404' | '/login' | '/user' | '/users-points'
+  id: '__root__' | '/' | '/404' | '/login' | '/user' | '/users-points'
   fileRoutesById: FileRoutesById
 }
 
@@ -162,7 +132,6 @@ export interface RootRouteChildren {
   R404Route: typeof R404Route
   LoginRoute: typeof LoginRoute
   UserRoute: typeof UserRoute
-  UserStatisticsRoute: typeof UserStatisticsRoute
   UsersPointsRoute: typeof UsersPointsRoute
 }
 
@@ -171,7 +140,6 @@ const rootRouteChildren: RootRouteChildren = {
   R404Route: R404Route,
   LoginRoute: LoginRoute,
   UserRoute: UserRoute,
-  UserStatisticsRoute: UserStatisticsRoute,
   UsersPointsRoute: UsersPointsRoute,
 }
 
@@ -189,7 +157,6 @@ export const routeTree = rootRoute
         "/404",
         "/login",
         "/user",
-        "/user-statistics",
         "/users-points"
       ]
     },
@@ -204,9 +171,6 @@ export const routeTree = rootRoute
     },
     "/user": {
       "filePath": "user.tsx"
-    },
-    "/user-statistics": {
-      "filePath": "user-statistics.tsx"
     },
     "/users-points": {
       "filePath": "users-points.tsx"

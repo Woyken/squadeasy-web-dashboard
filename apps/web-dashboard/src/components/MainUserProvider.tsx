@@ -1,65 +1,28 @@
-import {
-    Accessor,
-    ParentProps,
-    Setter,
-    createContext,
-    createEffect,
-    createMemo,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { createContext, createMemo, useContext, type Accessor, type JSX } from "solid-js";
 import { useUsersTokens } from "./UsersTokensProvider";
-import {
-    localStorageGetItem,
-    localStorageRemoveItem,
-    localStorageSetItem,
-} from "~/utils/localStorage";
 
-const ctx = createContext<{
-    mainUserId: Accessor<string | undefined>;
-    setMainUserId: Setter<string | undefined>;
-}>();
-
-export function useMainUser() {
-    const value = useContext(ctx);
-    if (!value) throw new Error("Missing <MainUserProvider />");
-
-    return value;
+interface MainUserContextValue {
+  mainUserId: Accessor<string | undefined>;
 }
 
-export function MainUserProvider(props: ParentProps) {
-    let savedMainUserId = localStorageGetItem("mainUserId") ?? undefined;
+const MainUserContext = createContext<MainUserContextValue>({
+  mainUserId: () => undefined,
+});
 
-    const [mainUserId, setMainUserId] = createSignal<string | undefined>();
-    const users = useUsersTokens();
-    const userIds = createMemo(() => Array.from(users().tokens.keys()));
-    const firstUserId = createMemo(() => userIds()[0]);
+export function MainUserProvider(props: { children: JSX.Element }) {
+  const usersTokens = useUsersTokens();
+  const mainUserId = createMemo(() => {
+    const keys = Array.from(usersTokens().tokens.keys());
+    return keys[0];
+  });
 
-    const savedMainUserExistsInLoggedInUsers = createMemo(() => {
-        if (!savedMainUserId) return false;
-        if (userIds().find((userId) => userId === savedMainUserId)) return true;
-    });
+  return (
+    <MainUserContext.Provider value={{ mainUserId }}>
+      {props.children}
+    </MainUserContext.Provider>
+  );
+}
 
-    createEffect(() => {
-        // Double check if saved main user actually exists in current logged in users list
-        if (savedMainUserExistsInLoggedInUsers())
-            setMainUserId(savedMainUserId);
-    });
-
-    createEffect(() => {
-        const id = mainUserId();
-        if (!id) localStorageRemoveItem("mainUserId");
-        else localStorageSetItem("mainUserId", id);
-    });
-
-    return (
-        <ctx.Provider
-            value={{
-                mainUserId: () => mainUserId() ?? firstUserId(),
-                setMainUserId,
-            }}
-        >
-            {props.children}
-        </ctx.Provider>
-    );
+export function useMainUser() {
+  return useContext(MainUserContext);
 }

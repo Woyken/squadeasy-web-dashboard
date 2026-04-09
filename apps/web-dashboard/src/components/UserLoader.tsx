@@ -1,19 +1,18 @@
-import { Accessor, JSX, createMemo } from "solid-js";
+import { createMemo, type JSX } from "solid-js";
 import { useMyUserQuery } from "~/api/client";
-import { getUserDisplayName } from "~/getUserDisplayName";
 
 export function UserLoader(props: {
-    userId: string;
-    children: (
-        query: ReturnType<typeof useMyUserQuery>,
-        displayName: Accessor<string | undefined>
-    ) => JSX.Element;
+  userId: string;
+  children: (query: { isLoading: boolean }, displayName: () => string) => JSX.Element;
 }) {
-    const query = useMyUserQuery(() => props.userId);
-    const displayName = createMemo(() => {
-        if (query.isLoading) return;
-        if (query.isError) return "Error!";
-        return getUserDisplayName(query.data);
-    });
-    return <>{props.children(query, displayName)}</>;
+  const query = useMyUserQuery(() => props.userId);
+  const displayName = createMemo(() => {
+    const data = query.data;
+    if (!data) return props.userId.slice(0, 8);
+    return data.firstName
+      ? `${data.firstName} ${data.lastName ?? ""}`.trim()
+      : props.userId.slice(0, 8);
+  });
+
+  return <>{props.children({ isLoading: query.isLoading }, displayName)}</>;
 }

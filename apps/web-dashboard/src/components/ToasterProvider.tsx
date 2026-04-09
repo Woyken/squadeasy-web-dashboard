@@ -1,47 +1,45 @@
-import {
-    For,
-    ParentProps,
-    Show,
-    createContext,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { createContext, createSignal, For, onCleanup, useContext, type JSX } from "solid-js";
 
-const ctx = createContext<(message: string) => () => void>();
+type Toaster = (message: string) => () => void;
 
-export function useToaster() {
-    const value = useContext(ctx);
-    if (!value) throw new Error("Missing <ToasterProvider />");
-    return value;
+const ToasterContext = createContext<Toaster>(() => () => {});
+
+let toastId = 0;
+
+export function ToasterProvider(props: { children: JSX.Element }) {
+  const [toasts, setToasts] = createSignal<{ id: number; message: string }[]>([]);
+
+  const toaster: Toaster = (message: string) => {
+    const id = ++toastId;
+    setToasts((prev) => [...prev, { id, message }]);
+    const timeout = setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+    return () => {
+      clearTimeout(timeout);
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    };
+  };
+
+  return (
+    <ToasterContext.Provider value={toaster}>
+      {props.children}
+      <div class="fixed bottom-4 right-4 z-[10000] flex flex-col gap-2">
+        <For each={toasts()}>
+          {(toast) => (
+            <div
+              class="border-2 border-black bg-white px-4 py-3 font-mono text-xs shadow-[4px_4px_0_#000]"
+              style={{ animation: "toast-in 0.2s ease-out" }}
+            >
+              {toast.message}
+            </div>
+          )}
+        </For>
+      </div>
+    </ToasterContext.Provider>
+  );
 }
 
-export function ToasterProvider(props: ParentProps) {
-    const [activeToasts, setActiveToasts] = createSignal<{ message: string }[]>(
-        [],
-    );
-    return (
-        <ctx.Provider
-            value={(message) => {
-                const newToast = { message };
-                setActiveToasts((old) => [...old, newToast]);
-                return () =>
-                    setActiveToasts((old) => old.filter((x) => x !== newToast));
-            }}
-        >
-            <Show when={activeToasts().length > 0}>
-                <div class="fixed left-1/2 top-20 z-[100] flex -translate-x-1/2 flex-col gap-2">
-                    <For each={activeToasts()}>
-                        {(activeToast) => (
-                            <div class="animate-slide-down rounded-xl border border-info/20 bg-base-200/95 px-4 py-2.5 shadow-lg backdrop-blur-xl">
-                                <span class="text-sm text-info">
-                                    {activeToast.message}
-                                </span>
-                            </div>
-                        )}
-                    </For>
-                </div>
-            </Show>
-            {props.children}
-        </ctx.Provider>
-    );
+export function useToaster(): Toaster {
+  return useContext(ToasterContext);
 }

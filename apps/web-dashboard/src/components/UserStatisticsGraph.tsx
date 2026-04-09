@@ -10,6 +10,10 @@ import {
     untrack,
 } from "solid-js";
 import { init as echartsInit, EChartsType } from "echarts";
+import {
+    clampRangeToNow,
+    getDefaultHistoricalTimeWindow,
+} from "~/utils/timeRange";
 
 const chartColors = [
     "#818cf8", "#a78bfa", "#c084fc", "#e879f9", "#f472b6",
@@ -25,13 +29,7 @@ export function UserStatisticsGraph(props: {
     const [timeWindow, setTimeWindow] = createSignal<{
         start: number;
         end: number;
-    }>(
-        (() => {
-            const end = Date.now();
-            const start = end - 24 * 60 * 60 * 1000;
-            return { start, end };
-        })(),
-    );
+    }>(getDefaultHistoricalTimeWindow(props.startAt, props.endsAt));
 
     return (
         <div class="flex flex-col gap-4">
@@ -233,7 +231,7 @@ function UserChart(props: {
             if (!dz) return;
             const startTime = Math.floor(dz.startValue);
             const endTime = Math.floor(dz.endValue);
-            props.setTimeWindow({ start: startTime, end: endTime });
+            props.setTimeWindow(clampRangeToNow(startTime, endTime));
         });
     });
 
@@ -261,9 +259,16 @@ function UserChart(props: {
                 xAxis: { min: xAxisMin(), max: xAxisMax() },
             });
             const tw = props.timeWindow();
-            const max = xAxisMax();
-            if (tw.end > max) {
-                props.setTimeWindow({ start: tw.start, end: max });
+            const nextTimeWindow = clampRangeToNow(
+                tw.start,
+                tw.end,
+                xAxisMax(),
+            );
+            if (
+                tw.start !== nextTimeWindow.start ||
+                tw.end !== nextTimeWindow.end
+            ) {
+                props.setTimeWindow(nextTimeWindow);
             }
         };
         updateXAxisMax();
@@ -311,8 +316,12 @@ function UserChart(props: {
             const startTime = Math.floor(dz.startValue);
             const endTime = Math.floor(dz.endValue);
             const tw = props.timeWindow();
-            if (tw.start !== startTime || tw.end !== endTime) {
-                props.setTimeWindow({ start: startTime, end: endTime });
+            const nextTimeWindow = clampRangeToNow(startTime, endTime);
+            if (
+                tw.start !== nextTimeWindow.start ||
+                tw.end !== nextTimeWindow.end
+            ) {
+                props.setTimeWindow(nextTimeWindow);
             }
         });
     });

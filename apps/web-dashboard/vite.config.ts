@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import solid from "vite-plugin-solid";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import path from "node:path";
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), "");
@@ -13,6 +14,7 @@ export default defineConfig(({ mode }) => {
     return {
         base: normalizedBasePath,
         plugins: [
+            tailwindcss(),
             solid(),
             TanStackRouterVite({ target: "solid", autoCodeSplitting: true }),
         ],

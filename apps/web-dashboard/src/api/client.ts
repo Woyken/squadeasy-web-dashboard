@@ -1,5 +1,6 @@
 import createClient from "openapi-fetch";
 import { paths } from "./squadEasyApi";
+import { paths as trackerServerPaths } from "./trackerServerApi";
 import {
     useMutation,
     useQueries,
@@ -11,13 +12,18 @@ import {
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { Accessor, createMemo } from "solid-js";
 import { parseJwt } from "~/utils/parseJwt";
+import { clampRangeToNow } from "~/utils/timeRange";
 import { useMainUser } from "~/components/MainUserProvider";
 
 const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:3231";
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 export const squadEasyClient = createClient<paths>({
     baseUrl: `${API_BASE_URL}/squadeasy/proxy`,
+});
+
+export const trackerServerClient = createClient<trackerServerPaths>({
+    baseUrl: API_BASE_URL,
 });
 
 export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
@@ -520,23 +526,37 @@ export function useHistoricalTeamPointsQuery(
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     const query = useQuery(() => ({
-        queryKey: ["historicalTeamPoints", start(), end()],
+        queryKey: [
+            "historicalTeamPoints",
+            clampRangeToNow(start(), end()).start,
+            clampRangeToNow(start(), end()).end,
+        ],
         queryFn: async ({ signal }) => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
 
-            const url = `${API_BASE_URL}/api/team-points?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
-            const resp = await fetch(url, {
+            const range = clampRangeToNow(start(), end());
+
+            const result = await trackerServerClient.GET("/api/team-points", {
+                params: {
+                    query: {
+                        startDate: new Date(range.start).toISOString(),
+                        endDate: new Date(range.end).toISOString(),
+                    },
+                },
                 headers: {
                     authorization: `Bearer ${accessToken}`,
                 },
                 signal,
             });
-            if (!resp.ok) throw new Error("Network response was not ok");
-            const result = (await resp.json()) as [
-                { teamId: string; time: string; points: number },
-            ];
-            return result;
+
+            if (!result.data) {
+                throw new Error(
+                    `Get team points failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
         },
         staleTime: 1000 * 60 * 1, // 1 minutes
         cacheTime: 1000 * 60 * 5, // 5 minutes
@@ -567,33 +587,45 @@ export function getHistoricalUserPointsQueryOptions(
 ) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
-    const options = queryOptions<
-        [
-            {
-                userId: string;
-                time: string;
-                points: number;
-            },
+    const options = queryOptions({
+        queryKey: [
+            "historicalUserPoints",
+            userId(),
+            clampRangeToNow(start(), end()).start,
+            clampRangeToNow(start(), end()).end,
         ],
-        Error
-    >({
-        queryKey: ["historicalUserPoints", userId(), start(), end()],
         queryFn: async ({ signal }) => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
 
-            const url = `${API_BASE_URL}/api/user-points/${userId()}?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
-            const resp = await fetch(url, {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
+            const range = clampRangeToNow(start(), end());
+
+            const result = await trackerServerClient.GET(
+                "/api/user-points/{userId}",
+                {
+                    params: {
+                        path: {
+                            userId: userId(),
+                        },
+                        query: {
+                            startDate: new Date(range.start).toISOString(),
+                            endDate: new Date(range.end).toISOString(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                    signal,
                 },
-                signal,
-            });
-            if (!resp.ok) throw new Error("Network response was not ok");
-            const result = (await resp.json()) as [
-                { userId: string; time: string; points: number },
-            ];
-            return result;
+            );
+
+            if (!result.data) {
+                throw new Error(
+                    `Get user points failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
         },
         staleTime: 1000 * 60 * 1, // 1 minutes
         deferStream: true,
@@ -612,29 +644,44 @@ export function useHistoricalUserActivityPointsQuery(
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     const query = useQuery(() => ({
-        queryKey: ["historicalUserActivityPoints", userId(), start(), end()],
+        queryKey: [
+            "historicalUserActivityPoints",
+            userId(),
+            clampRangeToNow(start(), end()).start,
+            clampRangeToNow(start(), end()).end,
+        ],
         queryFn: async ({ signal }) => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
 
-            const url = `${API_BASE_URL}/api/user-activity-points/${userId()}?startDate=${new Date(start()).toISOString()}&endDate=${new Date(end()).toISOString()}`;
-            const resp = await fetch(url, {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
-                },
-                signal,
-            });
-            if (!resp.ok) throw new Error("Network response was not ok");
-            const result = (await resp.json()) as [
+            const range = clampRangeToNow(start(), end());
+
+            const result = await trackerServerClient.GET(
+                "/api/user-activity-points/{userId}",
                 {
-                    userId: string;
-                    activityId: string;
-                    time: string;
-                    value: number;
-                    points: number;
+                    params: {
+                        path: {
+                            userId: userId(),
+                        },
+                        query: {
+                            startDate: new Date(range.start).toISOString(),
+                            endDate: new Date(range.end).toISOString(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                    signal,
                 },
-            ];
-            return result;
+            );
+
+            if (!result.data) {
+                throw new Error(
+                    `Get user activity points failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
         },
         staleTime: 1000 * 60 * 1, // 1 minutes
         cacheTime: 1000 * 60 * 5, // 5 minutes

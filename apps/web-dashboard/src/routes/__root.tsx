@@ -1,6 +1,5 @@
-import { MetaProvider } from "@solidjs/meta";
-import { Link } from "@tanstack/solid-router";
 import { For, Show, Suspense, createMemo, createSignal } from "solid-js";
+import { Link, Outlet, createRootRoute } from "@tanstack/solid-router";
 import {
     UsersTokensProvider,
     useUsersTokens,
@@ -13,9 +12,16 @@ import { UserLoader } from "~/components/UserLoader";
 import { AutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
 import { MainUserProvider } from "~/components/MainUserProvider";
 import { ToasterProvider } from "~/components/ToasterProvider";
-import { Outlet, createRootRoute } from "@tanstack/solid-router";
-import { TanStackRouterDevtools } from "@tanstack/solid-router-devtools";
 import { NotFound } from "~/components/NotFoundRoutePage";
+
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1000 * 60 * 2,
+            retry: 1,
+        },
+    },
+});
 
 export const Route = createRootRoute({
     component: RootComponent,
@@ -24,20 +30,18 @@ export const Route = createRootRoute({
         console.error("rendering error", props.error);
         return (
             <div
-                class="flex min-h-screen items-center justify-center bg-base-200"
-                onclick={props.reset}
+                class="grid min-h-screen place-items-center bg-white font-mono"
+                onClick={props.reset}
             >
-                <div class="glass-card max-w-md p-8 text-center">
-                    <div class="mb-4 text-4xl">💥</div>
-                    <h2 class="mb-2 text-xl font-bold text-error">
-                        Something went wrong
-                    </h2>
-                    <p class="mb-4 text-sm text-base-content/60">
-                        Click anywhere to retry
-                    </p>
-                    <pre class="max-h-40 overflow-auto rounded-lg bg-base-300 p-3 text-left text-xs text-base-content/70">
-                        {JSON.stringify(props.error, null, 2)}
+                <div class="border-[3px] border-black p-8 text-center">
+                    <div class="mb-4 text-5xl font-bold">ERR</div>
+                    <div class="mb-2 bg-black px-3 py-1.5 text-[11px] tracking-widest text-(--color-brut-red)">
+                        STATUS: FATAL_ERROR
+                    </div>
+                    <pre class="mb-4 max-w-md overflow-auto text-left text-[10px] text-(--color-brut-gray)">
+                        {props.error?.message ?? "UNKNOWN"}
                     </pre>
+                    <button class="brut-btn-primary">[RETRY]</button>
                 </div>
             </div>
         );
@@ -45,214 +49,137 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-    const [queryClient] = createSignal(new QueryClient());
     return (
-        <>
-            <MetaProvider>
-                <ToasterProvider>
-                    <QueryClientProvider client={queryClient()}>
-                        <UsersTokensProvider>
-                            <MainUserProvider>
-                                <AutoBooster>
-                                    <AutoLikeTeamPosts>
-                                        <NavigationBar />
-                                        <Suspense
-                                            fallback={
-                                                <div class="flex flex-1 items-center justify-center">
-                                                    <span class="loading loading-ring loading-lg text-primary"></span>
-                                                </div>
-                                            }
-                                        >
-                                            <Outlet />
-                                        </Suspense>
-                                    </AutoLikeTeamPosts>
-                                </AutoBooster>
-                            </MainUserProvider>
-                        </UsersTokensProvider>
-                    </QueryClientProvider>
-                </ToasterProvider>
-            </MetaProvider>
-
-            <Suspense>
-                <TanStackRouterDevtools />
-            </Suspense>
-        </>
+        <QueryClientProvider client={queryClient}>
+            <UsersTokensProvider>
+                <MainUserProvider>
+                    <AutoBooster>
+                        <AutoLikeTeamPosts>
+                            <ToasterProvider>
+                                <NavigationBar />
+                                <Outlet />
+                            </ToasterProvider>
+                        </AutoLikeTeamPosts>
+                    </AutoBooster>
+                </MainUserProvider>
+            </UsersTokensProvider>
+        </QueryClientProvider>
     );
 }
 
 function NavigationBar() {
-    const userTokens = useUsersTokens();
-    const userIds = createMemo(() => Array.from(userTokens().tokens.keys()));
-    const [mobileOpen, setMobileOpen] = createSignal(false);
+    const usersTokens = useUsersTokens();
+    const [menuOpen, setMenuOpen] = createSignal(false);
+    const userIds = createMemo(() =>
+        Array.from(usersTokens().tokens.keys()),
+    );
 
     return (
-        <nav class="nav-glass">
-            <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-                {/* Logo */}
+        <nav class="sticky top-0 z-9999 flex h-12 items-center justify-between border-b-[3px] border-black bg-white px-4">
+            <div class="flex items-center gap-4">
                 <Link
                     to="/"
-                    class="flex items-center gap-2 text-lg font-bold tracking-tight transition-opacity hover:opacity-80"
+                    class="text-sm font-bold tracking-tighter no-underline text-black"
                 >
-                    <span class="text-gradient text-xl">⚡</span>
-                    <span class="text-gradient">SquadEasy</span>
+                    SQUADEASY_
                 </Link>
-
-                {/* Desktop nav links */}
-                <div class="hidden items-center gap-1 sm:flex">
+                <div class="hidden gap-2 sm:flex">
                     <Link
                         to="/"
-                        class="rounded-lg px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:bg-white/5 hover:text-base-content"
+                        class="px-2 py-1 text-[11px] font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
                     >
-                        Dashboard
+                        DASH
                     </Link>
                     <Link
                         to="/users-points"
-                        class="rounded-lg px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:bg-white/5 hover:text-base-content"
+                        search={{ teamId: "" }}
+                        class="px-2 py-1 text-[11px] font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
                     >
-                        Teams
+                        TEAMS
                     </Link>
-                </div>
-
-                {/* Right side: avatars + dropdown */}
-                <div class="flex items-center gap-2">
-                    <div class="dropdown dropdown-end">
-                        <div
-                            tabindex="0"
-                            role="button"
-                            class="btn btn-ghost btn-sm gap-2 rounded-xl border border-white/10 hover:bg-white/5"
-                        >
-                            <UsersAvatarsPreview userIds={userIds()} />
-                            <svg
-                                class="h-4 w-4 text-base-content/50"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </div>
-                        <ul
-                            tabindex="0"
-                            class="menu dropdown-content z-[50] mt-3 w-64 animate-slide-down rounded-xl border border-white/10 bg-base-200/95 p-2 shadow-2xl backdrop-blur-xl"
-                        >
-                            <For each={userIds()}>
-                                {(userId) => (
-                                    <li>
-                                        <Link
-                                            to={`/user`}
-                                            search={{ id: userId }}
-                                            class="rounded-lg transition-colors hover:bg-white/5"
-                                        >
-                                            <UserLoader userId={userId}>
-                                                {(query, displayName) => (
-                                                    <div class="flex items-center gap-3">
-                                                        <Avatar
-                                                            userId={userId}
-                                                        />
-                                                        <div class="min-w-0 flex-1">
-                                                            <Show
-                                                                when={
-                                                                    query.isLoading
-                                                                }
-                                                                fallback={
-                                                                    <span class="truncate text-sm font-medium">
-                                                                        {displayName()}
-                                                                    </span>
-                                                                }
-                                                            >
-                                                                <span class="loading loading-dots loading-sm"></span>
-                                                            </Show>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </UserLoader>
-                                        </Link>
-                                    </li>
-                                )}
-                            </For>
-                            <div class="my-1 border-t border-white/5" />
-                            <li>
-                                <Link
-                                    to="/login"
-                                    class="rounded-lg text-sm text-primary transition-colors hover:bg-primary/10"
-                                >
-                                    <svg
-                                        class="h-4 w-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                                        />
-                                    </svg>
-                                    Add account
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Mobile menu button */}
-                    <button
-                        class="btn btn-ghost btn-sm sm:hidden"
-                        onClick={() => setMobileOpen(!mobileOpen())}
-                    >
-                        <svg
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <Show
-                                when={!mobileOpen()}
-                                fallback={
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                }
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                />
-                            </Show>
-                        </svg>
-                    </button>
                 </div>
             </div>
 
-            {/* Mobile nav */}
-            <Show when={mobileOpen()}>
-                <div class="animate-slide-down border-t border-white/5 px-4 pb-4 pt-2 sm:hidden">
-                    <Link
-                        to="/"
-                        class="block rounded-lg px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:bg-white/5"
-                        onClick={() => setMobileOpen(false)}
-                    >
-                        Dashboard
-                    </Link>
-                    <Link
-                        to="/users-points"
-                        class="block rounded-lg px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:bg-white/5"
-                        onClick={() => setMobileOpen(false)}
-                    >
-                        Teams
-                    </Link>
-                </div>
-            </Show>
+            <div class="flex items-center gap-3">
+                <Show when={userIds().length > 0}>
+                    <div class="hidden sm:block">
+                        <UsersAvatarsPreview userIds={userIds()} />
+                    </div>
+                </Show>
+
+                <Show
+                    when={userIds().length > 0}
+                    fallback={
+                        <Link to="/login" class="brut-btn-primary text-[10px] no-underline">
+                            [LOGIN]
+                        </Link>
+                    }
+                >
+                    <div class="relative">
+                        <button
+                            class="border-2 border-black px-2 py-0.5 text-[10px] font-bold tracking-wider hover:bg-black hover:text-white"
+                            onClick={() => setMenuOpen((p) => !p)}
+                        >
+                            MENU
+                        </button>
+                        <Show when={menuOpen()}>
+                            <div
+                                class="absolute right-0 top-full mt-1 w-56 border-2 border-black bg-white shadow-[4px_4px_0_#000] z-50"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                <For each={userIds()}>
+                                    {(userId) => (
+                                        <div class="flex items-center gap-2 border-b border-(--color-brut-light) px-3 py-2 text-[11px]">
+                                            <Avatar userId={userId} size={24} />
+                                            <UserLoader userId={userId}>
+                                                {(query, displayName) => (
+                                                    <Show
+                                                        when={!query.isLoading}
+                                                        fallback={<span class="h-3 w-16 brut-skeleton" />}
+                                                    >
+                                                        <Link
+                                                            to="/user"
+                                                            search={{ id: userId }}
+                                                            class="font-bold uppercase no-underline text-black hover:text-(--color-brut-red)"
+                                                        >
+                                                            {displayName()}
+                                                        </Link>
+                                                    </Show>
+                                                )}
+                                            </UserLoader>
+                                        </div>
+                                    )}
+                                </For>
+                                <div class="sm:hidden border-t border-(--color-brut-light)">
+                                    <Link
+                                        to="/"
+                                        class="block px-3 py-2 text-[11px] font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                    >
+                                        DASH
+                                    </Link>
+                                    <Link
+                                        to="/users-points"
+                                        search={{ teamId: "" }}
+                                        class="block px-3 py-2 text-[11px] font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                    >
+                                        TEAMS
+                                    </Link>
+                                </div>
+                                <button
+                                    class="w-full border-t-2 border-black px-3 py-2 text-left text-[10px] font-bold tracking-widest text-(--color-brut-red) hover:bg-(--color-brut-red) hover:text-white"
+                                    onClick={() => {
+                                        for (const uid of userIds()) {
+                                            usersTokens().removeToken(uid);
+                                        }
+                                    }}
+                                >
+                                    [LOGOUT_ALL]
+                                </button>
+                            </div>
+                        </Show>
+                    </div>
+                </Show>
+            </div>
         </nav>
     );
 }

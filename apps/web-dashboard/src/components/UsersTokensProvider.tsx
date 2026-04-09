@@ -1,81 +1,83 @@
 import {
-    Accessor,
-    ParentProps,
-    createContext,
-    createEffect,
-    createSignal,
-    useContext,
+  createContext,
+  createEffect,
+  createSignal,
+  useContext,
+  type JSX,
+  type Accessor,
 } from "solid-js";
-import { localStorageGetItem, localStorageSetItem } from "~/utils/localStorage";
 
-interface Token {
-    accessToken: string;
-    refreshToken: string;
+const STORAGE_KEY = "sqe_user_tokens";
+
+interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
 }
 
-interface CtxValue {
-    tokens: Map<string, Token>;
-    setToken: (
-        userId: string,
-        accessToken: string,
-        refreshToken: string,
-    ) => void;
-    removeToken: (userId: string) => void;
+export interface UsersTokensValue {
+  tokens: Map<string, TokenPair>;
+  setToken: (userId: string, accessToken: string, refreshToken: string) => void;
+  removeToken: (userId: string) => void;
 }
 
-const ctx = createContext<Accessor<CtxValue>>();
+const UsersTokensContext = createContext<Accessor<UsersTokensValue>>();
 
-export function useUsersTokens() {
-    const c = useContext(ctx);
-    if (!c) throw new Error("Missing <UsersTokensProvider/>");
-
-    return c;
+function loadTokensFromStorage(): Map<string, TokenPair> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return new Map();
+    const obj = JSON.parse(raw) as Record<string, TokenPair>;
+    return new Map(Object.entries(obj));
+  } catch {
+    return new Map();
+  }
 }
 
-export function UsersTokensProvider(props: ParentProps) {
-    const [tokens, setTokens] = createSignal(new Map<string, Token>());
+function saveTokensToStorage(tokens: Map<string, TokenPair>) {
+  const obj = Object.fromEntries(tokens);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+}
 
-    createEffect(() => {
-        const itemsStr = localStorageGetItem("loginData");
-        if (itemsStr) {
-            const parsedMapData = JSON.parse(itemsStr);
-            if (parsedMapData && Array.isArray(parsedMapData))
-                // Too lazy to check type, assume it's valid
-                setTokens(new Map(parsedMapData as any) as any);
-        }
+export function UsersTokensProvider(props: { children: JSX.Element }) {
+  const [tokens, setTokens] = createSignal<Map<string, TokenPair>>(
+    loadTokensFromStorage(),
+  );
+
+  createEffect(() => {
+    saveTokensToStorage(tokens());
+  });
+
+  const setToken = (userId: string, accessToken: string, refreshToken: string) => {
+    setTokens((prev) => {
+      const next = new Map(prev);
+      next.set(userId, { accessToken, refreshToken });
+      return next;
     });
+  };
 
-    createEffect(() => {
-        localStorageSetItem(
-            "loginData",
-            JSON.stringify(Array.from(tokens().entries())),
-        );
+  const removeToken = (userId: string) => {
+    setTokens((prev) => {
+      const next = new Map(prev);
+      next.delete(userId);
+      return next;
     });
+  };
 
-    return (
-        <ctx.Provider
-            value={() => ({
-                setToken: (userId, accessToken, refreshToken) => {
-                    setTokens((old) => {
-                        const m = new Map(old);
-                        m.set(userId, {
-                            accessToken,
-                            refreshToken,
-                        });
-                        return m;
-                    });
-                },
-                removeToken: (userId) => {
-                    setTokens((old) => {
-                        const m = new Map(old);
-                        m.delete(userId);
-                        return m;
-                    });
-                },
-                tokens: tokens(),
-            })}
-        >
-            {props.children}
-        </ctx.Provider>
-    );
+  const value: Accessor<UsersTokensValue> = () => ({
+    tokens: tokens(),
+    setToken,
+    removeToken,
+  });
+
+  return (
+    <UsersTokensContext.Provider value={value}>
+      {props.children}
+    </UsersTokensContext.Provider>
+  );
+}
+
+export function useUsersTokens(): Accessor<UsersTokensValue> {
+  const ctx = useContext(UsersTokensContext);
+  if (!ctx) throw new Error("useUsersTokens must be inside UsersTokensProvider");
+  return ctx;
 }

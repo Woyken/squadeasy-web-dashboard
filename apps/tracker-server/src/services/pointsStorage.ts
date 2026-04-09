@@ -1,0 +1,529 @@
+import { sql, type SQL } from "drizzle-orm";
+
+import { db } from "../database.ts";
+import {
+  teamPoints,
+  userActivityPoints,
+  userActivityVisibility,
+  userPoints,
+} from "../db/schema.ts";
+
+type LatestUserActivityPointsRow = {
+  time: string;
+  user_id: string;
+  activity_id: string;
+  value: number;
+  points: number;
+};
+
+type UserPointsRow = {
+  time: string;
+  user_id: string;
+  points: number;
+};
+
+type TeamPointsRow = {
+  time: string;
+  team_id: string;
+  points: number;
+};
+
+type UserActivityPointsRow = {
+  time: string;
+  user_id: string;
+  activity_id: string;
+  value: number;
+  points: number;
+};
+
+type UserActivityVisibilityRow = {
+  time: string;
+  user_id: string;
+  is_activity_public: boolean;
+};
+
+function getTimeBucket(start: Date, end: Date) {
+  const entriesExpected = 50;
+  const timeDifference = end.getTime() - start.getTime();
+  const hoursForExpectedEntries = Math.floor(
+    timeDifference / (1000 * 60 * 60) / entriesExpected
+  );
+  const minutesForExpectedEntries = Math.floor(
+    timeDifference / (1000 * 60) / entriesExpected
+  );
+
+  if (hoursForExpectedEntries > 0) {
+    return `${hoursForExpectedEntries} hours`;
+  }
+
+  if (minutesForExpectedEntries >= 10) {
+    return `${minutesForExpectedEntries} minutes`;
+  }
+
+  return undefined;
+}
+
+function getTeamPointsByRangeQuery(start: Date, end: Date, timeBucket?: string): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", team_id, LAST(points, "time") AS points
+        FROM team_points WHERE "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, team_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+        FROM team_points
+        WHERE "time" <= ${start}
+        ORDER BY team_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+        FROM team_points
+        WHERE "time" >= ${end}
+        ORDER BY team_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, team_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, team_id, points FROM team_points
+      WHERE "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+      FROM team_points
+      WHERE "time" <= ${start}
+      ORDER BY team_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (team_id) time AS "time", team_id, points
+      FROM team_points
+      WHERE "time" >= ${end}
+      ORDER BY team_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, team_id ASC;
+  `;
+}
+
+function getUsersPointsByRangeQuery(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeBucket?: string
+): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", user_id, LAST(points, "time") AS points
+        FROM user_points WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, user_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+        FROM user_points
+        WHERE user_id = ${userId} AND "time" <= ${start}
+        ORDER BY user_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+        FROM user_points
+        WHERE user_id = ${userId} AND "time" >= ${end}
+        ORDER BY user_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, user_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, user_id, points FROM user_points
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+      FROM user_points
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, points
+      FROM user_points
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, user_id ASC;
+  `;
+}
+
+function getUsersActivityPointsByRangeQuery(
+  userId: string,
+  start: Date,
+  end: Date,
+  timeBucket?: string
+): SQL {
+  if (timeBucket) {
+    return sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", user_id, activity_id, LAST(value, "time") AS value, LAST(points, "time") AS points
+        FROM user_activity_points WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, user_id, activity_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+        FROM user_activity_points
+        WHERE user_id = ${userId} AND "time" <= ${start}
+        ORDER BY user_id, activity_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+        FROM user_activity_points
+        WHERE user_id = ${userId} AND "time" >= ${end}
+        ORDER BY user_id, activity_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, user_id ASC, activity_id ASC;
+    `;
+  }
+
+  return sql`
+    WITH main_points AS (
+      SELECT time, user_id, activity_id, value, points FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+      FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, activity_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (user_id, activity_id) time AS "time", user_id, activity_id, value, points
+      FROM user_activity_points
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, activity_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, user_id ASC, activity_id ASC;
+  `;
+}
+
+export async function getLatestPointsForUserActivities(userIds: string[]) {
+  const result = await db.execute<LatestUserActivityPointsRow>(sql`
+    select time, user_id, activity_id, value, points
+    from user_activity_points up
+    where up.time = (
+        select max(up1.time)
+        from user_activity_points up1
+        where up1.user_id = up.user_id
+        and up1.activity_id = up.activity_id
+        )
+      and up.user_id = any(${userIds})
+  `);
+  return result.rows;
+}
+
+export async function getLatestPointsForUsers(userIds: string[]) {
+  const result = await db.execute<UserPointsRow>(sql`
+    select time, user_id, points
+    from user_points up
+    where up.time = (
+        select max(up1.time)
+        from user_points up1
+        where up1.user_id = up.user_id
+        )
+      and up.user_id = any(${userIds})
+  `);
+  return result.rows;
+}
+
+export async function getLatestPointsForTeams() {
+  const result = await db.execute<TeamPointsRow>(sql`
+    select time, team_id, points
+    from team_points tp
+    where tp.time = (
+        select max(tp1.time)
+        from team_points tp1
+        where tp1.team_id = tp.team_id
+    )
+  `);
+  return result.rows;
+}
+
+export async function getLatestActivityVisibilityForUsers(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as UserActivityVisibilityRow[];
+  }
+
+  const result = await db.execute<UserActivityVisibilityRow>(sql`
+    select time, user_id, is_activity_public
+    from user_activity_visibility uav
+    where uav.time = (
+        select max(uav1.time)
+        from user_activity_visibility uav1
+        where uav1.user_id = uav.user_id
+    )
+      and uav.user_id = any(${userIds})
+  `);
+
+  return result.rows;
+}
+
+export async function storeUserActivities(
+  timestamp: number,
+  activities: {
+    userId: string;
+    activityId: string;
+    value: number;
+    points: number;
+  }[]
+): Promise<void> {
+  if (activities.length === 0) {
+    console.log("No activities data provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store data for ${
+      activities.length
+    } activities at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userActivityPoints).values(
+        activities.map((activity) => ({
+          time: insertTime,
+          userId: activity.userId,
+          activityId: activity.activityId,
+          value: activity.value,
+          points: activity.points,
+        }))
+      );
+    });
+
+    console.log(`Successfully stored ${activities.length} records using Drizzle.`);
+  } catch (error) {
+    console.error("Error storing data:", error);
+  }
+}
+
+export async function storeUsersPoints(
+  timestamp: number,
+  users: {
+    id: string;
+    points: number;
+  }[]
+): Promise<void> {
+  if (users.length === 0) {
+    console.log("No users data provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store data for ${
+      users.length
+    } users at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userPoints).values(
+        users.map((user) => ({
+          time: insertTime,
+          userId: user.id,
+          points: user.points,
+        }))
+      );
+    });
+
+    console.log(`Successfully stored ${users.length} records using Drizzle.`);
+  } catch (error) {
+    console.error("Error storing data:", error);
+  }
+}
+
+export async function storeUsersActivityVisibility(
+  timestamp: number,
+  users: {
+    id: string;
+    isActivityPublic: boolean;
+  }[]
+): Promise<void> {
+  if (users.length === 0) {
+    console.log("No user activity visibility data provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store visibility data for ${
+      users.length
+    } users at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userActivityVisibility).values(
+        users.map((user) => ({
+          time: insertTime,
+          userId: user.id,
+          isActivityPublic: user.isActivityPublic,
+        }))
+      );
+    });
+
+    console.log(
+      `Successfully stored visibility data for ${users.length} users using Drizzle.`
+    );
+  } catch (error) {
+    console.error("Error storing user activity visibility data:", error);
+  }
+}
+
+export async function storeTeamData(
+  timestamp: number,
+  teams: {
+    id: string;
+    points?: number;
+  }[]
+): Promise<void> {
+  if (!teams || teams.length === 0) {
+    console.log("No team data provided to store.");
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store data for ${
+      teams.length
+    } teams at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  const validTeams = teams.filter(
+    (team) => typeof team.id === "string" && typeof team.points === "number"
+  );
+
+  if (validTeams.length === 0) {
+    console.log("No valid team records to insert after filtering.");
+    return;
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(teamPoints).values(
+        validTeams.map((team) => ({
+          time: insertTime,
+          teamId: team.id,
+          points: team.points ?? 0,
+        }))
+      );
+    });
+
+    console.log(`Successfully stored ${validTeams.length} records using Drizzle.`);
+  } catch (error) {
+    console.error("Error storing data:", error);
+  }
+}
+
+export async function testDbConnection(): Promise<void> {
+  try {
+    await db.execute(sql`SELECT NOW()`);
+    console.log("Successfully connected to TimescaleDB via Drizzle.");
+  } catch (error) {
+    console.error("Unable to connect to the database via Drizzle:", error);
+    process.exit(1);
+  }
+}
+
+export async function getTeamPointsByRange(start: Date, end: Date) {
+  const timeBucket = getTimeBucket(start, end);
+  const query = getTeamPointsByRangeQuery(start, end, timeBucket);
+
+  console.info("Executing team points query with params:", [
+    start.toISOString(),
+    end.toISOString(),
+    ...(timeBucket ? [timeBucket] : []),
+  ]);
+
+  const result = await db.execute<TeamPointsRow>(query);
+
+  return result.rows;
+}
+
+export async function getUsersPointsByRange(
+  userId: string,
+  start: Date,
+  end: Date
+) {
+  const timeBucket = getTimeBucket(start, end);
+  const query = getUsersPointsByRangeQuery(userId, start, end, timeBucket);
+
+  console.info("Executing user points query with params:", [
+    start.toISOString(),
+    end.toISOString(),
+    userId,
+    ...(timeBucket ? [timeBucket] : []),
+  ]);
+
+  const result = await db.execute<UserPointsRow>(query);
+
+  return result.rows;
+}
+
+export async function getUsersActivityPointsByRange(
+  userId: string,
+  start: Date,
+  end: Date
+) {
+  const timeBucket = getTimeBucket(start, end);
+  const query = getUsersActivityPointsByRangeQuery(
+    userId,
+    start,
+    end,
+    timeBucket
+  );
+
+  console.info("Executing user activity points query with params:", [
+    start.toISOString(),
+    end.toISOString(),
+    userId,
+    ...(timeBucket ? [timeBucket] : []),
+  ]);
+
+  const result = await db.execute<UserActivityPointsRow>(query);
+
+  return result.rows;
+}

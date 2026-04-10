@@ -15,8 +15,13 @@ import { parseJwt } from "~/utils/parseJwt";
 import { clampRangeToNow } from "~/utils/timeRange";
 import { useMainUser } from "~/components/MainUserProvider";
 
-export const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+export const API_BASE_URL = (
+    configuredApiBaseUrl && configuredApiBaseUrl.length > 0
+        ? configuredApiBaseUrl
+        : "http://localhost:3000"
+).replace(/\/+$/, "");
 
 export const squadEasyClient = createClient<paths>({
     baseUrl: `${API_BASE_URL}/squadeasy/proxy`,

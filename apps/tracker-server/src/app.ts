@@ -148,7 +148,26 @@ const SSE_RETRY_DELAY_MS = 5000;
 const SSE_HEARTBEAT_INTERVAL_MS = 15000;
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
+const corsAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
 const bearerAuthSecurity = [{ bearerAuth: [] }];
+
+function isAllowedCorsOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    return true;
+  }
+
+  if (
+    corsAllowedOrigins.length === 0 ||
+    corsAllowedOrigins.includes("*")
+  ) {
+    return true;
+  }
+
+  return corsAllowedOrigins.includes(origin);
+}
 
 function writeSseEvent(
   raw: ServerResponse,
@@ -237,7 +256,9 @@ fastify.setErrorHandler((error, _request, reply) => {
 });
 
 fastify.register(cors, {
-  origin: "*",
+  origin(origin, callback) {
+    callback(null, isAllowedCorsOrigin(origin));
+  },
 });
 
 // Proxy all /squadeasy/proxy/* requests to the SquadEasy API, stripping the prefix
@@ -249,6 +270,36 @@ fastify.register(httpProxy, {
 });
 
 fastify.after(() => {
+  fastify.get(
+    "/healthz",
+    {
+      schema: {
+        hide: true,
+      },
+    },
+    async (_request, reply) => {
+      await reply.code(200).send({ status: "ok" });
+    }
+  );
+
+  fastify.get(
+    "/readyz",
+    {
+      schema: {
+        hide: true,
+      },
+    },
+    async (_request, reply) => {
+      try {
+        await pool.query("SELECT 1");
+        await reply.code(200).send({ status: "ready" });
+      } catch (error: unknown) {
+        fastify.log.warn({ err: error }, "Readiness check failed");
+        await reply.code(503).send({ status: "unavailable" });
+      }
+    }
+  );
+
   fastify.get(
     "/api/points/stream",
     {

@@ -1,42 +1,28 @@
 # syntax=docker/dockerfile:1
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
+FROM node:22-alpine
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
 
-ARG NODE_VERSION=23.11.0
-ARG PNPM_VERSION=10.10.0
+RUN corepack enable
 
-FROM node:${NODE_VERSION}-alpine
+WORKDIR /app
 
-# Use production node environment by default.
-ENV NODE_ENV production
+COPY package.json pnpm-lock.yaml ./
 
-# Install pnpm.
-RUN --mount=type=cache,target=/root/.npm \
-    npm install -g pnpm@${PNPM_VERSION}
+RUN --mount=type=cache,id=tracker-server-pnpm-store,target=/pnpm/store \
+    corepack prepare pnpm@10.10.0 --activate && \
+    pnpm install --frozen-lockfile --prod
 
-WORKDIR /usr/src/app
+COPY src ./src
+COPY tsconfig.json ./tsconfig.json
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.local/share/pnpm/store to speed up subsequent builds.
-# Leverage a bind mounts to package.json and pnpm-lock.yaml to avoid having to copy them into
-# into this layer.
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-    --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-# Run the application as a non-root user.
-USER node
-
-# Copy the rest of the source files into the image.
-COPY . .
-
-# Expose the port that the application listens on.
 EXPOSE 3000
 
-# Run the application.
-CMD pnpm run prod
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "const port = process.env.PORT ?? 3000; fetch('http://127.0.0.1:' + port + '/healthz').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["pnpm", "prod"]

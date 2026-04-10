@@ -35,6 +35,8 @@ The tracker server lives in `apps/tracker-server` and is deployed separately.
 
 The dashboard is a client-only SolidJS SPA built with Vite. Production builds emit static files into `dist/`, and the build step also copies `index.html` to `404.html` so deep links keep working on GitHub Pages.
 
+For production, set the repository secret `API_BASE_URL` to the public URL of the tracker server. The GitHub Pages workflow passes that value through `VITE_API_BASE_URL` during the build.
+
 ## Available Scripts
 
 - `dev` – Start the Vite development server

@@ -1,4 +1,8 @@
-import { useHistoricalUserActivityPointsQuery } from "~/api/client";
+import {
+    getHistoricalUserActivityPointsQueryOptions,
+    useGetUserToken,
+} from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import {
     Accessor,
     createEffect,
@@ -10,6 +14,7 @@ import {
     untrack,
 } from "solid-js";
 import { init as echartsInit, EChartsType } from "echarts";
+import { useMainUser } from "./MainUserProvider";
 import {
     clampRangeToNow,
     getDefaultHistoricalTimeWindow,
@@ -94,11 +99,17 @@ function UserChart(props: {
     const [canvasContainer, setCanvasContainer] =
         createSignal<HTMLDivElement>();
     const [chart, setChart] = createSignal<EChartsType>();
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
 
-    const historicalActivityPointsQuery = useHistoricalUserActivityPointsQuery(
-        () => props.userId,
-        () => props.timeWindow().start,
-        () => props.timeWindow().end,
+    const historicalActivityPointsQuery = useQuery(() =>
+        getHistoricalUserActivityPointsQueryOptions(
+            () => props.userId,
+            () => props.timeWindow().start,
+            () => props.timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
 
     const statisticsHistoryData = createMemo(() => {

@@ -14,11 +14,13 @@ import {
 } from "solid-js";
 import { useUsersTokens } from "./UsersTokensProvider";
 import {
+    getMyTeamQueryOptions,
+    getMyUserQueryOptions,
+    getSocialPostsQueryOptions,
     useLikePostMutation,
-    useMyTeamQuery,
-    useMyUserQuery,
-    useSocialPostsQuery,
+    useGetUserToken,
 } from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import { localStorageGetItem, localStorageSetItem } from "~/utils/localStorage";
 import { useToaster } from "./ToasterProvider";
 import { getUserDisplayName } from "~/getUserDisplayName";
@@ -135,29 +137,38 @@ function AutoLikePostUser(props: {
     });
 
     const likePostMutation = useLikePostMutation(() => props.userId);
+    const getUserToken = useGetUserToken(() => props.userId);
 
     const [latestKnownPostCrawl, setLatestKnownPostCrawl] = createSignal<{
         nextId: string;
         startedAt: { id: string; timestamp: number };
     }>();
 
-    const socialPostsQuery = useSocialPostsQuery(
-        () => props.userId,
-        () => latestKnownPostCrawl()?.nextId,
-        () => 30 * 60 * 1000,
-        () => !!postLikeSettings()?.enabled,
+    const socialPostsQuery = useQuery(() =>
+        getSocialPostsQueryOptions(
+            () => props.userId,
+            getUserToken,
+            () => latestKnownPostCrawl()?.nextId,
+            () => 30 * 60 * 1000,
+            () => !!postLikeSettings()?.enabled,
+        ),
     );
 
-    const myTeamQuery = useMyTeamQuery(
-        () => props.userId,
-        () => !!postLikeSettings()?.enabled,
+    const myTeamQuery = useQuery(() =>
+        getMyTeamQueryOptions(
+            () => props.userId,
+            getUserToken,
+            () => !!postLikeSettings()?.enabled,
+        ),
     );
 
-    const myUserQuery = useMyUserQuery(() => props.userId);
+    const myUserQuery = useQuery(() =>
+        getMyUserQueryOptions(() => props.userId, getUserToken),
+    );
 
     const myTeamUserIds = createMemo(() =>
         myTeamQuery.data
-            ? new Set(myTeamQuery.data.users.map((x) => x.id))
+            ? new Set(myTeamQuery.data.users?.map((x) => x.id))
             : undefined,
     );
 
@@ -312,13 +323,16 @@ function AutoLikePostUser(props: {
         onCleanup(cleanupToast);
     });
 
-    const socialLastCheckedPostsQuery = useSocialPostsQuery(
-        () => props.userId,
-        () => postLikeSettings()?.lastCrawledPost?.id,
-        undefined,
-        () =>
-            !!postLikeSettings()?.enabled &&
-            !postLikeSettings()?.lastCrawledPost?.ended,
+    const socialLastCheckedPostsQuery = useQuery(() =>
+        getSocialPostsQueryOptions(
+            () => props.userId,
+            getUserToken,
+            () => postLikeSettings()?.lastCrawledPost?.id,
+            undefined,
+            () =>
+                !!postLikeSettings()?.enabled &&
+                !postLikeSettings()?.lastCrawledPost?.ended,
+        ),
     );
 
     createEffect(() => {

@@ -4,7 +4,6 @@ import { paths as trackerServerPaths } from "./trackerServerApi";
 import {
     useMutation,
     useQueries,
-    useQuery,
     keepPreviousData,
     queryOptions,
     useQueryClient,
@@ -190,9 +189,11 @@ export function mergeSeasonTeams(
     );
 }
 
-export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
-    const getUserToken = useGetUserToken(userId);
-    return useQuery(() => ({
+export function getMyChallengeQueryOptions(
+    userId: Accessor<string | undefined>,
+    getUserToken: () => Promise<string | undefined>,
+) {
+    return queryOptions({
         queryKey: ["/api/3.0/my/challenge", userId()],
         queryFn: async () => {
             const token = await getUserToken();
@@ -210,20 +211,19 @@ export function useMyChallengeQuery(userId: Accessor<string | undefined>) {
         },
         enabled: !!userId(),
         staleTime: 1 * 60 * 60 * 1000,
-    }));
+    });
 }
 
-export function useUserByIdQuery(userId: Accessor<string>) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    return useQuery<ResolvedUserProfile>(() => ({
+export function getUserByIdQueryOptions(
+    userId: Accessor<string>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions<ResolvedUserProfile>({
         queryKey: ["/api/3.0/user-profile/{userId}", userId()],
         queryFn: async () => {
             const token = await getToken();
-            if (!token)
-                throw new Error(
-                    `token missing for user ${mainUser.mainUserId()}`,
-                );
+            if (!token) throw new Error(`token missing for user ${userId()}`);
             const result = await squadEasyClient.GET(
                 "/api/3.0/user-profile/{userId}",
                 {
@@ -258,26 +258,20 @@ export function useUserByIdQuery(userId: Accessor<string>) {
             };
         },
         staleTime: 5 * 60 * 1000,
-        enabled: !!mainUser.mainUserId(),
-    }));
-}
-
-export function useMyUserQuery(userId: Accessor<string>) {
-    const getUserToken = useGetUserToken(userId);
-    return useQuery(() => {
-        return getMyUserOptions(userId(), getUserToken);
+        enabled: enabled?.() ?? true,
     });
 }
 
-export function getMyUserOptions(
-    userId: string,
+export function getMyUserQueryOptions(
+    userId: Accessor<string>,
     getAccessToken: () => Promise<string | undefined>,
 ) {
     return queryOptions({
-        queryKey: ["/api/2.0/my/user", userId],
+        queryKey: ["/api/2.0/my/user", userId()],
         queryFn: async () => {
             const token = await getAccessToken();
-            if (!token) throw new Error(`token missing for user ${userId}`);
+            const currentUserId = userId();
+            if (!token) throw new Error(`token missing for user ${currentUserId}`);
             const result = await squadEasyClient.GET("/api/2.0/my/user", {
                 headers: {
                     authorization: `Bearer ${token}`,
@@ -293,15 +287,17 @@ export function getMyUserOptions(
     });
 }
 
-function getMyTeamOptions(
-    userId: string,
+export function getMyTeamQueryOptions(
+    userId: Accessor<string>,
     getAccessToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
 ) {
     return queryOptions({
-        queryKey: ["", userId],
+        queryKey: ["/api/2.0/my/team", userId()],
         queryFn: async () => {
             const token = await getAccessToken();
-            if (!token) throw new Error(`token missing for user ${userId}`);
+            const currentUserId = userId();
+            if (!token) throw new Error(`token missing for user ${currentUserId}`);
             const result = await squadEasyClient.GET("/api/2.0/my/team", {
                 headers: {
                     authorization: `Bearer ${token}`,
@@ -314,30 +310,17 @@ function getMyTeamOptions(
             return result.data;
         },
         staleTime: 5 * 60 * 1000,
+        enabled: (enabled?.() ?? true) && !!userId(),
     });
 }
 
-export function useMyTeamQuery(
-    userId: Accessor<string>,
-    enabled?: Accessor<boolean>,
-) {
-    const getUserToken = useGetUserToken(userId);
-    return useQuery(() => {
-        return {
-            ...getMyTeamOptions(userId(), getUserToken),
-            enabled: enabled?.() ?? true,
-        };
-    });
-}
-
-export function useSeasonRankingQuery(
+export function getSeasonRankingQueryOptions(
+    getToken: () => Promise<string | undefined>,
     enabled?: Accessor<boolean>,
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    return useQuery(() => ({
+    return queryOptions({
         queryKey: ["/api/2.0/my/ranking/season"],
         queryFn: async () => {
             const accessToken = await getToken();
@@ -374,52 +357,49 @@ export function useSeasonRankingQuery(
             };
         },
         staleTime: 5 * 60 * 1000,
-        enabled: (enabled?.() ?? true) && !!mainUser.mainUserId(),
+        enabled: enabled?.() ?? true,
         refetchInterval,
         refetchIntervalInBackground,
         placeholderData: keepPreviousData,
-    }));
+    });
 }
 
 export function useStoredTeamQueries(teamIds: Accessor<string[]>) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     return useQueries(() => ({
-        queries: teamIds().map((teamId) => ({
-            queryKey: ["/api/stored-team-profile/{teamId}", teamId],
-            queryFn: async () => {
-                const accessToken = await getToken();
-                if (!accessToken) throw new Error("Missing token!");
-
-                return getStoredTeamProfile(accessToken, teamId);
-            },
-            staleTime: 5 * 60 * 1000,
-            enabled: !!teamId && !!mainUser.mainUserId(),
-        })),
-    }));
-}
-
-export function useTeamQuery(
-    teamId: Accessor<string | undefined>,
-    refetchInterval?: number,
-    refetchIntervalInBackground?: boolean,
-) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    return useQuery(() => ({
-        ...teamQueryOptions(
-            teamId,
-            getToken,
-            refetchInterval,
-            refetchIntervalInBackground,
+        queries: teamIds().map((teamId) =>
+            getStoredTeamProfileQueryOptions(
+                () => teamId,
+                getToken,
+                () => !!teamId && !!mainUser.mainUserId(),
+            ),
         ),
-        enabled: !!teamId() && !!mainUser.mainUserId(),
     }));
 }
 
-function teamQueryOptions(
+export function getStoredTeamProfileQueryOptions(
+    teamId: Accessor<string>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["/api/stored-team-profile/{teamId}", teamId()],
+        queryFn: async () => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            return getStoredTeamProfile(accessToken, teamId());
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: (enabled?.() ?? true) && !!teamId(),
+    });
+}
+
+export function getTeamQueryOptions(
     teamId: Accessor<string | undefined>,
     getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
     refetchInterval?: number,
     refetchIntervalInBackground?: boolean,
 ) {
@@ -449,28 +429,11 @@ function teamQueryOptions(
         staleTime: 5 * 60 * 1000,
         refetchInterval,
         refetchIntervalInBackground,
+        enabled: (enabled?.() ?? true) && !!teamId(),
     });
 }
 
-export function useUserStatisticsQuery(
-    userId: Accessor<string>,
-    refetchInterval?: number,
-    refetchIntervalInBackground?: boolean,
-) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    return useQuery(() =>
-        userStatisticsQueryOptions(
-            userId,
-            getToken,
-            () => true,
-            refetchInterval,
-            refetchIntervalInBackground,
-        ),
-    );
-}
-
-export function userStatisticsQueryOptions(
+export function getUserStatisticsQueryOptions(
     userId: Accessor<string>,
     getToken: () => Promise<string | undefined>,
     enabled?: Accessor<boolean>,
@@ -502,20 +465,20 @@ export function userStatisticsQueryOptions(
             return result.data;
         },
         staleTime: 20 * 60 * 1000,
-        enabled: enabled?.(),
+        enabled: enabled?.() ?? true,
         refetchInterval,
         refetchIntervalInBackground,
     });
 }
 
-export function useSocialPostsQuery(
+export function getSocialPostsQueryOptions(
     userId: Accessor<string>,
+    getToken: () => Promise<string | undefined>,
     sincePostId?: Accessor<string | undefined>,
     refetchIntervalInBackground?: Accessor<number>,
     enabled?: Accessor<boolean>,
 ) {
-    const getToken = useGetUserToken(userId);
-    return useQuery(() => ({
+    return queryOptions({
         queryKey: ["/api/3.0/social/posts", userId(), sincePostId?.()],
         queryFn: async () => {
             const token = await getToken();
@@ -537,7 +500,7 @@ export function useSocialPostsQuery(
         refetchInterval: refetchIntervalInBackground?.(),
         refetchIntervalInBackground: !!refetchIntervalInBackground,
         enabled: !!userId() && (enabled?.() ?? true),
-    }));
+    });
 }
 
 export function useLikePostMutation(userId: Accessor<string>) {
@@ -598,7 +561,7 @@ export function useBoostMutation(userId: Accessor<string>) {
         },
         onSuccess: () => {
             client.invalidateQueries({
-                queryKey: getMyTeamOptions(userId(), async () => "").queryKey,
+                queryKey: getMyTeamQueryOptions(userId, getUserToken).queryKey,
             });
         },
     }));
@@ -709,8 +672,10 @@ export function useLoginMutation() {
         },
         onSuccess: (data) => {
             client.setQueryData(
-                getMyUserOptions(data.myUser.id, async () => data.accessToken)
-                    .queryKey,
+                getMyUserQueryOptions(
+                    () => data.myUser.id,
+                    async () => data.accessToken,
+                ).queryKey,
                 () => {
                     return data.myUser;
                 },
@@ -725,13 +690,13 @@ export function useLoginMutation() {
     }));
 }
 
-export function useHistoricalTeamPointsQuery(
+export function getHistoricalTeamPointsQueryOptions(
     start: Accessor<number>,
     end: Accessor<number>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
 ) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    const query = useQuery(() => ({
+    return queryOptions({
         queryKey: [
             "historicalTeamPoints",
             clampRangeToNow(start(), end()).start,
@@ -765,23 +730,21 @@ export function useHistoricalTeamPointsQuery(
             return result.data;
         },
         staleTime: 1000 * 60 * 1, // 1 minutes
-        cacheTime: 1000 * 60 * 5, // 5 minutes
         deferStream: true,
         gcTime: 1000 * 60 * 5, // 5 minutes
-        enabled: typeof window !== "undefined",
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
         placeholderData: keepPreviousData,
-    }));
-    return query;
+    });
 }
 
-export function useHistoricalTeamMembershipsQuery(
+export function getHistoricalTeamMembershipsQueryOptions(
     teamId: Accessor<string>,
     start: Accessor<number>,
     end: Accessor<number>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
 ) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    const query = useQuery(() => ({
+    return queryOptions({
         queryKey: [
             "historicalTeamMemberships",
             teamId(),
@@ -822,14 +785,14 @@ export function useHistoricalTeamMembershipsQuery(
             return result.data;
         },
         staleTime: 1000 * 60 * 1,
-        cacheTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 5,
         deferStream: true,
-        enabled: typeof window !== "undefined" && !!teamId(),
+        enabled:
+            typeof window !== "undefined" &&
+            !!teamId() &&
+            (enabled?.() ?? true),
         placeholderData: keepPreviousData,
-    }));
-
-    return query;
+    });
 }
 
 export function useHistoricalUserPointsQueries(
@@ -837,9 +800,17 @@ export function useHistoricalUserPointsQueries(
     start: Accessor<number>,
     end: Accessor<number>,
 ) {
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
     return useQueries(() => ({
         queries: userIds().map((userId) =>
-            getHistoricalUserPointsQueryOptions(() => userId, start, end),
+            getHistoricalUserPointsQueryOptions(
+                () => userId,
+                start,
+                end,
+                getToken,
+                () => !!mainUser.mainUserId(),
+            ),
         ),
     }));
 }
@@ -848,10 +819,10 @@ export function getHistoricalUserPointsQueryOptions(
     userId: Accessor<string>,
     start: Accessor<number>,
     end: Accessor<number>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
 ) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    const options = queryOptions({
+    return queryOptions({
         queryKey: [
             "historicalUserPoints",
             userId(),
@@ -894,28 +865,19 @@ export function getHistoricalUserPointsQueryOptions(
         staleTime: 1000 * 60 * 1, // 1 minutes
         deferStream: true,
         gcTime: 1000 * 60 * 5, // 5 minutes
-        enabled: typeof window !== "undefined",
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
         placeholderData: keepPreviousData,
     });
-    return options;
 }
 
-export function useHistoricalUserPointsQuery(
+export function getHistoricalUserActivityPointsQueryOptions(
     userId: Accessor<string>,
     start: Accessor<number>,
     end: Accessor<number>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
 ) {
-    return useQuery(() => getHistoricalUserPointsQueryOptions(userId, start, end));
-}
-
-export function useHistoricalUserActivityPointsQuery(
-    userId: Accessor<string>,
-    start: Accessor<number>,
-    end: Accessor<number>,
-) {
-    const mainUser = useMainUser();
-    const getToken = useGetUserToken(mainUser.mainUserId);
-    const query = useQuery(() => ({
+    return queryOptions({
         queryKey: [
             "historicalUserActivityPoints",
             userId(),
@@ -956,11 +918,8 @@ export function useHistoricalUserActivityPointsQuery(
             return result.data;
         },
         staleTime: 1000 * 60 * 1, // 1 minutes
-        cacheTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 5, // 5 minutes
-        enabled: typeof window !== "undefined",
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
         placeholderData: keepPreviousData,
-    }));
-
-    return query;
+    });
 }

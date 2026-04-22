@@ -1,12 +1,14 @@
 import { createSignal, createMemo, For, Show, Suspense } from "solid-js";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import {
-    useHistoricalUserPointsQuery,
-    useUserByIdQuery,
-    useUserStatisticsQuery,
-    useMyChallengeQuery,
-    useHistoricalUserActivityPointsQuery,
+    getHistoricalUserActivityPointsQueryOptions,
+    getHistoricalUserPointsQueryOptions,
+    getMyChallengeQueryOptions,
+    getUserByIdQueryOptions,
+    getUserStatisticsQueryOptions,
+    useGetUserToken,
 } from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import { useMainUser } from "~/components/MainUserProvider";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
 import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
@@ -22,10 +24,21 @@ function UserPage() {
     const search = Route.useSearch();
     const mainUser = useMainUser();
     const userId = createMemo(() => search().id || mainUser.mainUserId() || "");
+    const getToken = useGetUserToken(mainUser.mainUserId);
 
-    const userQuery = useUserByIdQuery(userId);
-    const statsQuery = useUserStatisticsQuery(userId);
-    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
+    const userQuery = useQuery(() =>
+        getUserByIdQueryOptions(userId, getToken, () => !!mainUser.mainUserId()),
+    );
+    const statsQuery = useQuery(() =>
+        getUserStatisticsQueryOptions(
+            userId,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
+    );
+    const challengeQuery = useQuery(() =>
+        getMyChallengeQueryOptions(mainUser.mainUserId, getToken),
+    );
     const historicalTimeWindow = createMemo(() => {
         const startAt = challengeQuery.data?.startAt
             ? new Date(challengeQuery.data.startAt).getTime()
@@ -36,15 +49,23 @@ function UserPage() {
 
         return getDefaultHistoricalTimeWindow(startAt, endAt);
     });
-    const historicalUserPointsQuery = useHistoricalUserPointsQuery(
-        userId,
-        () => historicalTimeWindow().start,
-        () => historicalTimeWindow().end,
+    const historicalUserPointsQuery = useQuery(() =>
+        getHistoricalUserPointsQueryOptions(
+            userId,
+            () => historicalTimeWindow().start,
+            () => historicalTimeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
-    const historicalUserActivityQuery = useHistoricalUserActivityPointsQuery(
-        userId,
-        () => historicalTimeWindow().start,
-        () => historicalTimeWindow().end,
+    const historicalUserActivityQuery = useQuery(() =>
+        getHistoricalUserActivityPointsQueryOptions(
+            userId,
+            () => historicalTimeWindow().start,
+            () => historicalTimeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
 
     const userName = createMemo(() => {
@@ -204,11 +225,17 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
     const [timeWindow] = createSignal(
         getDefaultHistoricalTimeWindow(props.startAt, props.endsAt),
     );
+    const mainUser = useMainUser();
+    const getToken = useGetUserToken(mainUser.mainUserId);
 
-    const histQuery = useHistoricalUserActivityPointsQuery(
-        () => props.userId,
-        () => timeWindow().start,
-        () => timeWindow().end,
+    const histQuery = useQuery(() =>
+        getHistoricalUserActivityPointsQueryOptions(
+            () => props.userId,
+            () => timeWindow().start,
+            () => timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
 
     const actColors: Record<string, string> = {

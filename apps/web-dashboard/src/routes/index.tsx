@@ -8,12 +8,14 @@ import {
     Suspense,
 } from "solid-js";
 import {
+    getHistoricalTeamPointsQueryOptions,
+    getMyChallengeQueryOptions,
+    getSeasonRankingQueryOptions,
     mergeSeasonTeams,
-    useHistoricalTeamPointsQuery,
-    useMyChallengeQuery,
-    useSeasonRankingQuery,
+    useGetUserToken,
     useStoredTeamQueries,
 } from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import {
     getDefaultHistoricalTimeWindow,
 } from "~/utils/timeRange";
@@ -36,7 +38,10 @@ function DashboardPage() {
         if (users().tokens.size === 0) navigate({ to: "/login" });
     });
 
-    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const challengeQuery = useQuery(() =>
+        getMyChallengeQueryOptions(mainUser.mainUserId, getToken),
+    );
 
     const endAtTimestamp = createMemo(() => {
         if (!challengeQuery.data?.endAt) return;
@@ -79,16 +84,22 @@ function DashboardPage() {
     const minutes = createMemo(() => pad(Math.floor((absDiffMs() % (60 * 60 * 1000)) / (60 * 1000))));
     const seconds = createMemo(() => pad(Math.floor((absDiffMs() % (60 * 1000)) / 1000)));
 
-    const teamsQuery = useSeasonRankingQuery();
+    const teamsQuery = useQuery(() =>
+        getSeasonRankingQueryOptions(getToken, () => !!mainUser.mainUserId()),
+    );
     const historicalTimeWindow = createMemo(() => {
         const startAt = startAtTimestamp() ?? Date.now() - 86400000;
         const endAt = endAtTimestamp() ?? Date.now();
 
         return getDefaultHistoricalTimeWindow(startAt, endAt);
     });
-    const historicalTeamPointsQuery = useHistoricalTeamPointsQuery(
-        () => historicalTimeWindow().start,
-        () => historicalTimeWindow().end,
+    const historicalTeamPointsQuery = useQuery(() =>
+        getHistoricalTeamPointsQueryOptions(
+            () => historicalTimeWindow().start,
+            () => historicalTimeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
     const missingHistoricalTeamIds = createMemo(() => {
         if (phase() !== "ended") {

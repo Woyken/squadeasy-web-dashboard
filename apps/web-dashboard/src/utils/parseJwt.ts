@@ -5,7 +5,7 @@ interface Token {
 
 export function parseJwt(token: string): Token {
     var base64Url = token.split(".")[1];
-    var base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    var base64 = base64Url?.replace(/-/g, "+").replace(/_/g, "/") ?? "";
     var jsonPayload = decodeURIComponent(
         window
             .atob(base64)

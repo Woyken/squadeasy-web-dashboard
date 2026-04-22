@@ -12,15 +12,22 @@ import {
     useContext,
 } from "solid-js";
 import { useUsersTokens } from "./UsersTokensProvider";
-import { useBoostMutation, useMyTeamQuery } from "~/api/client";
+import {
+    getMyTeamQueryOptions,
+    useBoostMutation,
+    useGetUserToken,
+} from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import {
     localStorageGetItem,
     localStorageSetItem,
 } from "../utils/localStorage";
 
 function AutoBoosterUser(props: { userId: string }) {
-    // const myUserQuery = useMyUserQuery(() => props.userId);
-    const myTeamQuery = useMyTeamQuery(() => props.userId);
+    const getUserToken = useGetUserToken(() => props.userId);
+    const myTeamQuery = useQuery(() =>
+        getMyTeamQueryOptions(() => props.userId, getUserToken),
+    );
     const boostMutation = useBoostMutation(() => props.userId);
     const boostAvailableAt = createMemo(() =>
         myTeamQuery.data ? myTeamQuery.data.boostAvailableAt : "",
@@ -41,8 +48,7 @@ function AutoBoosterUser(props: { userId: string }) {
                 myTeamQuery
                     .refetch()
                     .then((x) =>
-                        x.data?.users
-                            .toSorted((u1, u2) => u2.points - u1.points)
+                        x.data?.users?.toSorted((u1, u2) => (u2.points ?? 0) - (u1.points ?? 0))
                             .find((x) => x.isBoostable),
                     )
                     .then((user) => {

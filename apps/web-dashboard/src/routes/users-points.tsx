@@ -1,15 +1,17 @@
 import { createMemo, createSignal, For, Show, Suspense } from "solid-js";
 import { createFileRoute, Link } from "@tanstack/solid-router";
 import {
-    useHistoricalTeamMembershipsQuery,
-    useHistoricalTeamPointsQuery,
+    getHistoricalTeamMembershipsQueryOptions,
+    getHistoricalTeamPointsQueryOptions,
+    getMyChallengeQueryOptions,
+    getSeasonRankingQueryOptions,
     useHistoricalUserPointsQueries,
-    useMyChallengeQuery,
+    useGetUserToken,
     useStoredTeamQueries,
-    useSeasonRankingQuery,
     mergeSeasonTeams,
     type HistoricalTeamMembership,
 } from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
 import { useMainUser } from "~/components/MainUserProvider";
 import { BrutChart, brutAxis, brutGrid, brutTip, brutZoom } from "~/components/BrutChart";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
@@ -24,8 +26,13 @@ export const Route = createFileRoute("/users-points")({
 function UsersPointsPage() {
     const search = Route.useSearch();
     const mainUser = useMainUser();
-    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
-    const teamsQuery = useSeasonRankingQuery();
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const challengeQuery = useQuery(() =>
+        getMyChallengeQueryOptions(mainUser.mainUserId, getToken),
+    );
+    const teamsQuery = useQuery(() =>
+        getSeasonRankingQueryOptions(getToken, () => !!mainUser.mainUserId()),
+    );
 
     const phase = createMemo(() => {
         const start = challengeQuery.data?.startAt
@@ -52,9 +59,13 @@ function UsersPointsPage() {
 
         return getDefaultHistoricalTimeWindow(startAt, endAt);
     });
-    const historicalTeamPointsQuery = useHistoricalTeamPointsQuery(
-        () => historicalTimeWindow().start,
-        () => historicalTimeWindow().end,
+    const historicalTeamPointsQuery = useQuery(() =>
+        getHistoricalTeamPointsQueryOptions(
+            () => historicalTimeWindow().start,
+            () => historicalTimeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
     const missingHistoricalTeamIds = createMemo(() => {
         if (phase() !== "ended") {
@@ -170,7 +181,10 @@ function UsersPointsPage() {
 
 function TeamDetail(props: { teamId: string }) {
     const mainUser = useMainUser();
-    const challengeQuery = useMyChallengeQuery(mainUser.mainUserId);
+    const getToken = useGetUserToken(mainUser.mainUserId);
+    const challengeQuery = useQuery(() =>
+        getMyChallengeQueryOptions(mainUser.mainUserId, getToken),
+    );
 
     const startAt = createMemo(() => {
         const start = challengeQuery.data?.startAt;
@@ -185,10 +199,14 @@ function TeamDetail(props: { teamId: string }) {
         getDefaultHistoricalTimeWindow(startAt(), endsAt()),
     );
 
-    const membershipsQuery = useHistoricalTeamMembershipsQuery(
-        () => props.teamId,
-        () => timeWindow().start,
-        () => timeWindow().end,
+    const membershipsQuery = useQuery(() =>
+        getHistoricalTeamMembershipsQueryOptions(
+            () => props.teamId,
+            () => timeWindow().start,
+            () => timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
 
     const users = createMemo(() =>

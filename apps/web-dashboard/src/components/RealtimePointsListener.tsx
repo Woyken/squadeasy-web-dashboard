@@ -2,13 +2,82 @@ import { useQueryClient } from "@tanstack/solid-query";
 import { createEffect, onCleanup } from "solid-js";
 import type { paths as SquadEasyPaths } from "~/api/squadEasyApi";
 import type { paths as TrackerServerPaths } from "~/api/trackerServerApi";
-import { API_BASE_URL, useGetUserToken } from "~/api/client";
+import {
+    API_BASE_URL,
+    getHistoricalTeamPointsQueryOptions,
+    getHistoricalUserActivityPointsQueryOptions,
+    getHistoricalUserPointsQueryOptions,
+    getMyTeamQueryOptions,
+    getMyUserQueryOptions,
+    getSeasonRankingQueryOptions,
+    getTeamQueryOptions,
+    getUserByIdQueryOptions,
+    getUserStatisticsQueryOptions,
+    useGetUserToken,
+} from "~/api/client";
 import { useMainUser } from "./MainUserProvider";
 
 const DEFAULT_RETRY_DELAY_MS = 5000;
+const getQueryKeyOnlyToken = async () => {
+    throw new Error("Query key helper should not execute the query function");
+};
+const disableKeyOnlyQuery = () => false;
+const seasonRankingQueryKey = getSeasonRankingQueryOptions(
+    getQueryKeyOnlyToken,
+).queryKey;
+const historicalTeamPointsQueryRootKey =
+    getHistoricalTeamPointsQueryOptions(
+        () => 0,
+        () => 0,
+        getQueryKeyOnlyToken,
+    ).queryKey[0];
+const historicalUserPointsQueryRootKey =
+    getHistoricalUserPointsQueryOptions(
+        () => "",
+        () => 0,
+        () => 0,
+        getQueryKeyOnlyToken,
+    ).queryKey[0];
+const historicalUserActivityPointsQueryRootKey =
+    getHistoricalUserActivityPointsQueryOptions(
+        () => "",
+        () => 0,
+        () => 0,
+        getQueryKeyOnlyToken,
+    ).queryKey[0];
+const userStatisticsQueryRootKey = getUserStatisticsQueryOptions(
+    () => "",
+    getQueryKeyOnlyToken,
+).queryKey[0];
+const userByIdQueryRootKey = getUserByIdQueryOptions(
+    () => "",
+    getQueryKeyOnlyToken,
+    disableKeyOnlyQuery,
+).queryKey[0];
+const myUserQueryRootKey = getMyUserQueryOptions(
+    () => "",
+    getQueryKeyOnlyToken,
+).queryKey[0];
+const teamQueryRootKey = getTeamQueryOptions(
+    () => "",
+    getQueryKeyOnlyToken,
+    disableKeyOnlyQuery,
+).queryKey[0];
+const myTeamQueryRootKey = getMyTeamQueryOptions(
+    () => "",
+    getQueryKeyOnlyToken,
+    disableKeyOnlyQuery,
+).queryKey[0];
 
-type SeasonRankingData =
-    SquadEasyPaths["/api/2.0/my/ranking/season"]["get"]["responses"][200]["content"]["application/json"];
+type SeasonRankingData = {
+    teams: Array<{
+        id: string;
+        image?: string;
+        name: string;
+        points: number;
+    }>;
+    raw: SquadEasyPaths["/api/3.0/ranking/{type}/{seasonId}"]["get"]["responses"][200]["content"]["application/json"];
+};
 type SeasonRankingQueryData = {
     time: number;
     data: SeasonRankingData;
@@ -293,7 +362,7 @@ function applyTeamPointsEvent(
     );
 
     queryClient.setQueryData<SeasonRankingQueryData>(
-        ["/api/2.0/my/ranking/season"],
+        seasonRankingQueryKey,
         (current) => {
             if (!current) {
                 return current;
@@ -330,7 +399,7 @@ function updateHistoricalTeamPointsQueries(
     items: TeamPointsStreamItem[],
 ) {
     for (const [queryKey, current] of queryClient.getQueriesData<HistoricalTeamPointsData>({
-        queryKey: ["historicalTeamPoints"],
+        queryKey: [historicalTeamPointsQueryRootKey],
     })) {
         if (!Array.isArray(queryKey) || !isTimeRangeQueryKey(queryKey)) {
             continue;
@@ -365,7 +434,10 @@ function applyUserPointsEvent(
 
     for (const item of event.data.items) {
         queryClient.setQueryData<UserStatisticsData>(
-            ["/api/2.0/users/{id}/statistics", item.userId],
+            getUserStatisticsQueryOptions(
+                () => item.userId,
+                getQueryKeyOnlyToken,
+            ).queryKey,
             (current) => {
                 if (!current) {
                     return current;
@@ -391,7 +463,7 @@ function updateHistoricalUserPointsQueries(
     const itemsByUserId = new Map(items.map((item) => [item.userId, item]));
 
     for (const [queryKey, current] of queryClient.getQueriesData<HistoricalUserPointsData>({
-        queryKey: ["historicalUserPoints"],
+        queryKey: [historicalUserPointsQueryRootKey],
     })) {
         if (!Array.isArray(queryKey) || !isUserTimeRangeQueryKey(queryKey)) {
             continue;
@@ -428,7 +500,7 @@ function applyUserActivityPointsEvent(
     const eventTimestamp = new Date(event.data.time).getTime();
 
     queryClient.invalidateQueries({
-        queryKey: ["/api/2.0/users/{id}/statistics"],
+        queryKey: [userStatisticsQueryRootKey],
     });
 
     updateHistoricalUserActivityPointsQueries(
@@ -457,7 +529,7 @@ function updateHistoricalUserActivityPointsQueries(
     }
 
     for (const [queryKey, current] of queryClient.getQueriesData<HistoricalUserActivityPointsData>({
-        queryKey: ["historicalUserActivityPoints"],
+        queryKey: [historicalUserActivityPointsQueryRootKey],
     })) {
         if (!Array.isArray(queryKey) || !isUserTimeRangeQueryKey(queryKey)) {
             continue;
@@ -498,22 +570,23 @@ function applyUserActivityVisibilityEvent(
     queryClient: ReturnType<typeof useQueryClient>,
 ) {
     queryClient.invalidateQueries({
-        queryKey: ["/api/2.0/users/{id}/statistics"],
+        queryKey: [userStatisticsQueryRootKey],
     });
     queryClient.invalidateQueries({
-        queryKey: ["/api/3.0/user-profile/{userId}"],
+        queryKey: [userByIdQueryRootKey],
     });
     queryClient.invalidateQueries({
-        queryKey: ["/api/2.0/my/user"],
+        queryKey: [myUserQueryRootKey],
     });
     queryClient.invalidateQueries({
         predicate: (query) =>
             Array.isArray(query.queryKey) &&
-            (query.queryKey[0] === "/api/2.0/teams/{id}" || query.queryKey[0] === ""),
+            (query.queryKey[0] === teamQueryRootKey ||
+                query.queryKey[0] === myTeamQueryRootKey),
     });
 }
 
-function dedupeHistoricalEntries<T>(
+function dedupeHistoricalEntries<T extends { time: string }>(
     entries: T[],
     getKey: (entry: T) => string,
 ) {

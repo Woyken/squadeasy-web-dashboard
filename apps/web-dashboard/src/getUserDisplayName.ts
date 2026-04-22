@@ -1,6 +1,6 @@
 export function getUserDisplayName(
     userData:
-        | { firstName?: string; lastName?: string; email: string }
+        | { firstName?: string; lastName?: string; email?: string }
         | undefined,
 ) {
     if (userData?.firstName || userData?.lastName)

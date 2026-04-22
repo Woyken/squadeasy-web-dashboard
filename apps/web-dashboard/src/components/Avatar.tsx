@@ -1,8 +1,21 @@
 import { Show, createMemo } from "solid-js";
-import { useUserByIdQuery } from "~/api/client";
+import {
+  getUserByIdQueryOptions,
+  useGetUserToken,
+} from "~/api/client";
+import { useQuery } from "@tanstack/solid-query";
+import { useMainUser } from "./MainUserProvider";
 
 export function Avatar(props: { userId: string; size?: number }) {
-  const query = useUserByIdQuery(() => props.userId);
+  const mainUser = useMainUser();
+  const getToken = useGetUserToken(mainUser.mainUserId);
+  const query = useQuery(() =>
+    getUserByIdQueryOptions(
+      () => props.userId,
+      getToken,
+      () => !!mainUser.mainUserId(),
+    ),
+  );
   const sz = () => props.size ?? 32;
   const initials = createMemo(() => {
     const data = query.data;

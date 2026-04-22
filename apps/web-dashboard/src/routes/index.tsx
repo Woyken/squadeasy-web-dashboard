@@ -300,6 +300,7 @@ function TeamScoreChart(props: {
         "#000", "#ff0000", "#0000ff", "#008800", "#ff8800", "#8800ff",
         "#00aaaa", "#aa0088", "#888", "#446600", "#004488", "#cc4400",
     ];
+    const defaultVisibleTeamsCount = 10;
 
     const chartOptions = createMemo(() => {
         const currentData = props.teams.reduce(
@@ -340,6 +341,16 @@ function TeamScoreChart(props: {
                 symbolSize: 6,
             };
         });
+        const initiallyVisibleTeamNames = new Set(
+            props.teams
+                .slice()
+                .sort((a, b) => b.points - a.points)
+                .slice(0, defaultVisibleTeamsCount)
+                .map((team) => team.name),
+        );
+        const legendSelected = Object.fromEntries(
+            props.teams.map((team) => [team.name, initiallyVisibleTeamNames.has(team.name)]),
+        );
 
         return {
             backgroundColor: "transparent",
@@ -348,6 +359,7 @@ function TeamScoreChart(props: {
                 textStyle: { color: "#666", fontFamily: "'Space Mono', monospace", fontSize: 9 },
                 bottom: 24,
                 type: "scroll" as const,
+                selected: legendSelected,
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
             xAxis: {

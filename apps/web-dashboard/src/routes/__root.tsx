@@ -10,7 +10,7 @@ import { UsersAvatarsPreview } from "~/components/UsersAvatarsPreview";
 import { Avatar } from "~/components/Avatar";
 import { UserLoader } from "~/components/UserLoader";
 import { AutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
-import { MainUserProvider } from "~/components/MainUserProvider";
+import { MainUserProvider, useMainUser } from "~/components/MainUserProvider";
 import { ToasterProvider } from "~/components/ToasterProvider";
 import { NotFound } from "~/components/NotFoundRoutePage";
 import { RealtimePointsListener } from "~/components/RealtimePointsListener";
@@ -71,6 +71,7 @@ function RootComponent() {
 
 function NavigationBar() {
     const usersTokens = useUsersTokens();
+    const { mainUserId, setMainUserId } = useMainUser();
     const [menuOpen, setMenuOpen] = createSignal(false);
     const userIds = createMemo(() =>
         Array.from(usersTokens().tokens.keys()),
@@ -130,27 +131,48 @@ function NavigationBar() {
                                 onClick={() => setMenuOpen(false)}
                             >
                                 <For each={userIds()}>
-                                    {(userId) => (
-                                        <div class="flex items-center gap-2 border-b border-(--color-brut-light) px-3 py-2 text-[11px]">
-                                            <Avatar userId={userId} size={24} />
-                                            <UserLoader userId={userId}>
-                                                {(query, displayName) => (
-                                                    <Show
-                                                        when={!query.isLoading}
-                                                        fallback={<span class="h-3 w-16 brut-skeleton" />}
-                                                    >
-                                                        <Link
-                                                            to="/user"
-                                                            search={{ id: userId }}
-                                                            class="font-bold uppercase no-underline text-black hover:text-(--color-brut-red)"
+                                    {(userId) => {
+                                        const isMain = createMemo(() => mainUserId() === userId);
+                                        return (
+                                            <div class={`flex items-center gap-2 border-b border-(--color-brut-light) px-3 py-2 text-[11px] ${isMain() ? "bg-(--color-brut-light)" : ""}`}>
+                                                <Avatar userId={userId} size={24} />
+                                                <UserLoader userId={userId}>
+                                                    {(query, displayName) => (
+                                                        <Show
+                                                            when={!query.isLoading}
+                                                            fallback={<span class="h-3 w-16 brut-skeleton" />}
                                                         >
-                                                            {displayName()}
-                                                        </Link>
-                                                    </Show>
-                                                )}
-                                            </UserLoader>
-                                        </div>
-                                    )}
+                                                            <Link
+                                                                to="/user"
+                                                                search={{ id: userId }}
+                                                                class="flex-1 font-bold uppercase no-underline text-black hover:text-(--color-brut-red)"
+                                                            >
+                                                                {displayName()}
+                                                            </Link>
+                                                        </Show>
+                                                    )}
+                                                </UserLoader>
+                                                <Show
+                                                    when={isMain()}
+                                                    fallback={
+                                                        <button
+                                                            class="ml-auto shrink-0 border border-(--color-brut-light) px-1.5 py-0.5 text-[9px] tracking-wider text-(--color-brut-dim) hover:border-black hover:text-black"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setMainUserId(userId);
+                                                            }}
+                                                        >
+                                                            SET MAIN
+                                                        </button>
+                                                    }
+                                                >
+                                                    <span class="ml-auto shrink-0 text-[9px] font-bold tracking-wider text-(--color-brut-red)">
+                                                        MAIN
+                                                    </span>
+                                                </Show>
+                                            </div>
+                                        );
+                                    }}
                                 </For>
                                 <div class="sm:hidden border-t border-(--color-brut-light)">
                                     <Link

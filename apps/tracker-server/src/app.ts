@@ -169,6 +169,17 @@ function isAllowedCorsOrigin(origin: string | undefined): boolean {
   return corsAllowedOrigins.includes(origin);
 }
 
+function getCorsHeaders(origin: string | undefined): Record<string, string> {
+  if (!origin || !isAllowedCorsOrigin(origin)) {
+    return {};
+  }
+
+  return {
+    "Access-Control-Allow-Origin": origin,
+    Vary: "Origin",
+  };
+}
+
 function writeSseEvent(
   raw: ServerResponse,
   event: string,
@@ -324,6 +335,7 @@ fastify.after(() => {
 
       const raw = reply.raw;
       raw.writeHead(200, {
+        ...getCorsHeaders(request.headers.origin),
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",

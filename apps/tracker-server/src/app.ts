@@ -14,6 +14,7 @@ import { z } from "zod/v4";
 
 import { pool } from "./database.ts";
 import { isValidAccessToken } from "./api/accessToken.ts";
+import { mutationLogin } from "./api/client.ts";
 import {
   getLatestTeamProfile,
   getLatestUserProfile,
@@ -31,6 +32,7 @@ import { initializeDatabase } from "./scripts/init-db.ts";
 import cors from "@fastify/cors";
 import httpProxy from "@fastify/http-proxy";
 import { subscribeToPointsStream } from "./realtime/pointsEvents.ts";
+import { parseJwt } from "./utils/parseJwt.ts";
 
 const dateTimeStringSchema = z
   .iso.datetime({ offset: true })
@@ -93,6 +95,15 @@ const validationErrorResponseSchema = z.object({
   ),
 });
 
+const swaggerOauthTokenRequestSchema = z.object({
+  grant_type: z.literal("password"),
+  username: z.string().min(1),
+  password: z.string().min(1),
+  scope: z.string().optional(),
+  client_id: z.string().optional(),
+  client_secret: z.string().optional(),
+});
+
 const teamPointsResponseItemSchema = z.object({
   teamId: z.string(),
   time: dateTimeStringSchema,
@@ -146,6 +157,7 @@ type PointsQueryString = z.infer<typeof pointsQuerySchema>;
 
 const SSE_RETRY_DELAY_MS = 5000;
 const SSE_HEARTBEAT_INTERVAL_MS = 15000;
+const SWAGGER_OAUTH_TOKEN_PATH = "/api/v1/auth/squadeasy/token";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const corsAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
@@ -204,6 +216,18 @@ function writeSseComment(raw: ServerResponse, comment: string): void {
 const fastify: FastifyInstance = Fastify({
   logger: process.env.NODE_ENV === "development",
 });
+fastify.addContentTypeParser(
+  /^application\/x-www-form-urlencoded\b/i,
+  { parseAs: "string" },
+  (_request, body, done) => {
+    try {
+      const formBody = typeof body === "string" ? body : body.toString("utf8");
+      done(null, Object.fromEntries(new URLSearchParams(formBody).entries()));
+    } catch (error) {
+      done(error as Error, undefined);
+    }
+  }
+);
 const swaggerTransform = createJsonSchemaTransform({
   skipList: ["/docs", "/docs/*", "/openapi.json", "/squadeasy/proxy", "/squadeasy/proxy/*"],
 });
@@ -223,10 +247,15 @@ fastify.register(FastifySwagger, {
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-          description: "Provide the access token as a Bearer token.",
+          type: "oauth2",
+          description:
+            "Use your SquadEasy email as the username. Swagger UI exchanges those credentials for a SquadEasy access token and reuses it for authenticated requests.",
+          flows: {
+            password: {
+              tokenUrl: SWAGGER_OAUTH_TOKEN_PATH,
+              scopes: {},
+            },
+          },
         },
       },
     },
@@ -251,6 +280,9 @@ fastify.register(FastifySwagger, {
 
 fastify.register(FastifySwaggerUi, {
   routePrefix: "/docs",
+  uiConfig: {
+    persistAuthorization: true,
+  },
 });
 
 fastify.setErrorHandler((error, _request, reply) => {
@@ -285,6 +317,55 @@ fastify.register(httpProxy, {
 });
 
 fastify.after(() => {
+  fastify.post(
+    SWAGGER_OAUTH_TOKEN_PATH,
+    {
+      schema: {
+        hide: true,
+      },
+    },
+    async (request, reply) => {
+      const parsedBody = swaggerOauthTokenRequestSchema.safeParse(request.body);
+
+      if (!parsedBody.success) {
+        await reply.code(400).send({
+          error: "invalid_request",
+          error_description: "Swagger OAuth token requests must include username, password, and grant_type=password.",
+        });
+        return;
+      }
+
+      try {
+        const loginResult = await mutationLogin(
+          parsedBody.data.username,
+          parsedBody.data.password
+        );
+        const expiresAtSeconds = parseJwt(loginResult.accessToken).exp;
+        const expiresInSeconds = Math.max(
+          0,
+          expiresAtSeconds - Math.floor(Date.now() / 1000)
+        );
+
+        await reply
+          .header("Cache-Control", "no-store")
+          .header("Pragma", "no-cache")
+          .code(200)
+          .send({
+            access_token: loginResult.accessToken,
+            token_type: "Bearer",
+            refresh_token: loginResult.refreshToken,
+            expires_in: expiresInSeconds,
+          });
+      } catch (error: unknown) {
+        fastify.log.warn({ err: error }, "Swagger OAuth token exchange failed");
+        await reply.code(401).send({
+          error: "invalid_grant",
+          error_description: "SquadEasy login failed.",
+        });
+      }
+    }
+  );
+
   fastify.get(
     "/healthz",
     {

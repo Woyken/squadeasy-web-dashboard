@@ -84,11 +84,11 @@ type SeasonRankingQueryData = {
 };
 
 type HistoricalTeamPointsData =
-    TrackerServerPaths["/api/team-points"]["get"]["responses"][200]["content"]["application/json"];
+    TrackerServerPaths["/api/v1/teams/points"]["get"]["responses"][200]["content"]["application/json"];
 type HistoricalUserPointsData =
-    TrackerServerPaths["/api/user-points/{userId}"]["get"]["responses"][200]["content"]["application/json"];
+    TrackerServerPaths["/api/v1/users/{userId}/points"]["get"]["responses"][200]["content"]["application/json"];
 type HistoricalUserActivityPointsData =
-    TrackerServerPaths["/api/user-activity-points/{userId}"]["get"]["responses"][200]["content"]["application/json"];
+    TrackerServerPaths["/api/v1/users/{userId}/activity-points"]["get"]["responses"][200]["content"]["application/json"];
 type UserStatisticsData =
     SquadEasyPaths["/api/2.0/users/{id}/statistics"]["get"]["responses"][200]["content"]["application/json"];
 
@@ -227,7 +227,7 @@ export function RealtimePointsListener() {
             activeController = controller;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/points/stream`, {
+                const response = await fetch(`${API_BASE_URL}/api/v1/realtime/points`, {
                     method: "GET",
                     headers: {
                         Accept: "text/event-stream",

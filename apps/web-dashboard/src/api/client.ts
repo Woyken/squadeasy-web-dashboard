@@ -31,15 +31,15 @@ export const trackerServerClient = createClient<trackerServerPaths>({
 });
 
 export type HistoricalTeamMembership =
-    trackerServerPaths["/api/team-memberships/{teamId}"]["get"]["responses"][200]["content"]["application/json"][number];
+    trackerServerPaths["/api/v1/teams/{teamId}/memberships"]["get"]["responses"][200]["content"]["application/json"][number];
 type HistoricalTeamPointsEntry =
-    trackerServerPaths["/api/team-points"]["get"]["responses"][200]["content"]["application/json"][number];
+    trackerServerPaths["/api/v1/teams/points"]["get"]["responses"][200]["content"]["application/json"][number];
 type SquadEasyUserProfile =
     paths["/api/3.0/user-profile/{userId}"]["get"]["responses"][200]["content"]["application/json"];
 type StoredUserProfile =
-    trackerServerPaths["/api/stored-user-profile/{userId}"]["get"]["responses"][200]["content"]["application/json"];
+    trackerServerPaths["/api/v1/users/{userId}/profile"]["get"]["responses"][200]["content"]["application/json"];
 export type StoredTeamProfile =
-    trackerServerPaths["/api/stored-team-profile/{teamId}"]["get"]["responses"][200]["content"]["application/json"];
+    trackerServerPaths["/api/v1/teams/{teamId}/profile"]["get"]["responses"][200]["content"]["application/json"];
 
 export type ResolvedUserProfile = {
     id: string;
@@ -79,7 +79,7 @@ async function getStoredUserProfile(
     accessToken: string,
     userId: string,
 ): Promise<StoredUserProfile | undefined> {
-    const result = await trackerServerClient.GET("/api/stored-user-profile/{userId}", {
+    const result = await trackerServerClient.GET("/api/v1/users/{userId}/profile", {
         params: {
             path: {
                 userId,
@@ -107,7 +107,7 @@ async function getStoredTeamProfile(
     accessToken: string,
     teamId: string,
 ): Promise<StoredTeamProfile | undefined> {
-    const result = await trackerServerClient.GET("/api/stored-team-profile/{teamId}", {
+    const result = await trackerServerClient.GET("/api/v1/teams/{teamId}/profile", {
         params: {
             path: {
                 teamId,
@@ -384,7 +384,7 @@ export function getStoredTeamProfileQueryOptions(
     enabled?: Accessor<boolean>,
 ) {
     return queryOptions({
-        queryKey: ["/api/stored-team-profile/{teamId}", teamId()],
+        queryKey: ["/api/v1/teams/{teamId}/profile", teamId()],
         queryFn: async () => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
@@ -708,7 +708,7 @@ export function getHistoricalTeamPointsQueryOptions(
 
             const range = clampRangeToNow(start(), end());
 
-            const result = await trackerServerClient.GET("/api/team-points", {
+            const result = await trackerServerClient.GET("/api/v1/teams/points", {
                 params: {
                     query: {
                         startDate: new Date(range.start).toISOString(),
@@ -758,7 +758,7 @@ export function getHistoricalTeamMembershipsQueryOptions(
             const range = clampRangeToNow(start(), end());
 
             const result = await trackerServerClient.GET(
-                "/api/team-memberships/{teamId}",
+                "/api/v1/teams/{teamId}/memberships",
                 {
                     params: {
                         path: {
@@ -836,7 +836,7 @@ export function getHistoricalUserPointsQueryOptions(
             const range = clampRangeToNow(start(), end());
 
             const result = await trackerServerClient.GET(
-                "/api/user-points/{userId}",
+                "/api/v1/users/{userId}/points",
                 {
                     params: {
                         path: {
@@ -891,7 +891,7 @@ export function getHistoricalUserActivityPointsQueryOptions(
             const range = clampRangeToNow(start(), end());
 
             const result = await trackerServerClient.GET(
-                "/api/user-activity-points/{userId}",
+                "/api/v1/users/{userId}/activity-points",
                 {
                     params: {
                         path: {

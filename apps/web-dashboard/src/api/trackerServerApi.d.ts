@@ -156,7 +156,7 @@ export interface paths {
       };
     };
   };
-  "/api/points/stream": {
+  "/api/v1/realtime/points": {
     /**
      * Stream live points updates over Server-Sent Events
      * @description Use fetch with the standard Authorization header and read the text/event-stream response body incrementally on the client.
@@ -174,7 +174,7 @@ export interface paths {
       };
     };
   };
-  "/api/user-activity-points/{userId}": {
+  "/api/v1/users/{userId}/activity-points": {
     /** Get a user's activity points */
     get: {
       parameters: {
@@ -237,7 +237,7 @@ export interface paths {
       };
     };
   };
-  "/api/user-points/{userId}": {
+  "/api/v1/users/{userId}/points": {
     /** Get a user's total points */
     get: {
       parameters: {
@@ -298,7 +298,7 @@ export interface paths {
       };
     };
   };
-  "/api/team-memberships/{teamId}": {
+  "/api/v1/teams/{teamId}/memberships": {
     /** Get a team's user membership history */
     get: {
       parameters: {
@@ -377,7 +377,7 @@ export interface paths {
       };
     };
   };
-  "/api/stored-team-profile/{teamId}": {
+  "/api/v1/teams/{teamId}/profile": {
     /** Get the latest stored team profile */
     get: {
       parameters: {
@@ -428,7 +428,7 @@ export interface paths {
       };
     };
   };
-  "/api/stored-user-profile/{userId}": {
+  "/api/v1/users/{userId}/profile": {
     /** Get the latest stored user profile */
     get: {
       parameters: {
@@ -482,7 +482,7 @@ export interface paths {
       };
     };
   };
-  "/api/team-points": {
+  "/api/v1/teams/points": {
     /** Get team points over a time range */
     get: {
       parameters: {

@@ -236,8 +236,12 @@ fastify.register(FastifySwagger, {
         description: "Realtime transport endpoints.",
       },
       {
-        name: "Points",
-        description: "Points query endpoints.",
+        name: "Users",
+        description: "User tracking endpoints.",
+      },
+      {
+        name: "Teams",
+        description: "Team tracking endpoints.",
       },
     ],
   },
@@ -312,7 +316,7 @@ fastify.after(() => {
   );
 
   fastify.get(
-    "/api/points/stream",
+    "/api/v1/realtime/points",
     {
       schema: {
         tags: ["Realtime"],
@@ -387,10 +391,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/user-activity-points/:userId",
+    "/api/v1/users/:userId/activity-points",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Users"],
         summary: "Get a user's activity points",
         security: bearerAuthSecurity,
         params: userParamsSchema,
@@ -436,10 +440,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/user-points/:userId",
+    "/api/v1/users/:userId/points",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Users"],
         summary: "Get a user's total points",
         security: bearerAuthSecurity,
         params: userParamsSchema,
@@ -482,10 +486,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/team-memberships/:teamId",
+    "/api/v1/teams/:teamId/memberships",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Teams"],
         summary: "Get a team's user membership history",
         security: bearerAuthSecurity,
         params: teamParamsSchema,
@@ -535,10 +539,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/stored-team-profile/:teamId",
+    "/api/v1/teams/:teamId/profile",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Teams"],
         summary: "Get the latest stored team profile",
         security: bearerAuthSecurity,
         params: teamParamsSchema,
@@ -579,10 +583,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/stored-user-profile/:userId",
+    "/api/v1/users/:userId/profile",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Users"],
         summary: "Get the latest stored user profile",
         security: bearerAuthSecurity,
         params: userParamsSchema,
@@ -626,10 +630,10 @@ fastify.after(() => {
   );
 
   api.get(
-    "/api/team-points",
+    "/api/v1/teams/points",
     {
       schema: {
-        tags: ["Points"],
+        tags: ["Teams"],
         summary: "Get team points over a time range",
         security: bearerAuthSecurity,
         querystring: pointsQuerySchema,

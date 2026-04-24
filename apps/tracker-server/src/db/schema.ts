@@ -3,9 +3,41 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+
+export const currentChallengeMetadata = pgTable("current_challenge_metadata", {
+  singleton: text("singleton").primaryKey(),
+  title: text("title").notNull(),
+  startAt: timestamp("start_at", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+  endAt: timestamp("end_at", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+  updatedAt: timestamp("updated_at", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+});
+
+export const latestActivityMetadata = pgTable(
+  "latest_activity_metadata",
+  {
+    activityId: text("activity_id").notNull(),
+    title: text("title").notNull(),
+    type: text("type").notNull(),
+    updatedAt: timestamp("updated_at", {
+      mode: "date",
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.activityId] })]
+);
 
 export const teamPoints = pgTable(
   "team_points",

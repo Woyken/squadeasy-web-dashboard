@@ -2,6 +2,8 @@ import { sql, type SQL } from "drizzle-orm";
 
 import { db } from "../database.ts";
 import {
+  currentChallengeMetadata,
+  latestActivityMetadata,
   latestTeamProfiles,
   latestUserProfiles,
   teamPoints,
@@ -82,6 +84,8 @@ type LatestUserProfileRow = {
   team_name: string | null;
   updated_at: string;
 };
+
+const CURRENT_CHALLENGE_SINGLETON_KEY = "current";
 
 function getTimeBucket(start: Date, end: Date) {
   const entriesExpected = 50;
@@ -280,6 +284,10 @@ function getUsersActivityPointsByRangeQuery(
 }
 
 export async function getLatestPointsForUserActivities(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as LatestUserActivityPointsRow[];
+  }
+
   const result = await db.execute<LatestUserActivityPointsRow>(sql`
     select time, user_id, activity_id, value, points
     from user_activity_points up
@@ -289,12 +297,19 @@ export async function getLatestPointsForUserActivities(userIds: string[]) {
         where up1.user_id = up.user_id
         and up1.activity_id = up.activity_id
         )
-      and up.user_id = any(${userIds})
+      and up.user_id in (${sql.join(
+        userIds.map((userId) => sql`${userId}`),
+        sql`, `
+      )})
   `);
   return result.rows;
 }
 
 export async function getLatestPointsForUsers(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as UserPointsRow[];
+  }
+
   const result = await db.execute<UserPointsRow>(sql`
     select time, user_id, points
     from user_points up
@@ -303,7 +318,10 @@ export async function getLatestPointsForUsers(userIds: string[]) {
         from user_points up1
         where up1.user_id = up.user_id
         )
-      and up.user_id = any(${userIds})
+      and up.user_id in (${sql.join(
+        userIds.map((userId) => sql`${userId}`),
+        sql`, `
+      )})
   `);
   return result.rows;
 }
@@ -334,7 +352,10 @@ export async function getLatestActivityVisibilityForUsers(userIds: string[]) {
         from user_activity_visibility uav1
         where uav1.user_id = uav.user_id
     )
-      and uav.user_id = any(${userIds})
+      and uav.user_id in (${sql.join(
+        userIds.map((userId) => sql`${userId}`),
+        sql`, `
+      )})
   `);
 
   return result.rows;
@@ -353,7 +374,10 @@ export async function getLatestTeamMembershipsForUsers(userIds: string[]) {
         from user_team_memberships utm1
         where utm1.user_id = utm.user_id
     )
-      and utm.user_id = any(${userIds})
+      and utm.user_id in (${sql.join(
+        userIds.map((userId) => sql`${userId}`),
+        sql`, `
+      )})
   `);
 
   return result.rows;
@@ -391,6 +415,90 @@ export async function getLatestUserProfile(userId: string) {
   `);
 
   return result.rows[0];
+}
+
+export async function storeCurrentChallengeMetadata(
+  timestamp: number,
+  challenge: {
+    title: string;
+    startAt: string | Date;
+    endAt: string | Date;
+  }
+): Promise<void> {
+  const updatedAt = new Date(timestamp);
+  const startAt = new Date(challenge.startAt);
+  const endAt = new Date(challenge.endAt);
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(currentChallengeMetadata)
+        .values({
+          singleton: CURRENT_CHALLENGE_SINGLETON_KEY,
+          title: challenge.title,
+          startAt,
+          endAt,
+          updatedAt,
+        })
+        .onConflictDoUpdate({
+          target: currentChallengeMetadata.singleton,
+          set: {
+            title: sql`excluded.title`,
+            startAt: sql`excluded.start_at`,
+            endAt: sql`excluded.end_at`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    });
+  } catch (error) {
+    console.error("Error storing current challenge metadata:", error);
+  }
+}
+
+export async function storeLatestActivityMetadata(
+  timestamp: number,
+  activities: {
+    activityId: string;
+    title: string;
+    type: string;
+  }[]
+): Promise<void> {
+  if (activities.length === 0) {
+    return;
+  }
+
+  const updatedAt = new Date(timestamp);
+  const uniqueActivities = Array.from(
+    new Map(
+      activities.map((activity) => [
+        activity.activityId,
+        {
+          activityId: activity.activityId,
+          title: activity.title,
+          type: activity.type,
+          updatedAt,
+        },
+      ])
+    ).values()
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(latestActivityMetadata)
+        .values(uniqueActivities)
+        .onConflictDoUpdate({
+          target: latestActivityMetadata.activityId,
+          set: {
+            title: sql`excluded.title`,
+            type: sql`excluded.type`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        });
+    });
+  } catch (error) {
+    console.error("Error storing latest activity metadata:", error);
+  }
 }
 
 export async function storeUserActivities(

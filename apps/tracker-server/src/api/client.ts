@@ -10,6 +10,16 @@ const squadEasyMsClient = createClient<msPaths>({
   baseUrl: "https://api.ms.squadeasy.com",
 });
 
+export class ApiResponseError extends Error {
+  readonly statusCode: number;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = "ApiResponseError";
+    this.statusCode = statusCode;
+  }
+}
+
 export async function queryMyChallenge(accessToken: string) {
   const result = await squadEasyClient.GET("/api/3.0/my/challenge", {
     headers: {
@@ -117,6 +127,13 @@ export async function queryTeamById(accessToken: string, teamId: string) {
       authorization: `Bearer ${accessToken}`,
     },
   });
+  if (result.response.status === 404) {
+    throw new ApiResponseError(
+      `Get team failed ${JSON.stringify(result.error)}`,
+      404
+    );
+  }
+
   if (!result.data)
     throw new Error(`Get team failed ${JSON.stringify(result.error)}`);
   return result.data;

@@ -17,6 +17,25 @@ const createTeamPointsIndexSql = `
 CREATE INDEX IF NOT EXISTS ix_team_id_time ON team_points (team_id, time DESC);
 `;
 
+const createCurrentChallengeMetadataTableSql = `
+CREATE TABLE IF NOT EXISTS current_challenge_metadata (
+  singleton TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+`;
+
+const createLatestActivityMetadataTableSql = `
+CREATE TABLE IF NOT EXISTS latest_activity_metadata (
+  activity_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL
+);
+`;
+
 const createUserPointsTableSql = `
 CREATE TABLE IF NOT EXISTS user_points (
     time TIMESTAMPTZ NOT NULL,
@@ -114,6 +133,20 @@ export async function initializeDatabase() {
       console.log("Executing: CREATE INDEX IF NOT EXISTS ix_team_id_time...");
       await tx.execute(sql.raw(createTeamPointsIndexSql));
       console.log('Index "ix_team_id_time" ensured.');
+
+      console.log(
+        "executing createCurrentChallengeMetadataTableSql",
+        createCurrentChallengeMetadataTableSql
+      );
+      await tx.execute(sql.raw(createCurrentChallengeMetadataTableSql));
+      console.log("createCurrentChallengeMetadataTableSql ensured");
+
+      console.log(
+        "executing createLatestActivityMetadataTableSql",
+        createLatestActivityMetadataTableSql
+      );
+      await tx.execute(sql.raw(createLatestActivityMetadataTableSql));
+      console.log("createLatestActivityMetadataTableSql ensured");
 
       console.log("executing createUserPointsTableSql", createUserPointsTableSql);
       await tx.execute(sql.raw(createUserPointsTableSql));

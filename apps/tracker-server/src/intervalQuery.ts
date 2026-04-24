@@ -1,5 +1,6 @@
 import { getAccessToken } from "./api/accessToken.ts";
 import {
+  ApiResponseError,
   queryMyChallenge,
   querySeasonRanking,
   querySeasonRankingContinuation,
@@ -12,6 +13,8 @@ import {
   getLatestTeamMembershipsForUsers,
   getLatestPointsForUserActivities,
   getLatestPointsForUsers,
+  storeCurrentChallengeMetadata,
+  storeLatestActivityMetadata,
   storeTeamData,
   storeLatestTeamProfiles,
   storeLatestUserProfiles,
@@ -64,6 +67,17 @@ async function handleFetchUserActivities(
 
   const now = Date.now();
 
+  await storeLatestActivityMetadata(
+    now,
+    userActivities.flatMap((userActivityStats) =>
+      (userActivityStats.activities ?? []).map((activity) => ({
+        activityId: activity.activityId,
+        title: activity.title,
+        type: activity.type,
+      }))
+    )
+  );
+
   const userActivitiesFlat = userActivities.flatMap((x) =>
     x.activities?.map((a) => ({ userId: x.id, ...a }))
   );
@@ -107,17 +121,26 @@ async function handleFetchUserActivities(
 }
 
 async function fetchTeamUsersPoints(accessToken: string, id: string) {
-  const teamUsersPoints = await queryTeamById(accessToken, id);
-  const teamUsers = teamUsersPoints.users?.map((x): TeamUserSnapshot => ({
-    id: x.id,
-    teamId: id,
-    firstName: x.firstName,
-    lastName: x.lastName,
-    image: x.image,
-    points: x.points,
-    isActivityPublic: x.isActivityPublic,
-  }));
-  return teamUsers ?? [];
+  try {
+    const teamUsersPoints = await queryTeamById(accessToken, id);
+    const teamUsers = teamUsersPoints.users?.map((x): TeamUserSnapshot => ({
+      id: x.id,
+      teamId: id,
+      firstName: x.firstName,
+      lastName: x.lastName,
+      image: x.image,
+      points: x.points,
+      isActivityPublic: x.isActivityPublic,
+    }));
+    return teamUsers ?? [];
+  } catch (error) {
+    if (error instanceof ApiResponseError && error.statusCode === 404) {
+      console.warn({ teamId: id }, "team details no longer exist, skipping");
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 async function handleFetchTeamsUsersPoints(
@@ -308,11 +331,6 @@ async function handleScheduledTeamsFetch() {
   console.log(`\n--- ${new Date().toISOString()} ---`);
   console.log("Running scheduled task: Fetch and Store Team Data");
   const accessToken = await getAccessToken();
-  const isChallenge = await getIsChallengeOngoing(accessToken);
-  if (!isChallenge) {
-    console.log("Challenge not in progress, skipping");
-    return;
-  }
   const lastTeamsPoints = await getLatestPointsForTeams();
 
   console.log("Last teams points fetched: ", lastTeamsPoints.length);
@@ -373,35 +391,230 @@ async function handleScheduledTeamsFetch() {
   console.log("scheduled task finished.");
 }
 
-async function getIsChallengeOngoing(accessToken: string) {
-  const challenge = await queryMyChallenge(accessToken);
+type ChallengeMetadata = {
+  title: string;
+  startAt: string;
+  endAt: string;
+};
 
-  if (!challenge.startAt || !challenge.endAt) return false;
+type Phase = "idle" | "waiting" | "active" | "ended";
+
+const POINTS_INTERVAL_MS = 1 * 60 * 1000;
+const RECHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4h while waiting/active
+const IDLE_RECHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h while idle
+const RECONCILE_RETRY_MS = 60 * 1000; // 1 min on unexpected failure
+
+const state: {
+  phase: Phase;
+  challenge?: ChallengeMetadata;
+  pointsInterval?: NodeJS.Timeout;
+  recheckTimeout?: NodeJS.Timeout;
+  phaseTransitionTimeout?: NodeJS.Timeout;
+  stopped: boolean;
+} = {
+  phase: "idle",
+  stopped: false,
+};
+
+async function fetchAndStoreChallengeMetadata(): Promise<ChallengeMetadata | null> {
+  const accessToken = await getAccessToken();
+  const challenge = await queryMyChallenge(accessToken);
+  if (!challenge.title || !challenge.startAt || !challenge.endAt) {
+    return null;
+  }
+  await storeCurrentChallengeMetadata(Date.now(), {
+    title: challenge.title,
+    startAt: challenge.startAt,
+    endAt: challenge.endAt,
+  });
+  return {
+    title: challenge.title,
+    startAt: challenge.startAt,
+    endAt: challenge.endAt,
+  };
+}
+
+function determinePhase(challenge: ChallengeMetadata | null): Phase {
+  if (!challenge) return "idle";
+  const startAt = new Date(challenge.startAt).getTime();
+  const endAt = new Date(challenge.endAt).getTime();
+  const now = Date.now();
+  if (now < startAt) return "waiting";
+  if (now < endAt) return "active";
+  return "ended";
+}
+
+function clearRecheckTimeout() {
+  if (state.recheckTimeout) {
+    clearTimeout(state.recheckTimeout);
+    state.recheckTimeout = undefined;
+  }
+}
+
+function clearPhaseTransitionTimeout() {
+  if (state.phaseTransitionTimeout) {
+    clearTimeout(state.phaseTransitionTimeout);
+    state.phaseTransitionTimeout = undefined;
+  }
+}
+
+function stopPointsInterval() {
+  if (state.pointsInterval) {
+    clearInterval(state.pointsInterval);
+    state.pointsInterval = undefined;
+  }
+}
+
+function startPointsInterval() {
+  if (state.pointsInterval) return;
+  state.pointsInterval = setInterval(() => {
+    handleScheduledTeamsFetch().catch((e) => {
+      console.error("failed scheduled teams fetch task", e);
+    });
+  }, POINTS_INTERVAL_MS);
+}
+
+function runPointsFetchOnce() {
+  return handleScheduledTeamsFetch().catch((e) => {
+    console.error("failed scheduled teams fetch task", e);
+  });
+}
+
+function scheduleReconcile(delayMs: number) {
+  clearRecheckTimeout();
+  if (state.stopped) return;
+  state.recheckTimeout = setTimeout(() => {
+    void reconcile();
+  }, Math.max(0, delayMs));
+}
+
+function schedulePhaseTransition(delayMs: number, handler: () => void) {
+  clearPhaseTransitionTimeout();
+  if (state.stopped) return;
+  state.phaseTransitionTimeout = setTimeout(handler, Math.max(0, delayMs));
+}
+
+async function onChallengeStart() {
+  console.log("[phase] challenge start boundary reached");
+  state.phase = "active";
+  // Immediate one loop of querying, then start the recurring interval.
+  await runPointsFetchOnce();
+  startPointsInterval();
+  // Re-reconcile to set up end-of-challenge transition and periodic rechecks.
+  await reconcile();
+}
+
+async function onChallengeEnd() {
+  console.log("[phase] challenge end boundary reached");
+  // Final immediate query so we capture last-moment changes.
+  await runPointsFetchOnce();
+  stopPointsInterval();
+  clearPhaseTransitionTimeout();
+  clearRecheckTimeout();
+  state.phase = "ended";
+  console.log("[phase] ended - no more scheduled work");
+}
+
+async function reconcile(): Promise<void> {
+  if (state.stopped) return;
+  clearRecheckTimeout();
+
+  let challenge: ChallengeMetadata | null;
+  try {
+    challenge = await fetchAndStoreChallengeMetadata();
+  } catch (err) {
+    console.error("failed to fetch challenge metadata during reconcile", err);
+    scheduleReconcile(RECONCILE_RETRY_MS);
+    return;
+  }
+
+  state.challenge = challenge ?? undefined;
+  const phase = determinePhase(challenge);
+  const previousPhase = state.phase;
+  state.phase = phase;
+
+  console.log(
+    `[phase] reconcile: previous=${previousPhase} new=${phase}`,
+    challenge
+      ? `startAt=${challenge.startAt} endAt=${challenge.endAt}`
+      : "(no challenge)"
+  );
+
+  if (phase === "idle") {
+    stopPointsInterval();
+    clearPhaseTransitionTimeout();
+    scheduleReconcile(IDLE_RECHECK_INTERVAL_MS);
+    return;
+  }
+
+  if (phase === "ended") {
+    stopPointsInterval();
+    clearPhaseTransitionTimeout();
+    // No more checks while ended - server must be restarted to reset.
+    return;
+  }
+
+  if(!challenge) {
+    console.error("unexpected missing challenge metadata during reconcile while in non-idle phase");
+    scheduleReconcile(RECONCILE_RETRY_MS);
+    return;
+  }
 
   const startAt = new Date(challenge.startAt).getTime();
   const endAt = new Date(challenge.endAt).getTime();
   const now = Date.now();
 
-  if (startAt > now) return false;
-  if (endAt < now) return false;
-  return true;
-}
+  if (phase === "waiting") {
+    stopPointsInterval();
+    const msUntilStart = startAt - now;
+    if (msUntilStart <= RECHECK_INTERVAL_MS) {
+      // Close enough - schedule the exact start trigger.
+      schedulePhaseTransition(msUntilStart, () => {
+        onChallengeStart().catch((e) =>
+          console.error("failed onChallengeStart", e)
+        );
+      });
+      clearRecheckTimeout();
+    } else {
+      clearPhaseTransitionTimeout();
+      scheduleReconcile(RECHECK_INTERVAL_MS);
+    }
+    return;
+  }
 
-function runWithInterval(callback: () => void, delay: number) {
-  callback();
-  return setInterval(callback, delay);
-}
+  // phase === "active"
+  if (previousPhase !== "active") {
+    // We just discovered (e.g. after server restart) that the challenge is ongoing.
+    // Kick off an immediate points fetch so we recover quickly.
+    void runPointsFetchOnce();
+  }
+  startPointsInterval();
 
-let intervalId: NodeJS.Timeout | undefined = undefined;
+  const msUntilEnd = endAt - now;
+  if (msUntilEnd <= RECHECK_INTERVAL_MS) {
+    schedulePhaseTransition(msUntilEnd, () => {
+      onChallengeEnd().catch((e) =>
+        console.error("failed onChallengeEnd", e)
+      );
+    });
+    clearRecheckTimeout();
+  } else {
+    clearPhaseTransitionTimeout();
+    scheduleReconcile(RECHECK_INTERVAL_MS);
+  }
+}
 
 export function startIntervalPointsQuerying() {
-  intervalId = runWithInterval(() => {
-    handleScheduledTeamsFetch().catch((e) => {
-      console.error("failed scheduled teams fetch task", e);
-    });
-  }, 1 * 60 * 1000);
+  state.stopped = false;
+  reconcile().catch((e) => {
+    console.error("initial reconcile failed", e);
+    scheduleReconcile(RECONCILE_RETRY_MS);
+  });
 }
 
 export function stopIntervalPointsQuerying() {
-  clearInterval(intervalId);
+  state.stopped = true;
+  stopPointsInterval();
+  clearRecheckTimeout();
+  clearPhaseTransitionTimeout();
 }

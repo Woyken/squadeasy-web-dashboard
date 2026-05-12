@@ -325,9 +325,9 @@ function TeamDetail(props: { teamId: string }) {
                                                         <span class="font-bold uppercase">
                                                             {user.firstName} {user.lastName}
                                                         </span>
-                                                        <Show when={user.isCurrentMember}>
-                                                            <span class="bg-(--color-brut-red) px-1 py-0.5 text-[8px] font-bold text-white">
-                                                                NOW
+                                                        <Show when={!user.isCurrentMember}>
+                                                            <span class="bg-(--color-brut-gray) px-1 py-0.5 text-[8px] font-bold text-white">
+                                                                LEFT
                                                             </span>
                                                         </Show>
                                                     </div>

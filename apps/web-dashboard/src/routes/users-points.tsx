@@ -1,17 +1,17 @@
-import { createMemo, createSignal, For, Show, Suspense } from "solid-js";
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createEffect, createMemo, createSignal, For, Show, Suspense } from "solid-js";
+import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
 import {
     getHistoricalTeamMembershipsQueryOptions,
     getHistoricalTeamPointsQueryOptions,
     getMyChallengeQueryOptions,
-    getSeasonRankingQueryOptions,
+    getSeasonRankingInfiniteQueryOptions,
     useHistoricalUserPointsQueries,
     useGetUserToken,
     useStoredTeamQueries,
     mergeSeasonTeams,
     type HistoricalTeamMembership,
 } from "~/api/client";
-import { useQuery } from "@tanstack/solid-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/solid-query";
 import { Avatar } from "~/components/Avatar";
 import { useMainUser } from "~/components/MainUserProvider";
 import { BrutChart, brutAxis, brutGrid, brutTip, brutZoom } from "~/components/BrutChart";
@@ -31,9 +31,29 @@ function UsersPointsPage() {
     const challengeQuery = useQuery(() =>
         getMyChallengeQueryOptions(mainUser.mainUserId, getToken),
     );
-    const teamsQuery = useQuery(() =>
-        getSeasonRankingQueryOptions(getToken, () => !!mainUser.mainUserId()),
+    const teamsQuery = useInfiniteQuery(() =>
+        getSeasonRankingInfiniteQueryOptions(
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
+    createEffect(() => {
+        if (
+            !mainUser.mainUserId() ||
+            !teamsQuery.hasNextPage ||
+            teamsQuery.isFetchingNextPage ||
+            teamsQuery.isPending
+        ) {
+            return;
+        }
+
+        void teamsQuery.fetchNextPage();
+    });
+
+    const loadedTeams = createMemo(() =>
+        teamsQuery.data?.pages.flatMap((page) => page.data.teams) ?? [],
+    );
+    const areAllRankingPagesLoaded = createMemo(() => !teamsQuery.hasNextPage);
 
     const phase = createMemo(() => {
         const start = challengeQuery.data?.startAt
@@ -73,7 +93,11 @@ function UsersPointsPage() {
             return [];
         }
 
-        const liveTeamIds = new Set((teamsQuery.data?.data?.teams ?? []).map((team) => team.id));
+        if (!areAllRankingPagesLoaded()) {
+            return [];
+        }
+
+        const liveTeamIds = new Set(loadedTeams().map((team) => team.id));
         const trackedTeamIds = new Set(
             (historicalTeamPointsQuery.data ?? []).map((team) => team.teamId),
         );
@@ -90,11 +114,11 @@ function UsersPointsPage() {
     const sortedTeams = createMemo(() =>
         phase() === "ended"
             ? mergeSeasonTeams(
-                  teamsQuery.data?.data?.teams ?? [],
+                  loadedTeams(),
                   storedTeams(),
                   historicalTeamPointsQuery.data ?? [],
               )
-            : (teamsQuery.data?.data?.teams
+            : (loadedTeams()
                   .slice()
                   .sort((a, b) => b.points - a.points) ?? []),
     );
@@ -104,9 +128,9 @@ function UsersPointsPage() {
     );
 
     return (
-        <main class="mx-auto max-w-250 px-5 pb-20 pt-6 font-mono">
-            <h1 class="mb-1 text-lg font-bold uppercase">TEAMS</h1>
-            <div class="mb-6 inline-block bg-black px-3 py-1 text-[11px] tracking-widest text-(--color-brut-red)">
+        <main class="mx-auto max-w-[90vw] px-5 pb-20 pt-6 font-mono">
+            <h1 class="mb-1 text-2xl font-bold uppercase">TEAMS</h1>
+            <div class="mb-6 inline-block bg-black px-3 py-1 text-sm tracking-widest text-(--color-brut-red)">
                 SEASON RANKING
             </div>
 
@@ -169,6 +193,11 @@ function UsersPointsPage() {
                         }}
                     </For>
                 </div>
+                <Show when={teamsQuery.isFetchingNextPage || teamsQuery.hasNextPage}>
+                    <div class="border-2 border-black border-t-0 px-4 py-3 text-center text-xs uppercase tracking-[0.2em] text-(--color-brut-gray)">
+                        LOADING MORE TEAMS...
+                    </div>
+                </Show>
             </Suspense>
 
             <div class="mt-6 text-center">
@@ -181,6 +210,7 @@ function UsersPointsPage() {
 }
 
 function TeamDetail(props: { teamId: string }) {
+    const navigate = useNavigate();
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     const challengeQuery = useQuery(() =>
@@ -314,7 +344,10 @@ function TeamDetail(props: { teamId: string }) {
                         <tbody>
                             <For each={scoredUsers()}>
                                 {(user, j) => (
-                                    <tr class="hover:bg-[#fafafa]">
+                                    <tr
+                                        class="cursor-pointer hover:bg-[#fafafa] transition-colors"
+                                        onClick={() => navigate({ to: "/user", search: { id: user.userId } })}
+                                    >
                                         <td class="border-b border-(--color-brut-light) px-3 py-2 text-(--color-brut-gray)">
                                             {String(j() + 1).padStart(2, "0")}
                                         </td>

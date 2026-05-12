@@ -10,19 +10,18 @@ import {
 import {
     getHistoricalTeamPointsQueryOptions,
     getMyChallengeQueryOptions,
-    getSeasonRankingQueryOptions,
+    getSeasonRankingInfiniteQueryOptions,
     mergeSeasonTeams,
     useGetUserToken,
     useStoredTeamQueries,
 } from "~/api/client";
-import { useQuery } from "@tanstack/solid-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/solid-query";
 import {
     getDefaultHistoricalTimeWindow,
 } from "~/utils/timeRange";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { useMainUser } from "~/components/MainUserProvider";
-import { createFileRoute, Link } from "@tanstack/solid-router";
-import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
+import { createFileRoute } from "@tanstack/solid-router";
 
 export const Route = createFileRoute("/")({
     component: DashboardPage,
@@ -84,9 +83,31 @@ function DashboardPage() {
     const minutes = createMemo(() => pad(Math.floor((absDiffMs() % (60 * 60 * 1000)) / (60 * 1000))));
     const seconds = createMemo(() => pad(Math.floor((absDiffMs() % (60 * 1000)) / 1000)));
 
-    const teamsQuery = useQuery(() =>
-        getSeasonRankingQueryOptions(getToken, () => !!mainUser.mainUserId()),
+    const teamsQuery = useInfiniteQuery(() =>
+        getSeasonRankingInfiniteQueryOptions(
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
     );
+    createEffect(() => {
+        if (
+            !mainUser.mainUserId() ||
+            !teamsQuery.hasNextPage ||
+            teamsQuery.isFetchingNextPage ||
+            teamsQuery.isPending
+        ) {
+            return;
+        }
+
+        void teamsQuery.fetchNextPage();
+    });
+    const loadedTeams = createMemo(() =>
+        teamsQuery.data?.pages.flatMap((page) => page.data.teams) ?? [],
+    );
+    const totalRankedTeams = createMemo(() =>
+        teamsQuery.data?.pages[0]?.data.totalTeams ?? loadedTeams().length,
+    );
+    const areAllRankingPagesLoaded = createMemo(() => !teamsQuery.hasNextPage);
     const historicalTimeWindow = createMemo(() => {
         const startAt = startAtTimestamp() ?? Date.now() - 86400000;
         const endAt = endAtTimestamp() ?? Date.now();
@@ -102,11 +123,11 @@ function DashboardPage() {
         ),
     );
     const missingHistoricalTeamIds = createMemo(() => {
-        if (phase() !== "ended") {
+        if (phase() !== "ended" || !areAllRankingPagesLoaded()) {
             return [];
         }
 
-        const liveTeamIds = new Set((teamsQuery.data?.data?.teams ?? []).map((team) => team.id));
+        const liveTeamIds = new Set(loadedTeams().map((team) => team.id));
         const trackedTeamIds = new Set(
             (historicalTeamPointsQuery.data ?? []).map((team) => team.teamId),
         );
@@ -122,11 +143,11 @@ function DashboardPage() {
     const sortedTeams = createMemo(() =>
         phase() === "ended"
             ? mergeSeasonTeams(
-                  teamsQuery.data?.data?.teams ?? [],
+                  loadedTeams(),
                   storedTeams(),
                   historicalTeamPointsQuery.data ?? [],
               )
-            : (teamsQuery.data?.data?.teams
+            : (loadedTeams()
                   .slice()
                   .sort((a, b) => b.points - a.points) ?? []),
     );
@@ -137,242 +158,268 @@ function DashboardPage() {
         return "CHALLENGE ENDED";
     });
 
+    const pointsGap = createMemo(() => {
+        const teams = sortedTeams();
+        if (teams.length < 2) return 0;
+        return teams[0]!.points - teams[1]!.points;
+    });
+    const challengeProgress = createMemo(() => {
+        const start = startAtTimestamp();
+        const end = endAtTimestamp();
+        if (!start || !end) return 0;
+        if (phase() === "ended") return 100;
+        const elapsed = Date.now() - start;
+        const total = end - start;
+        return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+    });
+    const maxPoints = createMemo(() => {
+        const teams = sortedTeams();
+        return teams.length > 0 ? teams[0]!.points : 1;
+    });
+
     return (
-        <main class="mx-auto max-w-250 px-5 pb-20 pt-6 font-mono">
-            {/* Hero grid */}
-            <div class="mb-6 grid grid-cols-1 border-[3px] border-black sm:grid-cols-2">
-                <div class="border-b-[3px] border-black p-6 sm:border-b-0 sm:border-r-[3px]">
-                    <Suspense fallback={<div class="h-16 brut-skeleton" />}>
-                        <Show when={challengeQuery.data}>
-                            <h1 class="mb-2 text-lg font-bold uppercase leading-tight">
-                                {challengeQuery.data?.title}
-                            </h1>
-                            <p class="text-[11px] uppercase tracking-widest text-(--color-brut-gray)">
-                                {challengeQuery.data?.tagline}
-                            </p>
-                        </Show>
-                    </Suspense>
-                </div>
-                <div class="flex flex-col justify-center p-6">
-                    <div class="mb-3 text-[11px] tracking-widest text-(--color-brut-red)">
-                        {countdownLabel()}
+        <main class="mx-auto max-w-[92vw] px-4 pb-16 pt-4 font-mono sm:px-6 sm:pt-6">
+            {/* Full-width countdown bar */}
+            <div class="mb-6 border-[3px] border-black bg-black px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <Suspense fallback={<div class="h-8 w-60 brut-skeleton" />}>
+                            <Show when={challengeQuery.data}>
+                                <h1 class="text-lg font-bold uppercase text-white sm:text-xl lg:text-2xl">
+                                    {challengeQuery.data?.title}
+                                </h1>
+                                <p class="mt-1 text-[10px] uppercase tracking-[0.18em] text-(--color-brut-gray) sm:text-xs">
+                                    {challengeQuery.data?.tagline}
+                                </p>
+                            </Show>
+                        </Suspense>
                     </div>
-                    <Show
-                        when={phase() !== "ended"}
-                        fallback={
-                            <span class="text-sm text-(--color-brut-gray)">
-                                CHALLENGE CONCLUDED 🏁
-                            </span>
-                        }
-                    >
-                        <div class="flex gap-2">
-                            <span class="border-b-[3px] border-(--color-brut-red) py-1 text-3xl font-bold text-(--color-brut-red)">
-                                {days()}D
-                            </span>
-                            <span class="border-b-[3px] border-black py-1 text-3xl font-bold">
-                                {hours()}H
-                            </span>
-                            <span class="border-b-[3px] border-black py-1 text-3xl font-bold">
-                                {minutes()}M
-                            </span>
-                            <span class="border-b-[3px] border-black py-1 text-3xl font-bold">
-                                {seconds()}S
-                            </span>
-                        </div>
-                    </Show>
-                </div>
-            </div>
-
-            {/* Score progression chart */}
-            <div class="mb-6">
-                <span class="brut-heading mb-2">SCORE_PROGRESSION</span>
-                <div class="border-2 border-black bg-white p-3">
-                    <Suspense
-                        fallback={
-                            <div class="flex h-85 items-center justify-center">
-                                <span class="text-xs text-(--color-brut-gray)">LOADING_CHART...</span>
+                    <div class="flex flex-col items-start gap-3 sm:gap-4 lg:items-end">
+                        <span class="text-[10px] tracking-[0.2em] text-(--color-brut-red) sm:text-xs">
+                            {countdownLabel()}
+                        </span>
+                        <Show
+                            when={phase() !== "ended"}
+                            fallback={
+                                <span class="text-lg text-(--color-brut-gray)">
+                                    CONCLUDED 🏁
+                                </span>
+                            }
+                        >
+                            <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:justify-end">
+                                <span class="border-b-[3px] border-(--color-brut-red) px-1 py-1 text-center text-3xl font-bold text-(--color-brut-red) sm:min-w-22 sm:text-4xl lg:text-6xl">
+                                    {days()}D
+                                </span>
+                                <span class="border-b-[3px] border-white px-1 py-1 text-center text-3xl font-bold text-white sm:min-w-22 sm:text-4xl lg:text-6xl">
+                                    {hours()}H
+                                </span>
+                                <span class="border-b-[3px] border-white px-1 py-1 text-center text-3xl font-bold text-white sm:min-w-22 sm:text-4xl lg:text-6xl">
+                                    {minutes()}M
+                                </span>
+                                <span class="border-b-[3px] border-white px-1 py-1 text-center text-3xl font-bold text-white sm:min-w-22 sm:text-4xl lg:text-6xl">
+                                    {seconds()}S
+                                </span>
                             </div>
-                        }
-                    >
-                        <Show when={startAtTimestamp() && endAtTimestamp()}>
-                            <TeamScoreChart
-                                phase={phase()}
-                                startAt={startAtTimestamp()!}
-                                endsAt={endAtTimestamp()!}
-                                historicalPoints={historicalTeamPointsQuery.data ?? []}
-                                teams={sortedTeams()}
-                                currentSnapshotTime={teamsQuery.data?.time ?? Date.now()}
-                            />
                         </Show>
-                    </Suspense>
+                    </div>
                 </div>
             </div>
 
-            {/* Leaderboard table */}
-            <div class="mb-6">
-                <span class="brut-heading mb-2">LEADERBOARD</span>
+            {/* Stat cards */}
+            <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div class="border-[3px] border-black p-5">
+                    <div class="text-[10px] uppercase tracking-widest text-(--color-brut-gray)">TEAMS</div>
+                    <div class="mt-1 text-3xl font-bold">{totalRankedTeams()}</div>
+                </div>
+                <div class="border-[3px] border-black p-5">
+                    <div class="text-[10px] uppercase tracking-widest text-(--color-brut-gray)">LEADER GAP</div>
+                    <div class="mt-1 text-3xl font-bold text-(--color-brut-red)">+{pointsGap().toLocaleString()}</div>
+                </div>
+                <div class="border-[3px] border-black p-5">
+                    <div class="text-[10px] uppercase tracking-widest text-(--color-brut-gray)">PROGRESS</div>
+                    <div class="mt-1 text-3xl font-bold">{challengeProgress()}%</div>
+                    <div class="mt-2 h-2 w-full border border-black bg-(--color-brut-light)">
+                        <div class="h-full bg-(--color-brut-red)" style={{ width: `${challengeProgress()}%` }} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Top-3 podium */}
+            <Suspense fallback={<div class="mb-6 h-40 brut-skeleton border-2 border-black" />}>
+                <Show when={sortedTeams().length >= 3}>
+                    <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <For each={sortedTeams().slice(0, 3)}>
+                            {(team, i) => (
+                                <div
+                                    class="flex cursor-pointer items-center gap-4 border-[3px] border-black p-4 transition-colors hover:bg-[#fafafa] sm:p-5"
+                                    onClick={() => navigate({ to: "/users-points", search: { teamId: team.id } })}
+                                >
+                                    <div class="flex h-14 w-14 shrink-0 items-center justify-center border-[3px] border-(--color-brut-red) text-2xl font-bold text-(--color-brut-red)">
+                                        {i() + 1}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <Show
+                                                when={team.image}
+                                                fallback={
+                                                    <div class="grid h-9 w-9 shrink-0 place-items-center border-2 border-black bg-black text-xs font-bold text-white">
+                                                        {team.name.slice(0, 2).toUpperCase()}
+                                                    </div>
+                                                }
+                                            >
+                                                <img
+                                                    src={team.image!}
+                                                    alt={team.name}
+                                                    class="h-9 w-9 shrink-0 border-2 border-black object-cover"
+                                                />
+                                            </Show>
+                                            <span class="truncate text-base font-bold uppercase">{team.name}</span>
+                                        </div>
+                                        <div class="mt-2 text-2xl font-bold">{team.points.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </For>
+                    </div>
+                </Show>
+            </Suspense>
+
+            {/* Full leaderboard with point bars */}
+            <div>
+                <span class="brut-heading mb-3">LEADERBOARD</span>
                 <Suspense
                     fallback={<div class="h-40 border-2 border-black brut-skeleton" />}
                 >
                     <Show when={sortedTeams().length > 0}>
-                        <table class="w-full border-collapse font-mono text-xs">
-                            <thead>
-                                <tr>
-                                    <th class="border-b-[3px] border-black px-3 py-2 text-left text-[10px] tracking-widest text-(--color-brut-gray)">
-                                        #
-                                    </th>
-                                    <th class="border-b-[3px] border-black px-3 py-2 text-left text-[10px] tracking-widest text-(--color-brut-gray)">
-                                        TEAM
-                                    </th>
-                                    <th class="border-b-[3px] border-black px-3 py-2 text-right text-[10px] tracking-widest text-(--color-brut-gray)">
-                                        PTS
-                                    </th>
-                                    <th class="border-b-[3px] border-black px-3 py-2 w-8" />
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <>
+                            <div class="space-y-3 md:hidden">
                                 <For each={sortedTeams()}>
                                     {(team, i) => (
-                                        <tr
-                                            class={`cursor-pointer transition-colors hover:bg-[#fafafa] ${i() < 3 ? "border-l-[3px] border-l-(--color-brut-red)" : ""}`}
+                                        <button
+                                            type="button"
+                                            class="w-full border-[3px] border-black p-4 text-left transition-colors hover:bg-[#fafafa]"
+                                            onClick={() => navigate({ to: "/users-points", search: { teamId: team.id } })}
                                         >
-                                            <td class="border-b border-(--color-brut-light) px-3 py-2.5 font-bold text-(--color-brut-gray)">
-                                                {String(i() + 1).padStart(2, "0")}
-                                            </td>
-                                            <td class="border-b border-(--color-brut-light) px-3 py-2.5">
-                                                <Link
-                                                    to="/users-points"
-                                                    search={{ teamId: team.id }}
-                                                    class="flex items-center gap-2 no-underline text-black"
-                                                >
-                                                    <Show
-                                                        when={team.image}
-                                                        fallback={
-                                                            <div class="grid h-7 w-7 place-items-center border-2 border-black bg-black text-[10px] font-bold text-white">
-                                                                {team.name.slice(0, 2).toUpperCase()}
-                                                            </div>
-                                                        }
-                                                    >
-                                                        <img
-                                                            src={team.image!}
-                                                            alt={team.name}
-                                                            class="h-7 w-7 border-2 border-black object-cover"
-                                                        />
-                                                    </Show>
-                                                    <span class="font-bold uppercase">
-                                                        {team.name}
-                                                    </span>
-                                                </Link>
-                                            </td>
-                                            <td class="border-b border-(--color-brut-light) px-3 py-2.5 text-right font-bold">
-                                                {team.points.toLocaleString()}
-                                            </td>
-                                            <td class="border-b border-(--color-brut-light) px-3 py-2.5 text-center font-bold text-(--color-brut-red)">
-                                                <Link
-                                                    to="/users-points"
-                                                    search={{ teamId: team.id }}
-                                                    class="no-underline text-(--color-brut-red)"
-                                                >
-                                                    →
-                                                </Link>
-                                            </td>
-                                        </tr>
+                                            <div class="mb-3 flex items-start justify-between gap-3">
+                                                <div class="flex min-w-0 items-center gap-3">
+                                                    <div class={`flex h-10 w-10 shrink-0 items-center justify-center border-2 text-sm font-bold ${i() < 3 ? "border-(--color-brut-red) text-(--color-brut-red)" : "border-black text-(--color-brut-gray)"}`}>
+                                                        {String(i() + 1).padStart(2, "0")}
+                                                    </div>
+                                                    <div class="flex min-w-0 items-center gap-3">
+                                                        <Show
+                                                            when={team.image}
+                                                            fallback={
+                                                                <div class="grid h-10 w-10 place-items-center border-2 border-black bg-black text-sm font-bold text-white">
+                                                                    {team.name.slice(0, 2).toUpperCase()}
+                                                                </div>
+                                                            }
+                                                        >
+                                                            <img
+                                                                src={team.image!}
+                                                                alt={team.name}
+                                                                class="h-10 w-10 border-2 border-black object-cover"
+                                                            />
+                                                        </Show>
+                                                        <span class="truncate text-base font-bold uppercase">
+                                                            {team.name}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span class="text-xl font-bold text-(--color-brut-red)">→</span>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <div class="h-3 flex-1 border border-black bg-(--color-brut-light)">
+                                                    <div
+                                                        class="h-full bg-black transition-all"
+                                                        style={{ width: `${(team.points / maxPoints()) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span class="min-w-18 text-right text-base font-bold tabular-nums">
+                                                    {team.points.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </button>
                                     )}
                                 </For>
-                            </tbody>
-                        </table>
+                            </div>
+
+                            <table class="hidden w-full border-collapse font-mono text-base md:table">
+                                <thead>
+                                    <tr>
+                                        <th class="border-b-[3px] border-black px-4 py-3 text-left text-sm tracking-widest text-(--color-brut-gray)">
+                                            #
+                                        </th>
+                                        <th class="border-b-[3px] border-black px-4 py-3 text-left text-sm tracking-widest text-(--color-brut-gray)">
+                                            TEAM
+                                        </th>
+                                        <th class="border-b-[3px] border-black px-4 py-3 text-sm tracking-widest text-(--color-brut-gray)">
+                                            POINTS
+                                        </th>
+                                        <th class="border-b-[3px] border-black px-4 py-3 w-12" />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <For each={sortedTeams()}>
+                                        {(team, i) => (
+                                            <tr
+                                                class={`cursor-pointer transition-colors hover:bg-[#fafafa] ${i() < 3 ? "border-l-[3px] border-l-(--color-brut-red)" : ""}`}
+                                                onClick={() => navigate({ to: "/users-points", search: { teamId: team.id } })}
+                                            >
+                                                <td class="border-b border-(--color-brut-light) px-4 py-4 text-lg font-bold text-(--color-brut-gray)">
+                                                    {String(i() + 1).padStart(2, "0")}
+                                                </td>
+                                                <td class="border-b border-(--color-brut-light) px-4 py-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <Show
+                                                            when={team.image}
+                                                            fallback={
+                                                                <div class="grid h-10 w-10 place-items-center border-2 border-black bg-black text-sm font-bold text-white">
+                                                                    {team.name.slice(0, 2).toUpperCase()}
+                                                                </div>
+                                                            }
+                                                        >
+                                                            <img
+                                                                src={team.image!}
+                                                                alt={team.name}
+                                                                class="h-10 w-10 border-2 border-black object-cover"
+                                                            />
+                                                        </Show>
+                                                        <span class="text-lg font-bold uppercase">
+                                                            {team.name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="border-b border-(--color-brut-light) px-4 py-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="h-3 flex-1 border border-black bg-(--color-brut-light)">
+                                                            <div
+                                                                class="h-full bg-black transition-all"
+                                                                style={{ width: `${(team.points / maxPoints()) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                        <span class="w-20 text-right text-lg font-bold tabular-nums">
+                                                            {team.points.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="border-b border-(--color-brut-light) px-4 py-4 text-center text-xl font-bold text-(--color-brut-red)">
+                                                    →
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </For>
+                                </tbody>
+                            </table>
+
+                            <Show when={teamsQuery.isFetchingNextPage || teamsQuery.hasNextPage}>
+                                <div class="border-x-[3px] border-b-[3px] border-black px-4 py-3 text-center text-xs uppercase tracking-[0.2em] text-(--color-brut-gray)">
+                                    LOADING TEAMS {sortedTeams().length}/{totalRankedTeams()}
+                                </div>
+                            </Show>
+                        </>
                     </Show>
                 </Suspense>
             </div>
         </main>
     );
-}
-
-function TeamScoreChart(props: {
-    phase: ChallengePhase;
-    endsAt: number;
-    historicalPoints: { teamId: string; time: string; points: number }[];
-    startAt: number;
-    teams: { id: string; name: string; points: number }[];
-    currentSnapshotTime: number;
-}) {
-    const teamColors = [
-        "#000", "#ff0000", "#0000ff", "#008800", "#ff8800", "#8800ff",
-        "#00aaaa", "#aa0088", "#888", "#446600", "#004488", "#cc4400",
-    ];
-    const defaultVisibleTeamsCount = 10;
-
-    const chartOptions = createMemo(() => {
-        const currentData = props.teams.reduce(
-            (acc, t) => { acc[t.id] = t.points; return acc; },
-            {} as Record<string, number>,
-        );
-        const historical = props.historicalPoints;
-
-        // Build per-team data series
-        const byTeam: Record<string, { t: number; p: number }[]> = {};
-        for (const entry of historical) {
-            const ts = new Date(entry.time).getTime();
-            if (ts < props.startAt || ts > props.endsAt) continue;
-            if (!byTeam[entry.teamId]) byTeam[entry.teamId] = [];
-            byTeam[entry.teamId]!.push({ t: ts, p: entry.points });
-        }
-        // Add current points
-        if (props.phase !== "ended") {
-            for (const [teamId, points] of Object.entries(currentData)) {
-                if (!byTeam[teamId]) byTeam[teamId] = [];
-                byTeam[teamId]!.push({ t: props.currentSnapshotTime, p: points });
-            }
-        }
-
-        const series = props.teams.map((team, i) => {
-            const data = (byTeam[team.id] ?? [])
-                .sort((a, b) => a.t - b.t)
-                .map((d) => [d.t, d.p]);
-            return {
-                name: team.name,
-                type: "line" as const,
-                smooth: false,
-                step: "middle" as const,
-                data,
-                lineStyle: { color: teamColors[i % teamColors.length], width: 2.5 },
-                itemStyle: { color: teamColors[i % teamColors.length] },
-                symbol: "rect" as const,
-                symbolSize: 6,
-            };
-        });
-        const initiallyVisibleTeamNames = new Set(
-            props.teams
-                .slice()
-                .sort((a, b) => b.points - a.points)
-                .slice(0, defaultVisibleTeamsCount)
-                .map((team) => team.name),
-        );
-        const legendSelected = Object.fromEntries(
-            props.teams.map((team) => [team.name, initiallyVisibleTeamNames.has(team.name)]),
-        );
-
-        return {
-            backgroundColor: "transparent",
-            tooltip: brutTip(),
-            legend: {
-                textStyle: { color: "#666", fontFamily: "'Space Mono', monospace", fontSize: 9 },
-                bottom: 24,
-                type: "scroll" as const,
-                selected: legendSelected,
-            },
-            grid: { top: 12, right: 12, bottom: 58, left: 50 },
-            xAxis: {
-                type: "time" as const,
-                min: props.startAt,
-                max: Math.min(props.endsAt, Date.now()),
-                ...brutAxis(),
-            },
-            yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
-            series,
-            dataZoom: brutZoom(),
-        };
-    });
-
-    return <BrutChart options={chartOptions()} height="340px" />;
 }

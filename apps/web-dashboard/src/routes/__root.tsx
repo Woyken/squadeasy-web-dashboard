@@ -89,14 +89,20 @@ function NavigationBar() {
                 <div class="hidden gap-2 sm:flex">
                     <Link
                         to="/"
-                        class="px-2 py-1 text-[11px] font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
                     >
-                        DASH
+                        LEADERBOARD
+                    </Link>
+                    <Link
+                        to="/teams-dashboard"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                    >
+                        CHARTS
                     </Link>
                     <Link
                         to="/users-points"
                         search={{ teamId: "" }}
-                        class="px-2 py-1 text-[11px] font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
                     >
                         TEAMS
                     </Link>
@@ -177,14 +183,20 @@ function NavigationBar() {
                                 <div class="sm:hidden border-t border-(--color-brut-light)">
                                     <Link
                                         to="/"
-                                        class="block px-3 py-2 text-[11px] font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                        class="block px-3 py-2 text-sm font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
                                     >
-                                        DASH
+                                        LEADERBOARD
+                                    </Link>
+                                    <Link
+                                        to="/teams-dashboard"
+                                        class="block px-3 py-2 text-sm font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                    >
+                                        CHARTS
                                     </Link>
                                     <Link
                                         to="/users-points"
                                         search={{ teamId: "" }}
-                                        class="block px-3 py-2 text-[11px] font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                        class="block px-3 py-2 text-sm font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
                                     >
                                         TEAMS
                                     </Link>

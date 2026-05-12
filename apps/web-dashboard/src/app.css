@@ -17,7 +17,7 @@
     font-family: var(--font-mono);
     background: var(--color-brut-white);
     color: var(--color-brut-black);
-    font-size: 13px;
+    font-size: clamp(13px, 0.9vw, 20px);
   }
 
   /* Fix ECharts canvas/svg rendering in Firefox */

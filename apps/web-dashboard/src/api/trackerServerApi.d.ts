@@ -321,7 +321,6 @@ export interface paths {
                 userId: string;
                 firstName: string;
                 lastName: string;
-                image: string | null;
                 /**
                  * Format: date-time
                  * @description ISO 8601 datetime with timezone offset

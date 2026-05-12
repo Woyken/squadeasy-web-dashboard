@@ -65,11 +65,13 @@ function splitFullName(name: string | undefined) {
 }
 
 function mapSquadEasyUserProfile(profile: SquadEasyUserProfile): ResolvedUserProfile {
-    const { firstName, lastName } = splitFullName(profile.name);
+    const { firstName: parsedFirstName, lastName: parsedLastName } = splitFullName(
+        profile.name,
+    );
     return {
         id: profile.id,
-        firstName,
-        lastName,
+        firstName: profile.firstName || parsedFirstName,
+        lastName: profile.lastName || parsedLastName,
         teamName: profile.teamName,
         imageUrl: profile.imageUrl,
     };

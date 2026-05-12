@@ -101,7 +101,6 @@ export const userTeamMemberships = pgTable(
     teamId: text("team_id").notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
-    image: text("image"),
   },
   (table) => [
     index("ix_user_team_memberships_user_id_time").on(

@@ -53,7 +53,6 @@ type UserTeamMembershipRow = {
   team_id: string;
   first_name: string;
   last_name: string;
-  image: string | null;
 };
 
 type TeamMembershipIntervalRow = {
@@ -61,7 +60,6 @@ type TeamMembershipIntervalRow = {
   team_id: string;
   first_name: string;
   last_name: string;
-  image: string | null;
   joined_at: string;
   left_at: string | null;
   active_from: string;
@@ -367,7 +365,7 @@ export async function getLatestTeamMembershipsForUsers(userIds: string[]) {
   }
 
   const result = await db.execute<UserTeamMembershipRow>(sql`
-    select time, user_id, team_id, first_name, last_name, image
+    select time, user_id, team_id, first_name, last_name
     from user_team_memberships utm
     where utm.time = (
         select max(utm1.time)
@@ -622,7 +620,6 @@ export async function storeUserTeamMemberships(
     teamId: string;
     firstName: string;
     lastName: string;
-    image?: string;
   }[]
 ): Promise<void> {
   if (memberships.length === 0) {
@@ -646,7 +643,6 @@ export async function storeUserTeamMemberships(
           teamId: membership.teamId,
           firstName: membership.firstName,
           lastName: membership.lastName,
-          image: membership.image,
         }))
       );
     });
@@ -907,7 +903,6 @@ export async function getTeamMembershipsByRange(
         team_id,
         first_name,
         last_name,
-        image,
         "time" AS joined_at,
         LEAD("time") OVER (PARTITION BY user_id ORDER BY "time" ASC) AS left_at
       FROM user_team_memberships
@@ -918,7 +913,6 @@ export async function getTeamMembershipsByRange(
       team_id,
       first_name,
       last_name,
-      image,
       joined_at,
       left_at,
       GREATEST(joined_at, ${start}) AS active_from,

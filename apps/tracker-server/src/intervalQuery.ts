@@ -210,7 +210,6 @@ async function handleFetchTeamsUsersPoints(
         teamId: user.teamId,
         firstName: user.firstName,
         lastName: user.lastName,
-        image: user.image,
       }))
     );
   }

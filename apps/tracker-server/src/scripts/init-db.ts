@@ -81,9 +81,10 @@ CREATE TABLE IF NOT EXISTS user_team_memberships (
   user_id TEXT NOT NULL,
   team_id TEXT NOT NULL,
   first_name TEXT NOT NULL,
-  last_name TEXT NOT NULL,
-  image TEXT
+  last_name TEXT NOT NULL
 );
+
+ALTER TABLE user_team_memberships DROP COLUMN IF EXISTS image;
 
 SELECT create_hypertable('user_team_memberships', 'time', if_not_exists => TRUE);
 

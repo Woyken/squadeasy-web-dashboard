@@ -219,6 +219,22 @@ function TeamDetail(props: { teamId: string }) {
         () => timeWindow().start,
         () => timeWindow().end,
     );
+    const scoredUsers = createMemo(() =>
+        users()
+            .map((user, i) => ({
+                ...user,
+                score: getLatestHistoricalPoints(userPointsQueries[i]?.data ?? []),
+                pointsHistory: userPointsQueries[i]?.data ?? [],
+            }))
+            .sort(
+                (a, b) =>
+                    b.score - a.score ||
+                    Number(b.isCurrentMember) - Number(a.isCurrentMember) ||
+                    `${a.firstName} ${a.lastName}`.localeCompare(
+                        `${b.firstName} ${b.lastName}`,
+                    ),
+            ),
+    );
 
     const userColors = [
         "#000", "#ff0000", "#0000ff", "#008800", "#ff8800",
@@ -226,10 +242,10 @@ function TeamDetail(props: { teamId: string }) {
     ];
 
     const chartOptions = createMemo(() => {
-        const series = users()
+        const series = scoredUsers()
             .map((user, i) => {
                 const data = buildMembershipSeriesData(
-                    userPointsQueries[i]?.data ?? [],
+                    user.pointsHistory,
                     user.intervals,
                 );
 
@@ -289,16 +305,13 @@ function TeamDetail(props: { teamId: string }) {
                                     MEMBER
                                 </th>
                                 <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 text-right text-[10px] tracking-widest text-(--color-brut-gray)">
-                                    ACTIVE_IN_RANGE
-                                </th>
-                                <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 text-left text-[10px] tracking-widest text-(--color-brut-gray)">
-                                    PERIODS
+                                    SCORE
                                 </th>
                                 <th class="border-b-2 border-(--color-brut-light) bg-(--color-brut-light) px-3 py-2 w-8" />
                             </tr>
                         </thead>
                         <tbody>
-                            <For each={users()}>
+                            <For each={scoredUsers()}>
                                 {(user, j) => (
                                     <tr class="hover:bg-[#fafafa]">
                                         <td class="border-b border-(--color-brut-light) px-3 py-2 text-(--color-brut-gray)">
@@ -306,20 +319,9 @@ function TeamDetail(props: { teamId: string }) {
                                         </td>
                                         <td class="border-b border-(--color-brut-light) px-3 py-2">
                                             <div class="flex items-center gap-2">
-                                                <Show
-                                                    when={user.image}
-                                                    fallback={
-                                                        <div class="grid h-6 w-6 place-items-center border border-black bg-black text-[8px] font-bold text-white">
-                                                            {(user.firstName[0] ?? "") + (user.lastName[0] ?? "")}
-                                                        </div>
-                                                    }
-                                                >
-                                                    <img
-                                                        src={user.image ?? undefined}
-                                                        alt={user.firstName}
-                                                        class="h-6 w-6 border border-black object-cover"
-                                                    />
-                                                </Show>
+                                                <div class="grid h-6 w-6 place-items-center border border-black bg-black text-[8px] font-bold text-white">
+                                                    {(user.firstName[0] ?? "") + (user.lastName[0] ?? "")}
+                                                </div>
                                                 <div class="min-w-0">
                                                     <div class="flex items-center gap-2">
                                                         <span class="font-bold uppercase">
@@ -337,14 +339,8 @@ function TeamDetail(props: { teamId: string }) {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="border-b border-(--color-brut-light) px-3 py-2 text-right font-bold">
-                                            {formatDuration(user.totalActiveMs)}
-                                        </td>
-                                        <td class="border-b border-(--color-brut-light) px-3 py-2 text-(--color-brut-gray)">
-                                            {user.intervals.length}
-                                            <span class="ml-1 text-[10px] uppercase">
-                                                {user.intervals.length === 1 ? "period" : "periods"}
-                                            </span>
+                                        <td class="border-b border-(--color-brut-light) px-3 py-2 text-right font-bold whitespace-nowrap">
+                                            {user.score.toLocaleString()} PTS
                                         </td>
                                         <td class="border-b border-(--color-brut-light) px-3 py-2 text-center">
                                             <Link
@@ -386,13 +382,11 @@ type HistoricalTeamMember = {
     userId: string;
     firstName: string;
     lastName: string;
-    image?: string | null;
     intervals: {
         activeFrom: number;
         activeUntil: number;
         leftAt: number | null;
     }[];
-    totalActiveMs: number;
     isCurrentMember: boolean;
 };
 
@@ -407,6 +401,19 @@ const membershipDateFormatter = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
 });
+
+function getLatestHistoricalPoints(points: HistoricalUserPointsEntry[]) {
+    return points.reduce((latest, entry) => {
+        const latestTime = latest ? new Date(latest.time).getTime() : -Infinity;
+        const entryTime = new Date(entry.time).getTime();
+
+        if (entryTime >= latestTime) {
+            return entry;
+        }
+
+        return latest;
+    }, undefined as HistoricalUserPointsEntry | undefined)?.points ?? 0;
+}
 
 function groupHistoricalTeamMembers(
     memberships: HistoricalTeamMembership[],
@@ -429,9 +436,7 @@ function groupHistoricalTeamMembers(
             userId: membership.userId,
             firstName: membership.firstName,
             lastName: membership.lastName,
-            image: membership.image,
             intervals: [],
-            totalActiveMs: 0,
             isCurrentMember: false,
         };
 
@@ -440,9 +445,7 @@ function groupHistoricalTeamMembers(
             activeUntil,
             leftAt: membership.leftAt ? new Date(membership.leftAt).getTime() : null,
         });
-        existingMember.totalActiveMs += activeUntil - activeFrom;
         existingMember.isCurrentMember ||= membership.leftAt === null;
-        existingMember.image ??= membership.image;
 
         membersByUser.set(membership.userId, existingMember);
     }
@@ -457,7 +460,6 @@ function groupHistoricalTeamMembers(
         .sort(
             (a, b) =>
                 Number(b.isCurrentMember) - Number(a.isCurrentMember) ||
-                b.totalActiveMs - a.totalActiveMs ||
                 `${a.firstName} ${a.lastName}`.localeCompare(
                     `${b.firstName} ${b.lastName}`,
                 ),

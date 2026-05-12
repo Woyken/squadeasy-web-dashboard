@@ -1659,7 +1659,9 @@ export interface components {
     UserProfileRemoteEntity: {
       id: string;
       isCurrentUser: boolean;
-      name: string;
+      name?: string;
+      firstName: string;
+      lastName: string;
       teamName: string;
       entityName?: string;
       isInSameTeam: boolean;

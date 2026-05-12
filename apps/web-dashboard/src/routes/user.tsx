@@ -10,6 +10,7 @@ import {
 } from "~/api/client";
 import { useQuery } from "@tanstack/solid-query";
 import { useMainUser } from "~/components/MainUserProvider";
+import { getUserDisplayName, getUserInitials } from "~/getUserDisplayName";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
 import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
 
@@ -68,11 +69,12 @@ function UserPage() {
         ),
     );
 
-    const userName = createMemo(() => {
-        const data = userQuery.data;
-        if (!data?.firstName) return userId().slice(0, 8);
-        return `${data.firstName} ${data.lastName ?? ""}`.trim();
-    });
+    const userName = createMemo(
+        () => getUserDisplayName(userQuery.data) ?? userId().slice(0, 8),
+    );
+    const userInitials = createMemo(
+        () => getUserInitials(userQuery.data) ?? userId().slice(0, 2).toUpperCase(),
+    );
     const teamName = createMemo(() => userQuery.data?.teamName ?? "");
     const imageUrl = createMemo(() => userQuery.data?.imageUrl);
     const fallbackTotalPoints = createMemo(() =>
@@ -96,7 +98,7 @@ function UserPage() {
                         when={imageUrl()}
                         fallback={
                             <div class="grid h-16 w-16 place-items-center border-2 border-black bg-black text-lg font-bold text-white">
-                                {userName().slice(0, 2).toUpperCase()}
+                                {userInitials()}
                             </div>
                         }
                     >

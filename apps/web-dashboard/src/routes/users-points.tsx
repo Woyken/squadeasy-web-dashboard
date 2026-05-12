@@ -12,6 +12,7 @@ import {
     type HistoricalTeamMembership,
 } from "~/api/client";
 import { useQuery } from "@tanstack/solid-query";
+import { Avatar } from "~/components/Avatar";
 import { useMainUser } from "~/components/MainUserProvider";
 import { BrutChart, brutAxis, brutGrid, brutTip, brutZoom } from "~/components/BrutChart";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
@@ -319,9 +320,11 @@ function TeamDetail(props: { teamId: string }) {
                                         </td>
                                         <td class="border-b border-(--color-brut-light) px-3 py-2">
                                             <div class="flex items-center gap-2">
-                                                <div class="grid h-6 w-6 place-items-center border border-black bg-black text-[8px] font-bold text-white">
-                                                    {(user.firstName[0] ?? "") + (user.lastName[0] ?? "")}
-                                                </div>
+                                                <Avatar
+                                                    userId={user.userId}
+                                                    size={24}
+                                                    fallbackText={`${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase() || "?"}
+                                                />
                                                 <div class="min-w-0">
                                                     <div class="flex items-center gap-2">
                                                         <span class="font-bold uppercase">

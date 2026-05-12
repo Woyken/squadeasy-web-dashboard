@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/solid-query";
 import { useMainUser } from "./MainUserProvider";
 
-export function Avatar(props: { userId: string; size?: number }) {
+export function Avatar(props: { userId: string; size?: number; fallbackText?: string }) {
   const mainUser = useMainUser();
   const getToken = useGetUserToken(mainUser.mainUserId);
   const query = useQuery(() =>
@@ -19,7 +19,7 @@ export function Avatar(props: { userId: string; size?: number }) {
   const sz = () => props.size ?? 32;
   const initials = createMemo(() => {
     const data = query.data;
-    if (!data?.firstName) return "?";
+    if (!data?.firstName) return props.fallbackText ?? "?";
     return (
       (data.firstName[0] ?? "") + (data.lastName?.[0] ?? "")
     ).toUpperCase();

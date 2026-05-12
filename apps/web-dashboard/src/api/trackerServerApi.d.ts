@@ -174,6 +174,132 @@ export interface paths {
       };
     };
   };
+  "/api/v1/users/points/all": {
+    /**
+     * Get all stored user point snapshots
+     * @description Returns raw stored user point records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: {
+                  userId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  time: string;
+                  points: number;
+                }[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/users/activity-points/all": {
+    /**
+     * Get all stored user activity point snapshots
+     * @description Returns raw stored user activity point records, including scores and values, ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: {
+                  userId: string;
+                  activityId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  time: string;
+                  value: number;
+                  points: number;
+                }[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/api/v1/users/{userId}/activity-points": {
     /** Get a user's activity points */
     get: {
@@ -464,6 +590,68 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/teams/points/all": {
+    /**
+     * Get all stored team point snapshots
+     * @description Returns raw stored team point records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: {
+                  teamId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  time: string;
+                  points: number;
+                }[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
           content: {
             "application/json": {
               error: string;

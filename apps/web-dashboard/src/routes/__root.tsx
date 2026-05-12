@@ -1,19 +1,22 @@
-import { For, Show, Suspense, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { Link, Outlet, createRootRoute } from "@tanstack/solid-router";
 import {
     UsersTokensProvider,
     useUsersTokens,
 } from "~/components/UsersTokensProvider";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/solid-query";
 import { AutoBooster } from "~/components/AutoBooster";
 import { UsersAvatarsPreview } from "~/components/UsersAvatarsPreview";
 import { Avatar } from "~/components/Avatar";
 import { UserLoader } from "~/components/UserLoader";
 import { AutoLikeTeamPosts } from "~/components/AutoLikeTeamPosts";
 import { MainUserProvider, useMainUser } from "~/components/MainUserProvider";
-import { ToasterProvider } from "~/components/ToasterProvider";
+import { ToasterProvider, useToaster } from "~/components/ToasterProvider";
 import { NotFound } from "~/components/NotFoundRoutePage";
 import { RealtimePointsListener } from "~/components/RealtimePointsListener";
+import { useGetUserToken, getMyChallengeQueryOptions, getSeasonRankingInfiniteQueryOptions } from "~/api/client";
+import { useInfiniteQuery } from "@tanstack/solid-query";
+import { exportDashboardCsvBundle } from "~/utils/trackerCsvExport";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -72,10 +75,74 @@ function RootComponent() {
 function NavigationBar() {
     const usersTokens = useUsersTokens();
     const { mainUserId, setMainUserId } = useMainUser();
+    const toaster = useToaster();
     const [menuOpen, setMenuOpen] = createSignal(false);
+    const [isExporting, setIsExporting] = createSignal(false);
+    const [exportStatus, setExportStatus] = createSignal<string>();
     const userIds = createMemo(() =>
         Array.from(usersTokens().tokens.keys()),
     );
+
+    const getToken = useGetUserToken(mainUserId);
+    const challengeQuery = useQuery(() =>
+        getMyChallengeQueryOptions(mainUserId, getToken),
+    );
+
+    const teamsQuery = useInfiniteQuery(() =>
+        getSeasonRankingInfiniteQueryOptions(
+            getToken,
+            () => !!mainUserId(),
+        ),
+    );
+
+    const loadedTeams = createMemo(() =>
+        teamsQuery.data?.pages.flatMap((page) => page.data.teams) ?? [],
+    );
+
+    const sortedTeams = createMemo(() =>
+        (loadedTeams()
+            .slice()
+            .sort((a, b) => b.points - a.points) ?? []),
+    );
+
+    const handleExport = async () => {
+        if (isExporting()) {
+            return;
+        }
+
+        setIsExporting(true);
+        setExportStatus("Starting export...");
+        const dismissToast = toaster("EXPORT STARTED");
+
+        try {
+            const filesCount = await exportDashboardCsvBundle({
+                getToken,
+                teams: sortedTeams(),
+                challenge: challengeQuery.data
+                    ? {
+                          title: challengeQuery.data.title,
+                          tagline: challengeQuery.data.tagline,
+                          startAt: challengeQuery.data.startAt,
+                          endAt: challengeQuery.data.endAt,
+                      }
+                    : undefined,
+                onStatus: setExportStatus,
+            });
+
+            dismissToast();
+            toaster(`EXPORT COMPLETE: ${filesCount} CSV FILES`);
+        } catch (error) {
+            dismissToast();
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Unable to export CSV files";
+            setExportStatus(message);
+            toaster(`EXPORT FAILED: ${message}`);
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <nav class="sticky top-0 z-9999 flex h-12 items-center justify-between border-b-[3px] border-black bg-white px-4">
@@ -201,6 +268,24 @@ function NavigationBar() {
                                         TEAMS
                                     </Link>
                                 </div>
+                                <Show when={userIds().length > 0}>
+                                    <button
+                                        type="button"
+                                        class="w-full border-t-2 border-black px-3 py-2 text-left text-[10px] font-bold tracking-widest text-(--color-brut-dim) hover:bg-(--color-brut-light)"
+                                        disabled={isExporting()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            void handleExport();
+                                        }}
+                                    >
+                                        {isExporting() ? "EXPORTING..." : "[EXPORT_CSV]"}
+                                    </button>
+                                    <Show when={exportStatus()}>
+                                        <div class="border-b border-(--color-brut-light) px-3 py-1 text-[9px] uppercase tracking-[0.15em] text-(--color-brut-gray) word-break">
+                                            {exportStatus()}
+                                        </div>
+                                    </Show>
+                                </Show>
                                 <button
                                     class="w-full border-t-2 border-black px-3 py-2 text-left text-[10px] font-bold tracking-widest text-(--color-brut-red) hover:bg-(--color-brut-red) hover:text-white"
                                     onClick={() => {

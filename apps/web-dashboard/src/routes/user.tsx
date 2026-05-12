@@ -262,12 +262,10 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         const series = Object.entries(byActivity).map(([actId, data]) => ({
             name: actId,
             type: "line" as const,
-            stack: "total",
             areaStyle: { opacity: 0.3 },
             data: data.sort((a, b) => a.t - b.t).map((d) => [d.t, d.p]),
             lineStyle: { color: actColors[actId] ?? "#888", width: 2 },
             itemStyle: { color: actColors[actId] ?? "#888" },
-            symbol: "none" as const,
         }));
 
         return {
@@ -298,8 +296,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
 
         const series = Object.entries(byActivity).map(([actId, data]) => ({
             name: actId,
-            type: "bar" as const,
-            stack: "total",
+            type: "line" as const,
             data: data.sort((a, b) => a.t - b.t).map((d) => [d.t, d.v]),
             itemStyle: { color: actColors[actId] ?? "#888" },
         }));

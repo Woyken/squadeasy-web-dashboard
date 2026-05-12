@@ -18,6 +18,9 @@ import { mutationLogin } from "./api/client.ts";
 import {
   getLatestTeamProfile,
   getLatestUserProfile,
+  getStoredUserActivityPointsPage,
+  getStoredTeamPointsPage,
+  getStoredUserPointsPage,
   getTeamPointsByRange,
   getTeamMembershipsByRange,
   getUsersActivityPointsByRange,
@@ -152,6 +155,32 @@ const latestUserProfileResponseSchema = z.object({
   updatedAt: dateTimeStringSchema,
 });
 
+const exportQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  continuationToken: z.string().min(1).optional(),
+});
+
+const paginatedTeamPointsResponseSchema = z.object({
+  items: z.array(teamPointsResponseItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const paginatedUserPointsResponseSchema = z.object({
+  items: z.array(userPointsResponseItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const paginatedUserActivityPointsResponseSchema = z.object({
+  items: z.array(userActivityPointsResponseItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const continuationTokenPayloadSchema = z.object({
+  time: dateTimeStringSchema,
+  id: z.string().min(1),
+  secondaryId: z.string().min(1).optional(),
+});
+
 type PointsQueryString = z.infer<typeof pointsQuerySchema>;
 
 const SSE_RETRY_DELAY_MS = 5000;
@@ -210,6 +239,39 @@ function writeSseComment(raw: ServerResponse, comment: string): void {
   }
 
   raw.write(`: ${comment}\n\n`);
+}
+
+function encodeContinuationToken(cursor: {
+  time: Date;
+  id: string;
+  secondaryId?: string;
+}): string {
+  return Buffer.from(
+    JSON.stringify({
+      time: cursor.time.toISOString(),
+      id: cursor.id,
+      ...(cursor.secondaryId ? { secondaryId: cursor.secondaryId } : {}),
+    }),
+    "utf8"
+  ).toString("base64url");
+}
+
+function decodeContinuationToken(
+  token?: string
+): { time: Date; id: string; secondaryId?: string } | undefined {
+  if (!token) {
+    return undefined;
+  }
+
+  const parsedPayload = continuationTokenPayloadSchema.parse(
+    JSON.parse(Buffer.from(token, "base64url").toString("utf8"))
+  );
+
+  return {
+    time: new Date(parsedPayload.time),
+    id: parsedPayload.id,
+    secondaryId: parsedPayload.secondaryId,
+  };
 }
 
 const fastify: FastifyInstance = Fastify({
@@ -471,6 +533,167 @@ fastify.after(() => {
   );
 
   api.get(
+    "/api/v1/users/points/all",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get all stored user point snapshots",
+        description:
+          "Returns raw stored user point records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.",
+        security: bearerAuthSecurity,
+        querystring: exportQuerySchema,
+        response: {
+          200: paginatedUserPointsResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { time: Date; id: string } | undefined;
+      try {
+        cursor = decodeContinuationToken(request.query.continuationToken);
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getStoredUserPointsPage(
+          request.query.limit,
+          cursor
+            ? {
+                time: cursor.time,
+                userId: cursor.id,
+              }
+            : undefined
+        );
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            points: x.points,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeContinuationToken({
+                time: result.nextCursor.time,
+                id: result.nextCursor.userId,
+              })
+            : null,
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/activity-points/all",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get all stored user activity point snapshots",
+        description:
+          "Returns raw stored user activity point records, including scores and values, ordered newest-first. Pass the continuationToken from the previous page to continue exporting.",
+        security: bearerAuthSecurity,
+        querystring: exportQuerySchema,
+        response: {
+          200: paginatedUserActivityPointsResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { time: Date; id: string; secondaryId?: string } | undefined;
+      try {
+        cursor = decodeContinuationToken(request.query.continuationToken);
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      if (cursor && !cursor.secondaryId) {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getStoredUserActivityPointsPage(
+          request.query.limit,
+          cursor
+            ? {
+                time: cursor.time,
+                userId: cursor.id,
+                activityId: cursor.secondaryId!,
+              }
+            : undefined
+        );
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            userId: x.user_id,
+            activityId: x.activity_id,
+            time: new Date(x.time).toISOString(),
+            value: x.value,
+            points: x.points,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeContinuationToken({
+                time: result.nextCursor.time,
+                id: result.nextCursor.userId,
+                secondaryId: result.nextCursor.activityId,
+              })
+            : null,
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
     "/api/v1/users/:userId/activity-points",
     {
       schema: {
@@ -699,6 +922,78 @@ fastify.after(() => {
           teamId: result.team_id,
           teamName: result.team_name,
           updatedAt: new Date(result.updated_at).toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/teams/points/all",
+    {
+      schema: {
+        tags: ["Teams"],
+        summary: "Get all stored team point snapshots",
+        description:
+          "Returns raw stored team point records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.",
+        security: bearerAuthSecurity,
+        querystring: exportQuerySchema,
+        response: {
+          200: paginatedTeamPointsResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { time: Date; id: string } | undefined;
+      try {
+        cursor = decodeContinuationToken(request.query.continuationToken);
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getStoredTeamPointsPage(
+          request.query.limit,
+          cursor
+            ? {
+                time: cursor.time,
+                teamId: cursor.id,
+              }
+            : undefined
+        );
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            teamId: x.team_id,
+            time: new Date(x.time).toISOString(),
+            points: x.points,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeContinuationToken({
+                time: result.nextCursor.time,
+                id: result.nextCursor.teamId,
+              })
+            : null,
         });
       } catch (error: unknown) {
         console.error("Error executing query:", error);

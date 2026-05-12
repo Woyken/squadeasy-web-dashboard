@@ -15,6 +15,7 @@ SELECT create_hypertable('team_points', 'time', if_not_exists => TRUE);
 
 const createTeamPointsIndexSql = `
 CREATE INDEX IF NOT EXISTS ix_team_id_time ON team_points (team_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_team_points_time_team_id ON team_points (time DESC, team_id ASC);
 `;
 
 const createCurrentChallengeMetadataTableSql = `
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS user_points (
 SELECT create_hypertable('user_points', 'time', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS ix_user_id_time ON user_points (user_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_user_points_time_user_id ON user_points (time DESC, user_id ASC);
 `;
 
 const createUserActivityPointsTableSql = `
@@ -61,6 +63,7 @@ SELECT create_hypertable('user_activity_points', 'time', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS ix_user_id_time ON user_activity_points (user_id, time DESC);
 CREATE INDEX IF NOT EXISTS ix_user_id_activity_id_time ON user_activity_points (user_id, activity_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_user_activity_points_time_user_id_activity_id ON user_activity_points (time DESC, user_id ASC, activity_id ASC);
 `;
 
 const createUserActivityVisibilityTableSql = `

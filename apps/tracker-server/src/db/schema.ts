@@ -46,7 +46,10 @@ export const teamPoints = pgTable(
     teamId: text("team_id").notNull(),
     points: integer("points").notNull(),
   },
-  (table) => [index("ix_team_id_time").on(table.teamId, table.time.desc())]
+  (table) => [
+    index("ix_team_id_time").on(table.teamId, table.time.desc()),
+    index("ix_team_points_time_team_id").on(table.time.desc(), table.teamId),
+  ]
 );
 
 export const userPoints = pgTable(
@@ -56,7 +59,10 @@ export const userPoints = pgTable(
     userId: text("user_id").notNull(),
     points: integer("points").notNull(),
   },
-  (table) => [index("ix_user_id_time").on(table.userId, table.time.desc())]
+  (table) => [
+    index("ix_user_id_time").on(table.userId, table.time.desc()),
+    index("ix_user_points_time_user_id").on(table.time.desc(), table.userId),
+  ]
 );
 
 export const userActivityPoints = pgTable(
@@ -74,6 +80,11 @@ export const userActivityPoints = pgTable(
       table.userId,
       table.activityId,
       table.time.desc()
+    ),
+    index("ix_user_activity_points_time_user_id_activity_id").on(
+      table.time.desc(),
+      table.userId,
+      table.activityId
     ),
   ]
 );

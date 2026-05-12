@@ -13,6 +13,7 @@ import {
     getTeamQueryOptions,
     getUserByIdQueryOptions,
     getUserStatisticsQueryOptions,
+    type SeasonRankingQueryData,
     useGetUserToken,
 } from "~/api/client";
 import { useMainUser } from "./MainUserProvider";
@@ -22,9 +23,9 @@ const getQueryKeyOnlyToken = async () => {
     throw new Error("Query key helper should not execute the query function");
 };
 const disableKeyOnlyQuery = () => false;
-const seasonRankingQueryKey = getSeasonRankingQueryOptions(
+const seasonRankingQueryRootKey = getSeasonRankingQueryOptions(
     getQueryKeyOnlyToken,
-).queryKey;
+).queryKey[0];
 const historicalTeamPointsQueryRootKey =
     getHistoricalTeamPointsQueryOptions(
         () => 0,
@@ -69,18 +70,9 @@ const myTeamQueryRootKey = getMyTeamQueryOptions(
     disableKeyOnlyQuery,
 ).queryKey[0];
 
-type SeasonRankingData = {
-    teams: Array<{
-        id: string;
-        image?: string;
-        name: string;
-        points: number;
-    }>;
-    raw: SquadEasyPaths["/api/3.0/ranking/{type}/{seasonId}"]["get"]["responses"][200]["content"]["application/json"];
-};
-type SeasonRankingQueryData = {
-    time: number;
-    data: SeasonRankingData;
+type SeasonRankingInfiniteQueryData = {
+    pages: SeasonRankingQueryData[];
+    pageParams: Array<string | undefined>;
 };
 
 type HistoricalTeamPointsData =
@@ -361,35 +353,63 @@ function applyTeamPointsEvent(
         event.data.items.map((item) => [item.teamId, item.points]),
     );
 
-    queryClient.setQueryData<SeasonRankingQueryData>(
-        seasonRankingQueryKey,
-        (current) => {
-            if (!current) {
-                return current;
-            }
+    for (const [queryKey, current] of queryClient.getQueriesData<
+        SeasonRankingQueryData | SeasonRankingInfiniteQueryData
+    >({
+        queryKey: [seasonRankingQueryRootKey],
+    })) {
+        if (!current) {
+            continue;
+        }
 
-            return {
+        if (isSeasonRankingInfiniteData(current)) {
+            queryClient.setQueryData<SeasonRankingInfiniteQueryData>(queryKey, {
                 ...current,
-                time: eventTimestamp,
-                data: {
-                    ...current.data,
-                    teams: current.data.teams.map((team) => {
-                        const nextPoints = pointsByTeamId.get(team.id);
-                        if (nextPoints === undefined) {
-                            return team;
-                        }
+                pages: current.pages.map((page: SeasonRankingQueryData) =>
+                    updateSeasonRankingPage(page, eventTimestamp, pointsByTeamId),
+                ),
+            });
+            continue;
+        }
 
-                        return {
-                            ...team,
-                            points: nextPoints,
-                        };
-                    }),
-                },
-            };
-        },
-    );
+        queryClient.setQueryData<SeasonRankingQueryData>(
+            queryKey,
+            updateSeasonRankingPage(current, eventTimestamp, pointsByTeamId),
+        );
+    }
 
     updateHistoricalTeamPointsQueries(queryClient, eventTimestamp, event.data.time, event.data.items);
+}
+
+function updateSeasonRankingPage(
+    current: SeasonRankingQueryData,
+    eventTimestamp: number,
+    pointsByTeamId: Map<string, number>,
+) {
+    return {
+        ...current,
+        time: eventTimestamp,
+        data: {
+            ...current.data,
+            teams: current.data.teams.map((team) => {
+                const nextPoints = pointsByTeamId.get(team.id);
+                if (nextPoints === undefined) {
+                    return team;
+                }
+
+                return {
+                    ...team,
+                    points: nextPoints,
+                };
+            }),
+        },
+    };
+}
+
+function isSeasonRankingInfiniteData(
+    data: SeasonRankingQueryData | SeasonRankingInfiniteQueryData,
+): data is SeasonRankingInfiniteQueryData {
+    return "pages" in data;
 }
 
 function updateHistoricalTeamPointsQueries(

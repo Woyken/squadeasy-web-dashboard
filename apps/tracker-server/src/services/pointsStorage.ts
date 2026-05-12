@@ -27,10 +27,20 @@ type UserPointsRow = {
   points: number;
 };
 
+type UserPointsPageCursor = {
+  time: Date;
+  userId: string;
+};
+
 type TeamPointsRow = {
   time: string;
   team_id: string;
   points: number;
+};
+
+type TeamPointsPageCursor = {
+  time: Date;
+  teamId: string;
 };
 
 type UserActivityPointsRow = {
@@ -39,6 +49,12 @@ type UserActivityPointsRow = {
   activity_id: string;
   value: number;
   points: number;
+};
+
+type UserActivityPointsPageCursor = {
+  time: Date;
+  userId: string;
+  activityId: string;
 };
 
 type UserActivityVisibilityRow = {
@@ -81,6 +97,11 @@ type LatestUserProfileRow = {
   team_id: string;
   team_name: string | null;
   updated_at: string;
+};
+
+type PaginatedResult<TItem, TCursor> = {
+  items: TItem[];
+  nextCursor?: TCursor;
 };
 
 const CURRENT_CHALLENGE_SINGLETON_KEY = "current";
@@ -824,6 +845,130 @@ export async function testDbConnection(): Promise<void> {
     console.error("Unable to connect to the database via Drizzle:", error);
     process.exit(1);
   }
+}
+
+export async function getStoredTeamPointsPage(
+  limit: number,
+  cursor?: TeamPointsPageCursor
+): Promise<PaginatedResult<TeamPointsRow, TeamPointsPageCursor>> {
+  const filters: SQL[] = [];
+
+  if (cursor) {
+    filters.push(
+      sql`("time" < ${cursor.time} OR ("time" = ${cursor.time} AND team_id > ${cursor.teamId}))`
+    );
+  }
+
+  const whereClause =
+    filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+  const pageSize = limit + 1;
+  const result = await db.execute<TeamPointsRow>(sql`
+    SELECT time, team_id, points
+    FROM team_points
+    ${whereClause}
+    ORDER BY "time" DESC, team_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            time: new Date(lastItem.time),
+            teamId: lastItem.team_id,
+          }
+        : undefined,
+  };
+}
+
+export async function getStoredUserPointsPage(
+  limit: number,
+  cursor?: UserPointsPageCursor
+): Promise<PaginatedResult<UserPointsRow, UserPointsPageCursor>> {
+  const filters: SQL[] = [];
+
+  if (cursor) {
+    filters.push(
+      sql`("time" < ${cursor.time} OR ("time" = ${cursor.time} AND user_id > ${cursor.userId}))`
+    );
+  }
+
+  const whereClause =
+    filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+  const pageSize = limit + 1;
+  const result = await db.execute<UserPointsRow>(sql`
+    SELECT time, user_id, points
+    FROM user_points
+    ${whereClause}
+    ORDER BY "time" DESC, user_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            time: new Date(lastItem.time),
+            userId: lastItem.user_id,
+          }
+        : undefined,
+  };
+}
+
+export async function getStoredUserActivityPointsPage(
+  limit: number,
+  cursor?: UserActivityPointsPageCursor
+): Promise<
+  PaginatedResult<UserActivityPointsRow, UserActivityPointsPageCursor>
+> {
+  const filters: SQL[] = [];
+
+  if (cursor) {
+    filters.push(
+      sql`(
+        "time" < ${cursor.time}
+        OR ("time" = ${cursor.time} AND user_id > ${cursor.userId})
+        OR ("time" = ${cursor.time} AND user_id = ${cursor.userId} AND activity_id > ${cursor.activityId})
+      )`
+    );
+  }
+
+  const whereClause =
+    filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+  const pageSize = limit + 1;
+  const result = await db.execute<UserActivityPointsRow>(sql`
+    SELECT time, user_id, activity_id, value, points
+    FROM user_activity_points
+    ${whereClause}
+    ORDER BY "time" DESC, user_id ASC, activity_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            time: new Date(lastItem.time),
+            userId: lastItem.user_id,
+            activityId: lastItem.activity_id,
+          }
+        : undefined,
+  };
 }
 
 export async function getTeamPointsByRange(start: Date, end: Date) {

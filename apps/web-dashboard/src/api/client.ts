@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 import { paths } from "./squadEasyApi";
 import { paths as trackerServerPaths } from "./trackerServerApi";
 import {
+    infiniteQueryOptions,
     useMutation,
     useQueries,
     keepPreviousData,
@@ -55,6 +56,111 @@ export type ResolvedSeasonTeam = {
     image?: string | null;
     points: number;
 };
+
+type SeasonRankingResponse =
+    paths["/api/3.0/ranking/{type}/{seasonId}"]["get"]["responses"][200]["content"]["application/json"];
+type SeasonRankingElement =
+    paths["/api/3.0/ranking/{type}/{seasonId}/elements"]["get"]["responses"][200]["content"]["application/json"][number];
+
+export type SeasonRankingQueryData = {
+    time: number;
+    data: {
+        teams: ResolvedSeasonTeam[];
+        nextOffsetId?: string;
+        totalTeams?: number;
+        raw?: SeasonRankingResponse;
+    };
+};
+
+function mapSeasonRankingTeams(elements: ReadonlyArray<SeasonRankingElement>) {
+    return elements.map((team) => ({
+        id: team.id,
+        image: team.image,
+        name: team.name,
+        points: team.points ?? 0,
+    }));
+}
+
+async function getSeasonRankingPage(
+    accessToken: string,
+    offsetId?: string,
+): Promise<SeasonRankingQueryData> {
+    const time = Date.now();
+
+    if (!offsetId) {
+        const result = await squadEasyClient.GET(
+            "/api/3.0/ranking/{type}/{seasonId}",
+            {
+                params: {
+                    path: {
+                        type: "season",
+                        seasonId: "current",
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            },
+        );
+        if (!result.data) {
+            throw new Error(
+                `Get teams failed ${JSON.stringify(result.error)}`,
+            );
+        }
+
+        const teams = mapSeasonRankingTeams(result.data.elements ?? []);
+        const nextOffsetId =
+            typeof result.data.rankedElements === "number" &&
+            teams.length >= result.data.rankedElements
+                ? undefined
+                : result.data.elements?.at(-1)?.id;
+
+        return {
+            time,
+            data: {
+                teams,
+                nextOffsetId,
+                totalTeams: result.data.rankedElements,
+                raw: result.data,
+            },
+        };
+    }
+
+    const result = await squadEasyClient.GET(
+        "/api/3.0/ranking/{type}/{seasonId}/elements",
+        {
+            params: {
+                path: {
+                    type: "season",
+                    seasonId: "current",
+                },
+                query: {
+                    direction: "bottom",
+                    offsetId,
+                },
+            },
+            headers: {
+                authorization: `Bearer ${accessToken}`,
+            },
+        },
+    );
+
+    if (!result.data) {
+        throw new Error(
+            `Get paged teams failed ${JSON.stringify(result.error)}`,
+        );
+    }
+
+    const nextOffset = result.data.at(-1)?.id;
+
+    return {
+        time,
+        data: {
+            teams: mapSeasonRankingTeams(result.data),
+            nextOffsetId: nextOffset === offsetId ? undefined : nextOffset,
+        },
+    };
+}
 
 function splitFullName(name: string | undefined) {
     const [firstName = "", ...rest] = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -323,46 +429,55 @@ export function getSeasonRankingQueryOptions(
     refetchIntervalInBackground?: boolean,
 ) {
     return queryOptions({
-        queryKey: ["/api/2.0/my/ranking/season"],
+        queryKey: ["/api/2.0/my/ranking/season", "initial"],
         queryFn: async () => {
             const accessToken = await getToken();
             if (!accessToken) throw new Error("Missing token!");
-            const result = await squadEasyClient.GET(
-                "/api/3.0/ranking/{type}/{seasonId}",
-                {
-                    params: {
-                        path: {
-                            type: "season",
-                            seasonId: "current",
-                        },
-                    },
-                    headers: {
-                        authorization: `Bearer ${accessToken}`,
-                    },
-                },
-            );
-            if (!result.data)
-                throw new Error(
-                    `Get teams failed ${JSON.stringify(result.error)}`,
-                );
-            return {
-                time: Date.now(),
-                data: {
-                    teams: (result.data.elements ?? []).map((team) => ({
-                        id: team.id,
-                        image: team.image,
-                        name: team.name,
-                        points: team.points ?? 0,
-                    })),
-                    raw: result.data,
-                },
-            };
+            return getSeasonRankingPage(accessToken);
         },
         staleTime: 5 * 60 * 1000,
         enabled: enabled?.() ?? true,
         refetchInterval,
         refetchIntervalInBackground,
         placeholderData: keepPreviousData,
+    });
+}
+
+export function getSeasonRankingInfiniteQueryOptions(
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+    refetchInterval?: number,
+    refetchIntervalInBackground?: boolean,
+) {
+    return infiniteQueryOptions({
+        queryKey: ["/api/2.0/my/ranking/season", "infinite"],
+        initialPageParam: undefined as string | undefined,
+        queryFn: async ({ pageParam }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            return getSeasonRankingPage(accessToken, pageParam);
+        },
+        getNextPageParam: (lastPage, pages) => {
+            const totalTeams = pages[0]?.data.totalTeams;
+            const loadedTeams = pages.reduce(
+                (count, page) => count + page.data.teams.length,
+                0,
+            );
+
+            if (
+                typeof totalTeams === "number" &&
+                loadedTeams >= totalTeams
+            ) {
+                return undefined;
+            }
+
+            return lastPage.data.nextOffsetId;
+        },
+        staleTime: 5 * 60 * 1000,
+        enabled: enabled?.() ?? true,
+        refetchInterval,
+        refetchIntervalInBackground,
     });
 }
 

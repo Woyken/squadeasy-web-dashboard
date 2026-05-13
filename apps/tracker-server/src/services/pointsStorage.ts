@@ -63,6 +63,11 @@ type UserActivityVisibilityRow = {
   is_activity_public: boolean;
 };
 
+type UserActivityVisibilityPageCursor = {
+  time: Date;
+  userId: string;
+};
+
 type UserTeamMembershipRow = {
   time: string;
   user_id: string;
@@ -966,6 +971,47 @@ export async function getStoredUserActivityPointsPage(
             time: new Date(lastItem.time),
             userId: lastItem.user_id,
             activityId: lastItem.activity_id,
+          }
+        : undefined,
+  };
+}
+
+export async function getStoredUserActivityVisibilityPage(
+  limit: number,
+  cursor?: UserActivityVisibilityPageCursor
+): Promise<
+  PaginatedResult<UserActivityVisibilityRow, UserActivityVisibilityPageCursor>
+> {
+  const filters: SQL[] = [];
+
+  if (cursor) {
+    filters.push(
+      sql`("time" < ${cursor.time} OR ("time" = ${cursor.time} AND user_id > ${cursor.userId}))`
+    );
+  }
+
+  const whereClause =
+    filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+  const pageSize = limit + 1;
+  const result = await db.execute<UserActivityVisibilityRow>(sql`
+    SELECT time, user_id, is_activity_public
+    FROM user_activity_visibility
+    ${whereClause}
+    ORDER BY "time" DESC, user_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            time: new Date(lastItem.time),
+            userId: lastItem.user_id,
           }
         : undefined,
   };

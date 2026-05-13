@@ -19,6 +19,7 @@ import {
   getLatestTeamProfile,
   getLatestUserProfile,
   getStoredUserActivityPointsPage,
+  getStoredUserActivityVisibilityPage,
   getStoredTeamPointsPage,
   getStoredUserPointsPage,
   getTeamPointsByRange,
@@ -179,6 +180,11 @@ const paginatedUserPointsResponseSchema = z.object({
 
 const paginatedUserActivityPointsResponseSchema = z.object({
   items: z.array(userActivityPointsResponseItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const paginatedUserActivityVisibilityResponseSchema = z.object({
+  items: z.array(userActivityVisibilityResponseItemSchema),
   continuationToken: z.string().nullable(),
 });
 
@@ -689,6 +695,91 @@ fastify.after(() => {
                 time: result.nextCursor.time,
                 id: result.nextCursor.userId,
                 secondaryId: result.nextCursor.activityId,
+              })
+            : null,
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/activity-visibility/all",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get all stored user activity visibility snapshots",
+        description:
+          "Returns raw stored user activity visibility records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.",
+        security: bearerAuthSecurity,
+        querystring: exportQuerySchema,
+        response: {
+          200: paginatedUserActivityVisibilityResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { time: Date; id: string } | undefined;
+      try {
+        cursor = decodeContinuationToken(request.query.continuationToken);
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      if (cursor?.secondaryId) {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getStoredUserActivityVisibilityPage(
+          request.query.limit,
+          cursor
+            ? {
+                time: cursor.time,
+                userId: cursor.id,
+              }
+            : undefined
+        );
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            isActivityPublic: x.is_activity_public,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeContinuationToken({
+                time: result.nextCursor.time,
+                id: result.nextCursor.userId,
               })
             : null,
         });

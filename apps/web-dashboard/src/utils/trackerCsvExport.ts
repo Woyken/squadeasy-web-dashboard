@@ -22,6 +22,12 @@ type UserActivityPointsSnapshot = {
     points: number;
 };
 
+type UserActivityVisibilitySnapshot = {
+    userId: string;
+    time: string;
+    isActivityPublic: boolean;
+};
+
 type TeamPointsSnapshot = {
     teamId: string;
     time: string;
@@ -200,6 +206,48 @@ async function fetchAllTeamPoints(accessToken: string, onProgress?: (count: numb
     return allItems;
 }
 
+async function fetchAllUserActivityVisibility(
+    accessToken: string,
+    onProgress?: (count: number) => void,
+) {
+    const allItems: UserActivityVisibilitySnapshot[] = [];
+    let continuationToken: string | undefined;
+
+    while (true) {
+        const result = await trackerServerClient.GET(
+            "/api/v1/users/activity-visibility/all",
+            {
+                params: {
+                    query: {
+                        limit: EXPORT_PAGE_LIMIT,
+                        continuationToken,
+                    },
+                },
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+            },
+        );
+
+        if (!result.data) {
+            throw new Error(
+                `Get all user activity visibility failed ${JSON.stringify(result.error)}`,
+            );
+        }
+
+        allItems.push(...result.data.items);
+        onProgress?.(allItems.length);
+
+        if (!result.data.continuationToken) {
+            break;
+        }
+
+        continuationToken = result.data.continuationToken;
+    }
+
+    return allItems;
+}
+
 async function fetchUserProfiles(accessToken: string, userIds: string[], onProgress?: (count: number) => void) {
     const uniqueUserIds = [...new Set(userIds)];
     const profiles = new Map<
@@ -255,7 +303,8 @@ async function addTeamImagesToZip(zip: JSZip, teams: ResolvedSeasonTeam[], onPro
             try {
                 const response = await fetch(team.image);
                 if (!response.ok) {
-                    throw new Error(`Failed to download image for ${team.name}`);
+                    console.warn(`Failed to download image for team ${team.name}: ${response.status}`);
+                    return;
                 }
 
                 const blob = await response.blob();
@@ -263,6 +312,9 @@ async function addTeamImagesToZip(zip: JSZip, teams: ResolvedSeasonTeam[], onPro
                 const fileName = `${sanitizeFileName(team.name)}-${team.id}.${extension}`;
 
                 zip.file(`${TEAM_IMAGE_FOLDER}/${fileName}`, blob);
+            } catch (error) {
+                console.warn(`Failed to download image for team ${team.name}:`, error);
+                // Silently skip team images that fail (CORS, network errors, etc)
             } finally {
                 downloadedCount++;
                 onProgress?.(downloadedCount);
@@ -290,7 +342,8 @@ async function addUserImagesToZip(
             try {
                 const response = await fetch(user.imageUrl);
                 if (!response.ok) {
-                    return; // Silently skip failed downloads
+                    console.warn(`Failed to download image for user ${user.userId}: ${response.status}`);
+                    return;
                 }
 
                 const blob = await response.blob();
@@ -298,8 +351,9 @@ async function addUserImagesToZip(
                 const fileName = `${sanitizeFileName(user.firstName)}-${sanitizeFileName(user.lastName)}-${user.userId}.${extension}`;
 
                 zip.file(`${USER_IMAGE_FOLDER}/${fileName}`, blob);
-            } catch {
-                // Silently skip users whose images fail to download
+            } catch (error) {
+                console.warn(`Failed to download image for user ${user.userId}:`, error);
+                // Silently skip user images that fail (CORS, network errors, etc)
             } finally {
                 downloadedCount++;
                 onProgress?.(downloadedCount);
@@ -332,6 +386,13 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
     const teamPoints = await fetchAllTeamPoints(
         accessToken,
         (count) => params.onStatus?.(`Fetching team point snapshots... (${count})`),
+    );
+
+    params.onStatus?.("Fetching user activity visibility snapshots...");
+    const userActivityVisibility = await fetchAllUserActivityVisibility(
+        accessToken,
+        (count) =>
+            params.onStatus?.(`Fetching user activity visibility snapshots... (${count})`),
     );
 
     params.onStatus?.("Fetching user profiles...");
@@ -416,6 +477,10 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
         "tracker/users_activity_points_all.csv",
         buildCsv(userActivityPoints, ["userId", "activityId", "time", "value", "points"]),
     );
+    zip.file(
+        "tracker/users_activity_visibility_all.csv",
+        buildCsv(userActivityVisibility, ["userId", "time", "isActivityPublic"]),
+    );
     zip.file("tracker/teams_points_all.csv", buildCsv(teamPoints, ["teamId", "time", "points"]));
 
     params.onStatus?.("Downloading team images...");
@@ -442,5 +507,5 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
     URL.revokeObjectURL(downloadUrl);
 
     params.onStatus?.("Export completed.");
-    return 6;
+    return 7;
 }

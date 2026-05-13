@@ -63,7 +63,13 @@ async function handleFetchUserActivities(
   const lastUsersActivities = await getLatestPointsForUserActivities(userIds);
   console.log("Last users activities fetched: ", lastUsersActivities.length);
 
-  const userActivities = await Promise.all(usersActivitiesPromises);
+  const userActivitiesSettled = await Promise.allSettled(usersActivitiesPromises);
+  userActivitiesSettled
+    .filter((r) => r.status === "rejected")
+    .forEach((r) => console.warn("Failed to fetch user statistics, skipping:", r.reason));
+  const userActivities = userActivitiesSettled
+    .filter((r) => r.status === "fulfilled")
+    .map((r) => r.value);
 
   const now = Date.now();
 
@@ -155,7 +161,13 @@ async function handleFetchTeamsUsersPoints(
   const teamsUsersQueries = teamIds.map((teamId) =>
     fetchTeamUsersPoints(accessToken, teamId)
   );
-  const teamsUsersPoints = await Promise.all(teamsUsersQueries);
+  const teamsUsersSettled = await Promise.allSettled(teamsUsersQueries);
+  teamsUsersSettled
+    .filter((r) => r.status === "rejected")
+    .forEach((r) => console.warn("Failed to fetch team users, skipping:", r.reason));
+  const teamsUsersPoints = teamsUsersSettled
+    .filter((r) => r.status === "fulfilled")
+    .map((r) => r.value);
   const teamsUsersFlat = Array.from(
     new Map(
       teamsUsersPoints.flatMap((teamUsers) => teamUsers).map((user) => [
@@ -310,10 +322,16 @@ async function* getAllTeamElements() {
   while (lastTeamId) {
     const accessToken = await getAccessToken();
     console.log("[Teams] Fetching continue", "offset:", lastTeamId);
-    const teamsDataResponse = await querySeasonRankingContinuation(
-      accessToken,
-      lastTeamId
-    );
+    let teamsDataResponse: Awaited<ReturnType<typeof querySeasonRankingContinuation>>;
+    try {
+      teamsDataResponse = await querySeasonRankingContinuation(
+        accessToken,
+        lastTeamId
+      );
+    } catch (e) {
+      console.warn("[Teams] Failed to fetch continuation page, stopping pagination:", e);
+      break;
+    }
     console.log(
       "[Teams] Found more teams",
       teamsDataResponse.length,

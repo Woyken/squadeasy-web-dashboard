@@ -986,6 +986,40 @@ export async function getTeamPointsByRange(start: Date, end: Date) {
   return result.rows;
 }
 
+export async function getUserActivityVisibilityByRange(
+  userId: string,
+  start: Date,
+  end: Date
+) {
+  const result = await db.execute<UserActivityVisibilityRow>(sql`
+    WITH main_rows AS (
+      SELECT time, user_id, is_activity_public
+      FROM user_activity_visibility
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_row AS (
+      SELECT DISTINCT ON (user_id) time, user_id, is_activity_public
+      FROM user_activity_visibility
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, "time" DESC
+    ),
+    after_row AS (
+      SELECT DISTINCT ON (user_id) time, user_id, is_activity_public
+      FROM user_activity_visibility
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, "time" ASC
+    )
+    SELECT * FROM before_row
+    UNION ALL
+    SELECT * FROM main_rows
+    UNION ALL
+    SELECT * FROM after_row
+    ORDER BY "time" ASC;
+  `);
+
+  return result.rows;
+}
+
 export async function getUsersPointsByRange(
   userId: string,
   start: Date,

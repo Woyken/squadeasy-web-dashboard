@@ -23,6 +23,7 @@ import {
   getStoredUserPointsPage,
   getTeamPointsByRange,
   getTeamMembershipsByRange,
+  getUserActivityVisibilityByRange,
   getUsersActivityPointsByRange,
   getUsersPointsByRange,
   testDbConnection,
@@ -125,6 +126,12 @@ const userActivityPointsResponseItemSchema = z.object({
   time: dateTimeStringSchema,
   value: z.number(),
   points: z.number(),
+});
+
+const userActivityVisibilityResponseItemSchema = z.object({
+  userId: z.string(),
+  time: dateTimeStringSchema,
+  isActivityPublic: z.boolean(),
 });
 
 const teamMembershipResponseItemSchema = z.object({
@@ -778,6 +785,53 @@ fastify.after(() => {
             userId: x.user_id,
             time: new Date(x.time).toISOString(),
             points: x.points,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/:userId/activity-visibility",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get a user's activity visibility history",
+        security: bearerAuthSecurity,
+        params: userParamsSchema,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(userActivityVisibilityResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      const { userId } = request.params;
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getUserActivityVisibilityByRange(userId, start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            isActivityPublic: x.is_activity_public,
           }))
         );
       } catch (error: unknown) {

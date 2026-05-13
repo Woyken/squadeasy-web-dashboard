@@ -4,6 +4,7 @@ import {
     getHistoricalUserActivityPointsQueryOptions,
     getHistoricalUserPointsQueryOptions,
     getMyChallengeQueryOptions,
+    getUserActivityVisibilityQueryOptions,
     getUserByIdQueryOptions,
     getUserStatisticsQueryOptions,
     useGetUserToken,
@@ -240,6 +241,16 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         ),
     );
 
+    const visibilityQuery = useQuery(() =>
+        getUserActivityVisibilityQueryOptions(
+            () => props.userId,
+            () => timeWindow().start,
+            () => timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
+    );
+
     const actColors: Record<string, string> = {
         walk: "#000",
         statistic_walk: "#333",
@@ -251,6 +262,55 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         mission: "#00aaaa",
     };
 
+    const privateMarkAreas = createMemo(() => {
+        const raw = visibilityQuery.data ?? [];
+        if (raw.length === 0) return [];
+
+        const areas: [{ xAxis: number }, { xAxis: number }][] = [];
+        let privateStart: number | null = null;
+
+        for (const entry of raw) {
+            const ts = new Date(entry.time).getTime();
+            if (!entry.isActivityPublic && privateStart === null) {
+                privateStart = ts;
+            } else if (entry.isActivityPublic && privateStart !== null) {
+                areas.push([{ xAxis: privateStart }, { xAxis: ts }]);
+                privateStart = null;
+            }
+        }
+
+        // If still private at the end of the range, close with the window end
+        if (privateStart !== null) {
+            areas.push([{ xAxis: privateStart }, { xAxis: timeWindow().end }]);
+        }
+
+        return areas;
+    });
+
+    const markAreaConfig = createMemo(() => {
+        const areas = privateMarkAreas();
+        if (areas.length === 0) return undefined;
+
+        return {
+            silent: true,
+            itemStyle: {
+                color: "rgba(0, 0, 0, 0.06)",
+                borderColor: "rgba(0, 0, 0, 0.15)",
+                borderWidth: 1,
+                borderType: "dashed" as const,
+            },
+            label: {
+                show: true,
+                position: "insideTop" as const,
+                formatter: "PRIVATE",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: 9,
+                color: "rgba(0, 0, 0, 0.35)",
+            },
+            data: areas,
+        };
+    });
+
     const pointsChartOptions = createMemo(() => {
         const raw = histQuery.data ?? [];
         const byActivity: Record<string, { t: number; p: number }[]> = {};
@@ -261,13 +321,15 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             byActivity[key]!.push({ t: ts, p: entry.points });
         }
 
-        const series = Object.entries(byActivity).map(([actId, data]) => ({
+        const mark = markAreaConfig();
+        const series = Object.entries(byActivity).map(([actId, data], i) => ({
             name: actId,
             type: "line" as const,
             areaStyle: { opacity: 0.3 },
             data: data.sort((a, b) => a.t - b.t).map((d) => [d.t, d.p]),
             lineStyle: { color: actColors[actId] ?? "#888", width: 2 },
             itemStyle: { color: actColors[actId] ?? "#888" },
+            ...(i === 0 && mark ? { markArea: mark } : {}),
         }));
 
         return {
@@ -296,11 +358,13 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             byActivity[key]!.push({ t: ts, v: entry.value });
         }
 
-        const series = Object.entries(byActivity).map(([actId, data]) => ({
+        const mark = markAreaConfig();
+        const series = Object.entries(byActivity).map(([actId, data], i) => ({
             name: actId,
             type: "line" as const,
             data: data.sort((a, b) => a.t - b.t).map((d) => [d.t, d.v]),
             itemStyle: { color: actColors[actId] ?? "#888" },
+            ...(i === 0 && mark ? { markArea: mark } : {}),
         }));
 
         return {

@@ -26,6 +26,7 @@ export const Route = createFileRoute("/users-points")({
 
 function UsersPointsPage() {
     const search = Route.useSearch();
+    const navigate = Route.useNavigate();
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
     const challengeQuery = useQuery(() =>
@@ -123,9 +124,7 @@ function UsersPointsPage() {
                   .sort((a, b) => b.points - a.points) ?? []),
     );
 
-    const [expandedTeamId, setExpandedTeamId] = createSignal<string | null>(
-        search().teamId || null,
-    );
+    const expandedTeamId = createMemo(() => search().teamId || null);
 
     return (
         <main class="mx-auto max-w-[90vw] px-5 pb-20 pt-6 font-mono">
@@ -146,11 +145,17 @@ function UsersPointsPage() {
                                 <div class="border-2 border-black -mt-0.5">
                                     <button
                                         class={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors ${isExpanded() ? "bg-black text-white" : "bg-white hover:bg-(--color-brut-light)"}`}
-                                        onClick={() =>
-                                            setExpandedTeamId((prev) =>
-                                                prev === team.id ? null : team.id,
-                                            )
-                                        }
+                                        onClick={() => {
+                                            const nextTeamId =
+                                                expandedTeamId() === team.id
+                                                    ? ""
+                                                    : team.id;
+                                            void navigate({
+                                                to: "/users-points",
+                                                search: { teamId: nextTeamId },
+                                                replace: true,
+                                            });
+                                        }}
                                     >
                                         <div class="flex items-center gap-3">
                                             <span class={`text-sm font-bold ${isExpanded() ? "text-(--color-brut-red)" : "text-(--color-brut-gray)"}`}>

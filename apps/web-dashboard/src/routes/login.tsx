@@ -4,13 +4,20 @@ import { useLoginMutation } from "~/api/client";
 import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { Avatar } from "~/components/Avatar";
 import { UserLoader } from "~/components/UserLoader";
+import * as v from "valibot";
+
+const loginSearchSchema = v.object({
+    redirect: v.optional(v.string(), ""),
+});
 
 export const Route = createFileRoute("/login")({
     component: LoginPage,
+    validateSearch: loginSearchSchema,
 });
 
 function LoginPage() {
     const navigate = useNavigate();
+    const search = Route.useSearch();
     const usersTokens = useUsersTokens();
     const loginMutation = useLoginMutation();
     const [email, setEmail] = createSignal("");
@@ -32,7 +39,7 @@ function LoginPage() {
                 email: email(),
                 password: pass(),
             });
-            navigate({ to: "/" });
+            navigate({ to: search().redirect || "/" });
         } catch (e) {
             setError(
                 `AUTH_FAILED: ${e instanceof Error ? e.message : "UNKNOWN_ERROR"}`,
@@ -40,7 +47,7 @@ function LoginPage() {
         }
     };
 
-    const goToDashboard = () => navigate({ to: "/" });
+    const goToDashboard = () => navigate({ to: search().redirect || "/" });
 
     return (
         <main class="grid min-h-[calc(100vh-48px)] place-items-center bg-white p-6">

@@ -19,12 +19,17 @@ import { useInfiniteQuery, useQuery } from "@tanstack/solid-query";
 import {
     getDefaultHistoricalTimeWindow,
 } from "~/utils/timeRange";
-import { useUsersTokens } from "~/components/UsersTokensProvider";
 import { useMainUser } from "~/components/MainUserProvider";
-import { createFileRoute } from "@tanstack/solid-router";
+import { createFileRoute, redirect } from "@tanstack/solid-router";
+import { hasStoredUserTokens } from "~/utils/localStorage";
 
 export const Route = createFileRoute("/")({
     component: DashboardPage,
+    beforeLoad: ({ location }) => {
+        if (!hasStoredUserTokens()) {
+            throw redirect({ to: "/login", search: { redirect: location.href } });
+        }
+    },
 });
 
 type ChallengePhase = "upcoming" | "active" | "ended";
@@ -32,10 +37,6 @@ type ChallengePhase = "upcoming" | "active" | "ended";
 function DashboardPage() {
     const navigate = Route.useNavigate();
     const mainUser = useMainUser();
-    const users = useUsersTokens();
-    createEffect(() => {
-        if (users().tokens.size === 0) navigate({ to: "/login" });
-    });
 
     const getToken = useGetUserToken(mainUser.mainUserId);
     const challengeQuery = useQuery(() =>

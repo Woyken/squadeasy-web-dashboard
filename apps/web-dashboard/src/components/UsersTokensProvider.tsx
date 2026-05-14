@@ -6,8 +6,7 @@ import {
   type JSX,
   type Accessor,
 } from "solid-js";
-
-const STORAGE_KEY = "sqe_user_tokens";
+import { USER_TOKENS_KEY } from "~/utils/localStorage";
 
 interface TokenPair {
   accessToken: string;
@@ -24,7 +23,7 @@ const UsersTokensContext = createContext<Accessor<UsersTokensValue>>();
 
 function loadTokensFromStorage(): Map<string, TokenPair> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(USER_TOKENS_KEY);
     if (!raw) return new Map();
     const obj = JSON.parse(raw) as Record<string, TokenPair>;
     return new Map(Object.entries(obj));
@@ -35,7 +34,7 @@ function loadTokensFromStorage(): Map<string, TokenPair> {
 
 function saveTokensToStorage(tokens: Map<string, TokenPair>) {
   const obj = Object.fromEntries(tokens);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  localStorage.setItem(USER_TOKENS_KEY, JSON.stringify(obj));
 }
 
 export function UsersTokensProvider(props: { children: JSX.Element }) {

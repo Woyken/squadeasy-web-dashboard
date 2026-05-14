@@ -14,11 +14,17 @@ import {
 import { useQuery } from "@tanstack/solid-query";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
 import { useMainUser } from "~/components/MainUserProvider";
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createFileRoute, Link, redirect } from "@tanstack/solid-router";
+import { hasStoredUserTokens } from "~/utils/localStorage";
 import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
 
 export const Route = createFileRoute("/teams-dashboard")({
     component: TeamsDashboardPage,
+    beforeLoad: ({ location }) => {
+        if (!hasStoredUserTokens()) {
+            throw redirect({ to: "/login", search: { redirect: location.href } });
+        }
+    },
 });
 
 type ChallengePhase = "upcoming" | "active" | "ended";

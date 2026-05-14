@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { Link, Outlet, createRootRoute } from "@tanstack/solid-router";
+import { Link, Outlet, createRootRoute, useNavigate } from "@tanstack/solid-router";
 import {
     UsersTokensProvider,
     useUsersTokens,
@@ -74,6 +74,7 @@ function RootComponent() {
 
 function NavigationBar() {
     const usersTokens = useUsersTokens();
+    const navigate = useNavigate();
     const { mainUserId, setMainUserId } = useMainUser();
     const toaster = useToaster();
     const [menuOpen, setMenuOpen] = createSignal(false);
@@ -292,6 +293,7 @@ function NavigationBar() {
                                         for (const uid of userIds()) {
                                             usersTokens().removeToken(uid);
                                         }
+                                        navigate({ to: "/login" });
                                     }}
                                 >
                                     [LOGOUT_ALL]

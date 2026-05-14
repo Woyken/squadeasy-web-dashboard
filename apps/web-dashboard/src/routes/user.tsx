@@ -1,5 +1,7 @@
 import { createSignal, createMemo, For, Show, Suspense } from "solid-js";
-import { createFileRoute, Link } from "@tanstack/solid-router";
+import { createFileRoute, Link, redirect } from "@tanstack/solid-router";
+import { hasStoredUserTokens } from "~/utils/localStorage";
+import * as v from "valibot";
 import {
     getHistoricalUserActivityPointsQueryOptions,
     getHistoricalUserPointsQueryOptions,
@@ -15,11 +17,18 @@ import { getUserDisplayName, getUserInitials } from "~/getUserDisplayName";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
 import { BrutChart, brutTip, brutAxis, brutGrid, brutZoom } from "~/components/BrutChart";
 
+const userSearchSchema = v.object({
+    id: v.optional(v.string(), ""),
+});
+
 export const Route = createFileRoute("/user")({
     component: UserPage,
-    validateSearch: (search: Record<string, unknown>) => ({
-        id: (search.id as string) ?? "",
-    }),
+    validateSearch: userSearchSchema,
+    beforeLoad: ({ location }) => {
+        if (!hasStoredUserTokens()) {
+            throw redirect({ to: "/login", search: { redirect: location.href } });
+        }
+    },
 });
 
 function UserPage() {

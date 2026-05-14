@@ -1,5 +1,7 @@
 import { createEffect, createMemo, createSignal, For, Show, Suspense } from "solid-js";
-import { createFileRoute, Link, useNavigate } from "@tanstack/solid-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/solid-router";
+import { hasStoredUserTokens } from "~/utils/localStorage";
+import * as v from "valibot";
 import {
     getHistoricalTeamMembershipsQueryOptions,
     getHistoricalTeamPointsQueryOptions,
@@ -17,11 +19,18 @@ import { useMainUser } from "~/components/MainUserProvider";
 import { BrutChart, brutAxis, brutGrid, brutTip, brutZoom } from "~/components/BrutChart";
 import { getDefaultHistoricalTimeWindow } from "~/utils/timeRange";
 
+const usersPointsSearchSchema = v.object({
+    teamId: v.optional(v.string(), ""),
+});
+
 export const Route = createFileRoute("/users-points")({
     component: UsersPointsPage,
-    validateSearch: (search: Record<string, unknown>) => ({
-        teamId: (search.teamId as string) ?? "",
-    }),
+    validateSearch: usersPointsSearchSchema,
+    beforeLoad: ({ location }) => {
+        if (!hasStoredUserTokens()) {
+            throw redirect({ to: "/login", search: { redirect: location.href } });
+        }
+    },
 });
 
 function UsersPointsPage() {

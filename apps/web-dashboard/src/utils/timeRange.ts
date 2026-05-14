@@ -1,5 +1,3 @@
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-
 export function clampRangeToNow(
     start: number,
     end: number,
@@ -25,7 +23,7 @@ export function getDefaultHistoricalTimeWindow(
     now = Date.now(),
 ) {
     const end = Math.min(challengeEnd, now);
-    const start = Math.min(Math.max(challengeStart, end - DAY_IN_MS), end);
+    const start = Math.min(challengeStart, end);
 
     return { start, end };
 }

@@ -1,7 +1,10 @@
 import {
+    createEffect,
     createMemo,
+    createSignal,
     Show,
     Suspense,
+    untrack,
 } from "solid-js";
 import {
     getHistoricalTeamPointsQueryOptions,
@@ -58,15 +61,21 @@ function TeamsDashboardPage() {
     const teamsQuery = useQuery(() =>
         getSeasonRankingQueryOptions(getToken, () => !!mainUser.mainUserId()),
     );
-    const historicalTimeWindow = createMemo(() => {
+    const baseTimeWindow = createMemo(() => {
         const startAt = startAtTimestamp() ?? Date.now() - 86400000;
         const endAt = endAtTimestamp() ?? Date.now();
         return getDefaultHistoricalTimeWindow(startAt, endAt);
     });
+    const [zoomedTimeWindow, setZoomedTimeWindow] = createSignal<{ start: number; end: number } | null>(null);
+    const chartTimeWindow = createMemo(() => zoomedTimeWindow() ?? baseTimeWindow());
+    createEffect(() => {
+        startAtTimestamp(); endAtTimestamp();
+        untrack(() => setZoomedTimeWindow(null));
+    });
     const historicalTeamPointsQuery = useQuery(() =>
         getHistoricalTeamPointsQueryOptions(
-            () => historicalTimeWindow().start,
-            () => historicalTimeWindow().end,
+            () => chartTimeWindow().start,
+            () => chartTimeWindow().end,
             getToken,
             () => !!mainUser.mainUserId(),
         ),
@@ -127,6 +136,8 @@ function TeamsDashboardPage() {
                             historicalPoints={historicalTeamPointsQuery.data ?? []}
                             teams={sortedTeams()}
                             currentSnapshotTime={teamsQuery.data?.time ?? Date.now()}
+                            timeWindow={chartTimeWindow()}
+                            onZoom={setZoomedTimeWindow}
                         />
                     </Show>
                 </Suspense>
@@ -142,6 +153,8 @@ function TeamScoreChart(props: {
     startAt: number;
     teams: { id: string; name: string; points: number }[];
     currentSnapshotTime: number;
+    timeWindow: { start: number; end: number };
+    onZoom: (range: { start: number; end: number }) => void;
 }) {
     const teamColors = [
         "#000", "#ff0000", "#0000ff", "#008800", "#ff8800", "#8800ff",
@@ -215,9 +228,9 @@ function TeamScoreChart(props: {
             },
             yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
             series,
-            dataZoom: brutZoom(),
+            dataZoom: brutZoom(props.timeWindow.start, props.timeWindow.end),
         };
     });
 
-    return <BrutChart options={chartOptions()} height="calc(100vh - 250px)" />;
+    return <BrutChart options={chartOptions()} height="calc(100vh - 250px)" onZoom={props.onZoom} />;
 }

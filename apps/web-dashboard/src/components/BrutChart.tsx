@@ -6,18 +6,42 @@ interface BrutChartProps {
   height?: string;
   class?: string;
   style?: JSX.CSSProperties;
+  onZoom?: (range: { start: number; end: number }) => void;
 }
 
 /** Brutalist-styled ECharts wrapper with SVG renderer (Firefox-safe) */
 export function BrutChart(props: BrutChartProps) {
   let container!: HTMLDivElement;
   let chart: echarts.ECharts | undefined;
+  // Prevents the dataZoom event fired by setOption from re-triggering onZoom
+  let suppressZoom = false;
+  let zoomDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
     requestAnimationFrame(() => {
       if (!container) return;
       chart = echarts.init(container, undefined, { renderer: "svg" });
       chart.setOption(props.options);
+
+      if (props.onZoom) {
+        chart.on("dataZoom", () => {
+          if (suppressZoom) return;
+          clearTimeout(zoomDebounceTimer);
+          zoomDebounceTimer = setTimeout(() => {
+            const dzArr = (chart!.getOption().dataZoom as any[] | undefined);
+            if (!dzArr) return;
+            const dz =
+              dzArr.find((d) => d.type === "slider" && d.startValue != null) ??
+              dzArr.find((d) => d.startValue != null);
+            if (!dz) return;
+            const start = Math.floor(dz.startValue);
+            const end = Math.floor(dz.endValue);
+            if (isFinite(start) && isFinite(end)) {
+              props.onZoom!({ start, end });
+            }
+          }, 400);
+        });
+      }
 
       const ro = new ResizeObserver(() => {
         if (container.clientWidth > 0 && container.clientHeight > 0) {
@@ -27,6 +51,7 @@ export function BrutChart(props: BrutChartProps) {
       ro.observe(container);
 
       onCleanup(() => {
+        clearTimeout(zoomDebounceTimer);
         ro.disconnect();
         chart?.dispose();
       });
@@ -36,7 +61,11 @@ export function BrutChart(props: BrutChartProps) {
   createEffect(() => {
     const opts = props.options;
     if (chart && opts) {
-      chart.setOption(opts, { notMerge: true });
+      suppressZoom = true;
+      // replaceMerge updates series in-place (no disappear), animation: false
+      // prevents re-animation on every data/zoom update
+      chart.setOption({ ...opts, animation: false }, { replaceMerge: ["series"] });
+      suppressZoom = false;
     }
   });
 
@@ -87,12 +116,20 @@ export function brutGrid() {
   };
 }
 
-/** Standard brutalist dataZoom config */
-export function brutZoom(): echarts.EChartsOption["dataZoom"] {
+/** Standard brutalist dataZoom config.
+ * Pass startValue/endValue (timestamps) to preserve zoom position across option updates. */
+export function brutZoom(
+  startValue?: number,
+  endValue?: number,
+): echarts.EChartsOption["dataZoom"] {
+  const range =
+    startValue != null && endValue != null ? { startValue, endValue } : {};
   return [
-    { type: "inside" as const },
+    { type: "inside" as const, filterMode: "none" as const, ...range },
     {
       type: "slider" as const,
+      filterMode: "none" as const,
+      ...range,
       height: 16,
       borderColor: "#000",
       backgroundColor: "#f0f0f0",

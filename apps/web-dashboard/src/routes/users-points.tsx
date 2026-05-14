@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show, Suspense } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show, Suspense, untrack } from "solid-js";
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/solid-router";
 import { hasStoredUserTokens } from "~/utils/localStorage";
 import * as v from "valibot";
@@ -240,15 +240,24 @@ function TeamDetail(props: { teamId: string }) {
         return end ? new Date(end).getTime() : Date.now();
     });
 
-    const timeWindow = createMemo(() =>
+    const baseTimeWindow = createMemo(() =>
         getDefaultHistoricalTimeWindow(startAt(), endsAt()),
     );
+    const [zoomedTimeWindow, setZoomedTimeWindow] = createSignal<{ start: number; end: number } | null>(null);
+    const chartTimeWindow = createMemo(() =>
+        zoomedTimeWindow() ?? baseTimeWindow(),
+    );
+    // Reset zoom when the challenge dates change (e.g. on first load)
+    createEffect(() => {
+        startAt(); endsAt();
+        untrack(() => setZoomedTimeWindow(null));
+    });
 
     const membershipsQuery = useQuery(() =>
         getHistoricalTeamMembershipsQueryOptions(
             () => props.teamId,
-            () => timeWindow().start,
-            () => timeWindow().end,
+            () => baseTimeWindow().start,
+            () => baseTimeWindow().end,
             getToken,
             () => !!mainUser.mainUserId(),
         ),
@@ -259,17 +268,26 @@ function TeamDetail(props: { teamId: string }) {
     );
     const userIds = createMemo(() => users().map((user) => user.userId));
 
+    // List queries: always use full challenge range — scores never change on zoom
     const userPointsQueries = useHistoricalUserPointsQueries(
         userIds,
-        () => timeWindow().start,
-        () => timeWindow().end,
+        () => baseTimeWindow().start,
+        () => baseTimeWindow().end,
+    );
+    // Chart queries: use the zoomed range for more granular datapoints
+    const chartPointsQueries = useHistoricalUserPointsQueries(
+        userIds,
+        () => chartTimeWindow().start,
+        () => chartTimeWindow().end,
+    );
+    const chartPointsHistoryByUserId = createMemo(() =>
+        new Map(userIds().map((id, i) => [id, chartPointsQueries[i]?.data ?? []] as const)),
     );
     const scoredUsers = createMemo(() =>
         users()
             .map((user, i) => ({
                 ...user,
                 score: getLatestHistoricalPoints(userPointsQueries[i]?.data ?? []),
-                pointsHistory: userPointsQueries[i]?.data ?? [],
             }))
             .sort(
                 (a, b) =>
@@ -290,7 +308,7 @@ function TeamDetail(props: { teamId: string }) {
         const series = scoredUsers()
             .map((user, i) => {
                 const data = buildMembershipSeriesData(
-                    user.pointsHistory,
+                    chartPointsHistoryByUserId().get(user.userId) ?? [],
                     user.intervals,
                 );
 
@@ -322,10 +340,10 @@ function TeamDetail(props: { teamId: string }) {
                 type: "scroll" as const,
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
-            xAxis: { type: "time" as const, ...brutAxis() },
+            xAxis: { type: "time" as const, min: startAt(), max: endsAt(), ...brutAxis() },
             yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
             series,
-            dataZoom: brutZoom(),
+            dataZoom: brutZoom(chartTimeWindow().start, chartTimeWindow().end),
         };
     });
 
@@ -420,7 +438,7 @@ function TeamDetail(props: { teamId: string }) {
                             </div>
                         }
                     >
-                        <BrutChart options={chartOptions()} height="300px" />
+                        <BrutChart options={chartOptions()} height="300px" onZoom={setZoomedTimeWindow} />
                     </Show>
                 </div>
             </div>

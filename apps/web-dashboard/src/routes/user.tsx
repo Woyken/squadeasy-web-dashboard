@@ -234,7 +234,7 @@ function getLatestHistoricalActivities(
 }
 
 function ActivityCharts(props: { userId: string; startAt: number; endsAt: number }) {
-    const [timeWindow] = createSignal(
+    const [timeWindow, setTimeWindow] = createSignal(
         getDefaultHistoricalTimeWindow(props.startAt, props.endsAt),
     );
     const mainUser = useMainUser();
@@ -350,10 +350,10 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 type: "scroll" as const,
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
-            xAxis: { type: "time" as const, ...brutAxis() },
+            xAxis: { type: "time" as const, min: props.startAt, max: props.endsAt, ...brutAxis() },
             yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
             series,
-            dataZoom: brutZoom(),
+            dataZoom: brutZoom(timeWindow().start, timeWindow().end),
         };
     });
 
@@ -385,10 +385,10 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 type: "scroll" as const,
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
-            xAxis: { type: "time" as const, ...brutAxis() },
+            xAxis: { type: "time" as const, min: props.startAt, max: props.endsAt, ...brutAxis() },
             yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
             series,
-            dataZoom: brutZoom(),
+            dataZoom: brutZoom(timeWindow().start, timeWindow().end),
         };
     });
 
@@ -405,7 +405,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                             </div>
                         }
                     >
-                        <BrutChart options={pointsChartOptions()} height="300px" />
+                        <BrutChart options={pointsChartOptions()} height="300px" onZoom={setTimeWindow} />
                     </Show>
                 </div>
             </div>
@@ -421,7 +421,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                             </div>
                         }
                     >
-                        <BrutChart options={valuesChartOptions()} height="300px" />
+                        <BrutChart options={valuesChartOptions()} height="300px" onZoom={setTimeWindow} />
                     </Show>
                 </div>
             </div>

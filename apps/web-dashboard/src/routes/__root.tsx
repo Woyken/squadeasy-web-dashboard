@@ -226,6 +226,13 @@ function NavigationBar() {
                                                         </Show>
                                                     )}
                                                 </UserLoader>
+                                                <Link
+                                                    to="/settings"
+                                                    search={{ userId }}
+                                                    class="shrink-0 border border-(--color-brut-light) px-1.5 py-0.5 text-[9px] tracking-wider text-(--color-brut-dim) no-underline hover:border-black hover:text-black"
+                                                >
+                                                    SETTINGS
+                                                </Link>
                                                 <Show
                                                     when={isMain()}
                                                     fallback={

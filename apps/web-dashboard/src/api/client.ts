@@ -591,16 +591,19 @@ export function getUserStatisticsQueryOptions(
 export function getSocialPostsQueryOptions(
     userId: Accessor<string>,
     getToken: () => Promise<string | undefined>,
-    sincePostId?: Accessor<string | undefined>,
+    dateCursor?: Accessor<string | undefined>,
     refetchIntervalInBackground?: Accessor<number>,
     enabled?: Accessor<boolean>,
 ) {
     return queryOptions({
-        queryKey: ["/api/3.0/social/posts", userId(), sincePostId?.()],
+        queryKey: ["/api/4.0/social/posts", userId(), dateCursor?.()],
         queryFn: async () => {
             const token = await getToken();
             if (!token) throw new Error(`token missing for user ${userId()}`);
             const result = await squadEasyClient.GET("/api/4.0/social/posts", {
+                params: {
+                    query: dateCursor?.() ? { date: dateCursor() } : undefined,
+                },
                 headers: {
                     authorization: `Bearer ${token}`,
                 },
@@ -609,11 +612,10 @@ export function getSocialPostsQueryOptions(
                 throw new Error(
                     `Request failed ${JSON.stringify(result.error)}`,
                 );
-            return result.data.elements ?? [];
+            return result.data;
         },
-        staleTime:
-            sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
-        gcTime: sincePostId?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
+        staleTime: dateCursor?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
+        gcTime: dateCursor?.() === undefined ? 5 * 60 * 1000 : 30 * 60 * 1000,
         refetchInterval: refetchIntervalInBackground?.(),
         refetchIntervalInBackground: !!refetchIntervalInBackground,
         enabled: !!userId() && (enabled?.() ?? true),

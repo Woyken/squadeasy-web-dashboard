@@ -150,3 +150,25 @@ export const latestUserProfiles = pgTable(
   },
   (table) => [index("ix_latest_user_profiles_team_id").on(table.teamId)]
 );
+
+export const boostDonors = pgTable("boost_donors", {
+  userId: text("user_id").primaryKey(),
+  refreshToken: text("refresh_token").notNull(),
+  fallbackMode: text("fallback_mode").notNull().default("none"),
+  registeredAt: timestamp("registered_at", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+});
+
+export const boostRequests = pgTable("boost_requests", {
+  userId: text("user_id").primaryKey(),
+  boostByDeadline: timestamp("boost_by_deadline", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+  createdAt: timestamp("created_at", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+});

@@ -651,41 +651,6 @@ export function useLikePostMutation(userId: Accessor<string>) {
     }));
 }
 
-export function useBoostMutation(userId: Accessor<string>) {
-    const client = useQueryClient();
-    const getUserToken = useGetUserToken(userId);
-    return useMutation(() => ({
-        mutationFn: async (targetUserId: string) => {
-            const accessToken = await getUserToken();
-            if (!accessToken)
-                throw new Error(`token missing for user ${userId()}`);
-            const boostResult = await squadEasyClient.POST(
-                "/api/2.0/users/{id}/boost",
-                {
-                    params: {
-                        path: {
-                            id: targetUserId,
-                        },
-                    },
-                    headers: {
-                        authorization: `Bearer ${accessToken}`,
-                    },
-                },
-            );
-            if (boostResult.response.status >= 400)
-                throw new Error(
-                    `Boost failed ${JSON.stringify(boostResult.error)}`,
-                );
-            return boostResult.data;
-        },
-        onSuccess: () => {
-            client.invalidateQueries({
-                queryKey: getMyTeamQueryOptions(userId, getUserToken).queryKey,
-            });
-        },
-    }));
-}
-
 export function useGetUserToken(userId: Accessor<string | undefined>) {
     const usersTokens = useUsersTokens();
     const token = createMemo(() => {
@@ -1095,4 +1060,189 @@ export function getUserActivityVisibilityQueryOptions(
         enabled: typeof window !== "undefined" && (enabled?.() ?? true),
         placeholderData: keepPreviousData,
     });
+}
+
+// ─── Boost API ────────────────────────────────────────────────────────
+
+export type BoostDonorStatus = {
+    userId: string;
+    fallbackMode: string;
+    registeredAt: string;
+} | null;
+
+export type BoostRequestStatus = {
+    userId: string;
+    boostByDeadline: string;
+    createdAt: string;
+} | null;
+
+export type BoostTeamStatus = {
+    donors: { userId: string; fallbackMode: string }[];
+    requests: { userId: string; boostByDeadline: string }[];
+};
+
+async function boostApiFetch<T>(
+    path: string,
+    accessToken: string,
+    options?: RequestInit,
+): Promise<T> {
+    const headers = new Headers(options?.headers);
+
+    if (options?.body != null) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            ...Object.fromEntries(headers.entries()),
+        },
+    });
+    if (res.status === 204) return undefined as T;
+    if (!res.ok) {
+        const err: any = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error ?? `Request failed: ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+}
+
+export function getBoostDonorStatusQueryOptions(
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["boost", "donor", "status"],
+        queryFn: async () => {
+            const token = await getToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<BoostDonorStatus>(
+                "/api/v1/boost/donor/status",
+                token,
+            );
+        },
+        enabled: enabled?.() ?? true,
+    });
+}
+
+export function getBoostRequestQueryOptions(
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["boost", "request"],
+        queryFn: async () => {
+            const token = await getToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<BoostRequestStatus>(
+                "/api/v1/boost/request",
+                token,
+            );
+        },
+        enabled: enabled?.() ?? true,
+    });
+}
+
+export function getBoostTeamStatusQueryOptions(
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["boost", "team", "status"],
+        queryFn: async () => {
+            const token = await getToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<BoostTeamStatus>(
+                "/api/v1/boost/team/status",
+                token,
+            );
+        },
+        staleTime: 1000 * 30,
+        enabled: enabled?.() ?? true,
+    });
+}
+
+export function useBoostDonorRegisterMutation(userId: Accessor<string>) {
+    const client = useQueryClient();
+    const usersTokens = useUsersTokens();
+    return useMutation(() => ({
+        mutationFn: async (variables: {
+            fallbackMode: "none" | "top_points";
+        }) => {
+            const tokenData = usersTokens().tokens.get(userId());
+            if (!tokenData) throw new Error("Missing token for user");
+            return boostApiFetch<NonNullable<BoostDonorStatus>>(
+                "/api/v1/boost/donor/register",
+                tokenData.accessToken,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        refreshToken: tokenData.refreshToken,
+                        fallbackMode: variables.fallbackMode,
+                    }),
+                },
+            );
+        },
+        onSuccess: () => {
+            client.invalidateQueries({ queryKey: ["boost"] });
+        },
+    }));
+}
+
+export function useBoostDonorUnregisterMutation(userId: Accessor<string>) {
+    const client = useQueryClient();
+    const getUserToken = useGetUserToken(userId);
+    return useMutation(() => ({
+        mutationFn: async () => {
+            const token = await getUserToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<void>("/api/v1/boost/donor", token, {
+                method: "DELETE",
+            });
+        },
+        onSuccess: () => {
+            client.invalidateQueries({ queryKey: ["boost"] });
+        },
+    }));
+}
+
+export function useBoostRequestMutation(userId: Accessor<string>) {
+    const client = useQueryClient();
+    const getUserToken = useGetUserToken(userId);
+    return useMutation(() => ({
+        mutationFn: async (variables: { boostByDeadline: string }) => {
+            const token = await getUserToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<NonNullable<BoostRequestStatus>>(
+                "/api/v1/boost/request",
+                token,
+                {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        boostByDeadline: variables.boostByDeadline,
+                    }),
+                },
+            );
+        },
+        onSuccess: () => {
+            client.invalidateQueries({ queryKey: ["boost"] });
+        },
+    }));
+}
+
+export function useBoostRequestCancelMutation(userId: Accessor<string>) {
+    const client = useQueryClient();
+    const getUserToken = useGetUserToken(userId);
+    return useMutation(() => ({
+        mutationFn: async () => {
+            const token = await getUserToken();
+            if (!token) throw new Error("Missing token");
+            return boostApiFetch<void>("/api/v1/boost/request", token, {
+                method: "DELETE",
+            });
+        },
+        onSuccess: () => {
+            client.invalidateQueries({ queryKey: ["boost"] });
+        },
+    }));
 }

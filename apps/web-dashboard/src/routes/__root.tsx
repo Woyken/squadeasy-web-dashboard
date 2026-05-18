@@ -5,7 +5,6 @@ import {
     useUsersTokens,
 } from "~/components/UsersTokensProvider";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/solid-query";
-import { AutoBooster } from "~/components/AutoBooster";
 import { UsersAvatarsPreview } from "~/components/UsersAvatarsPreview";
 import { Avatar } from "~/components/Avatar";
 import { UserLoader } from "~/components/UserLoader";
@@ -57,15 +56,13 @@ function RootComponent() {
         <QueryClientProvider client={queryClient}>
             <UsersTokensProvider>
                 <MainUserProvider>
-                    <AutoBooster>
-                        <AutoLikeTeamPosts>
-                            <ToasterProvider>
-                                <RealtimePointsListener />
-                                <NavigationBar />
-                                <Outlet />
-                            </ToasterProvider>
-                        </AutoLikeTeamPosts>
-                    </AutoBooster>
+                    <AutoLikeTeamPosts>
+                        <ToasterProvider>
+                            <RealtimePointsListener />
+                            <NavigationBar />
+                            <Outlet />
+                        </ToasterProvider>
+                    </AutoLikeTeamPosts>
                 </MainUserProvider>
             </UsersTokensProvider>
         </QueryClientProvider>

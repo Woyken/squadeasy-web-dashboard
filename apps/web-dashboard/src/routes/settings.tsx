@@ -7,6 +7,7 @@ import { useMainUser } from "~/components/MainUserProvider";
 import { getUserDisplayName } from "~/getUserDisplayName";
 import { useGetUserToken, getMyUserQueryOptions } from "~/api/client";
 import { useQuery } from "@tanstack/solid-query";
+import { BoostSettings } from "~/components/BoostSettings";
 
 const settingsSearchSchema = v.object({
     userId: v.optional(v.string(), ""),
@@ -140,6 +141,9 @@ function SettingsPage() {
                     </div>
                 </Show>
             </div>
+
+            {/* Boost section */}
+            <BoostSettings userId={userId} />
         </main>
     );
 }

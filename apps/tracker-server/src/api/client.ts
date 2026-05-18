@@ -206,3 +206,22 @@ export async function mutationLogin(email: string, password: string) {
     refreshToken: loginResult.data.refreshToken,
   };
 }
+
+export async function mutationBoostUser(
+  accessToken: string,
+  targetUserId: string
+) {
+  const result = await squadEasyClient.POST("/api/2.0/users/{id}/boost", {
+    params: {
+      path: {
+        id: targetUserId,
+      },
+    },
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (result.response.status >= 400)
+    throw new Error(`Boost failed ${JSON.stringify(result.error)}`);
+  return result.data;
+}

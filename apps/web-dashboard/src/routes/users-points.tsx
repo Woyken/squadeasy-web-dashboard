@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/solid-ro
 import { hasStoredUserTokens } from "~/utils/localStorage";
 import * as v from "valibot";
 import {
+    getBoostTeamStatusQueryOptions,
     getHistoricalTeamMembershipsQueryOptions,
     getHistoricalTeamPointsQueryOptions,
     getMyChallengeQueryOptions,
@@ -283,6 +284,16 @@ function TeamDetail(props: { teamId: string }) {
     const chartPointsHistoryByUserId = createMemo(() =>
         new Map(userIds().map((id, i) => [id, chartPointsQueries[i]?.data ?? []] as const)),
     );
+    const boostStatusQuery = useQuery(() =>
+        getBoostTeamStatusQueryOptions(getToken, () => !!mainUser.mainUserId()),
+    );
+    const boostDonorIds = createMemo(() =>
+        new Set(boostStatusQuery.data?.donors.map((d) => d.userId) ?? []),
+    );
+    const boostRequestorIds = createMemo(() =>
+        new Set(boostStatusQuery.data?.requests.map((r) => r.userId) ?? []),
+    );
+
     const scoredUsers = createMemo(() =>
         users()
             .map((user, i) => ({
@@ -398,6 +409,16 @@ function TeamDetail(props: { teamId: string }) {
                                                         <Show when={!user.isCurrentMember}>
                                                             <span class="bg-(--color-brut-gray) px-1 py-0.5 text-[8px] font-bold text-white">
                                                                 LEFT
+                                                            </span>
+                                                        </Show>
+                                                        <Show when={boostDonorIds().has(user.userId)}>
+                                                            <span class="bg-green-700 px-1 py-0.5 text-[8px] font-bold text-white">
+                                                                DONOR
+                                                            </span>
+                                                        </Show>
+                                                        <Show when={boostRequestorIds().has(user.userId)}>
+                                                            <span class="bg-orange-600 px-1 py-0.5 text-[8px] font-bold text-white">
+                                                                BOOST REQ
                                                             </span>
                                                         </Show>
                                                     </div>

@@ -12,9 +12,9 @@ import {
 } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { pool } from "./database.ts";
+import { pool, db } from "./database.ts";
 import { isValidAccessToken } from "./api/accessToken.ts";
-import { mutationLogin } from "./api/client.ts";
+import { mutationLogin, mutationRefreshToken, queryMyTeam } from "./api/client.ts";
 import {
   getLatestTeamProfile,
   getLatestUserProfile,
@@ -38,6 +38,20 @@ import cors from "@fastify/cors";
 import httpProxy from "@fastify/http-proxy";
 import { subscribeToPointsStream } from "./realtime/pointsEvents.ts";
 import { parseJwt } from "./utils/parseJwt.ts";
+import {
+  getAllDonors,
+  getAllRequests,
+  getDonorByUserId,
+  getRequestByUserId,
+  registerDonor,
+  unregisterDonor,
+  upsertRequest,
+  deleteRequest,
+  startBoostService,
+  stopBoostService,
+} from "./services/boostService.ts";
+import { currentChallengeMetadata } from "./db/schema.ts";
+import { eq } from "drizzle-orm";
 
 const dateTimeStringSchema = z
   .iso.datetime({ offset: true })
@@ -346,6 +360,10 @@ fastify.register(FastifySwagger, {
         name: "Teams",
         description: "Team tracking endpoints.",
       },
+      {
+        name: "Boost",
+        description: "Boost donor and request management.",
+      },
     ],
   },
   transform: swaggerTransform,
@@ -380,6 +398,7 @@ fastify.register(cors, {
   origin(origin, callback) {
     callback(null, isAllowedCorsOrigin(origin));
   },
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 
 // Proxy all /squadeasy/proxy/* requests to the SquadEasy API, stripping the prefix
@@ -1193,6 +1212,405 @@ fastify.after(() => {
     }
   );
 
+  // ─── Boost Endpoints ───────────────────────────────────────────────
+
+  const boostDonorRegisterBodySchema = z.object({
+    refreshToken: z.string().min(1),
+    fallbackMode: z.enum(["none", "top_points"]).default("none"),
+  });
+
+  const boostRequestBodySchema = z.object({
+    boostByDeadline: dateTimeStringSchema,
+  });
+
+  const boostDonorResponseSchema = z.object({
+    userId: z.string(),
+    fallbackMode: z.string(),
+    registeredAt: dateTimeStringSchema,
+  });
+
+  const boostRequestResponseSchema = z.object({
+    userId: z.string(),
+    boostByDeadline: dateTimeStringSchema,
+    createdAt: dateTimeStringSchema,
+  });
+
+  const boostTeamStatusResponseSchema = z.object({
+    donors: z.array(
+      z.object({
+        userId: z.string(),
+        fallbackMode: z.string(),
+      })
+    ),
+    requests: z.array(
+      z.object({
+        userId: z.string(),
+        boostByDeadline: dateTimeStringSchema,
+      })
+    ),
+  });
+
+  async function authenticateBoostRequest(
+    request: { headers: { authorization?: string } },
+    reply: any,
+  ): Promise<{ token: string; userId: string } | null> {
+    if (!(await isValidAccessToken(request.headers.authorization))) {
+      await reply.code(401).send({ error: "Unauthorized" });
+      return null;
+    }
+    const token = request.headers.authorization!.replace("Bearer ", "");
+    const userId = parseJwt(token).id;
+    return { token, userId };
+  }
+
+  api.post(
+    "/api/v1/boost/donor/register",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Register as a Boost Donor",
+        description:
+          "Registers the authenticated user as a Boost Donor by storing their refresh token. The backend will use this to execute boosts on their behalf.",
+        security: bearerAuthSecurity,
+        body: boostDonorRegisterBodySchema,
+        response: {
+          200: boostDonorResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { token } = auth;
+
+      const { refreshToken: providedRefreshToken, fallbackMode } = request.body;
+
+      // Immediately consume the refresh token to validate it and get a real access token
+      let refreshedAccessToken: string;
+      let refreshedRefreshToken: string;
+      try {
+        const refreshResult = await mutationRefreshToken(token, providedRefreshToken);
+        refreshedAccessToken = refreshResult.accessToken;
+        refreshedRefreshToken = refreshResult.refreshToken;
+      } catch (error: unknown) {
+        console.error("Donor registration: refresh token is invalid", error);
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            { path: "refreshToken", message: "Refresh token is invalid or expired" },
+          ],
+        });
+        return;
+      }
+
+      // Validate the refreshed access token against the same challenge check
+      if (!(await isValidAccessToken(`Bearer ${refreshedAccessToken}`))) {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            { path: "refreshToken", message: "Refreshed token does not belong to a valid user in this challenge" },
+          ],
+        });
+        return;
+      }
+
+      // Use the user ID from the refreshed token
+      const donorUserId = parseJwt(refreshedAccessToken).id;
+
+      try {
+        await registerDonor(donorUserId, refreshedAccessToken, refreshedRefreshToken, fallbackMode);
+        const donor = await getDonorByUserId(donorUserId);
+        if (!donor) {
+          await reply.code(500).send({ error: "Failed to register donor." });
+          return;
+        }
+
+        await reply.code(200).send({
+          userId: donor.userId,
+          fallbackMode: donor.fallbackMode,
+          registeredAt: donor.registeredAt.toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error registering donor:", error);
+        await reply.code(500).send({ error: "Failed to register donor." });
+      }
+    }
+  );
+
+  api.delete(
+    "/api/v1/boost/donor",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Unregister as a Boost Donor",
+        security: bearerAuthSecurity,
+        response: {
+          204: z.void(),
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { userId } = auth;
+
+      try {
+        await unregisterDonor(userId);
+        await reply.code(204).send();
+      } catch (error: unknown) {
+        console.error("Error unregistering donor:", error);
+        await reply.code(500).send({ error: "Failed to unregister donor." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/boost/donor/status",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Get your Boost Donor registration status",
+        security: bearerAuthSecurity,
+        response: {
+          200: boostDonorResponseSchema.nullable(),
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { userId } = auth;
+
+      try {
+        const donor = await getDonorByUserId(userId);
+        if (!donor) {
+          await reply.code(200).send(null);
+          return;
+        }
+        await reply.code(200).send({
+          userId: donor.userId,
+          fallbackMode: donor.fallbackMode,
+          registeredAt: donor.registeredAt.toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error getting donor status:", error);
+        await reply.code(500).send({ error: "Failed to get donor status." });
+      }
+    }
+  );
+
+  api.put(
+    "/api/v1/boost/request",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Create or update your Boost Request",
+        description:
+          "Submits a request to be boosted by a deadline. One active request per user. Deadline must be in the future and at most 2 weeks or end of challenge away.",
+        security: bearerAuthSecurity,
+        body: boostRequestBodySchema,
+        response: {
+          200: boostRequestResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { userId } = auth;
+
+      const deadline = new Date(request.body.boostByDeadline);
+      const now = new Date();
+
+      if (deadline <= now) {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            { path: "boostByDeadline", message: "Deadline must be in the future" },
+          ],
+        });
+        return;
+      }
+
+      // Check max 2 weeks
+      const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+      let maxDeadline = new Date(now.getTime() + twoWeeksMs);
+
+      // Also check challenge end
+      try {
+        const challengeRows = await db
+          .select()
+          .from(currentChallengeMetadata)
+          .where(eq(currentChallengeMetadata.singleton, "current"));
+        const challenge = challengeRows[0];
+        if (challenge && challenge.endAt < maxDeadline) {
+          maxDeadline = challenge.endAt;
+        }
+      } catch {
+        // If we can't read challenge data, just use 2 weeks
+      }
+
+      if (deadline > maxDeadline) {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "boostByDeadline",
+              message: `Deadline cannot exceed ${maxDeadline.toISOString()}`,
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        await upsertRequest(userId, deadline);
+        const req = await getRequestByUserId(userId);
+        await reply.code(200).send({
+          userId: req!.userId,
+          boostByDeadline: req!.boostByDeadline.toISOString(),
+          createdAt: req!.createdAt.toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error creating boost request:", error);
+        await reply.code(500).send({ error: "Failed to create boost request." });
+      }
+    }
+  );
+
+  api.delete(
+    "/api/v1/boost/request",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Cancel your Boost Request",
+        security: bearerAuthSecurity,
+        response: {
+          204: z.void(),
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { userId } = auth;
+
+      try {
+        await deleteRequest(userId);
+        await reply.code(204).send();
+      } catch (error: unknown) {
+        console.error("Error deleting boost request:", error);
+        await reply.code(500).send({ error: "Failed to delete boost request." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/boost/request",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Get your current Boost Request",
+        security: bearerAuthSecurity,
+        response: {
+          200: boostRequestResponseSchema.nullable(),
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { userId } = auth;
+
+      try {
+        const req = await getRequestByUserId(userId);
+        if (!req) {
+          await reply.code(200).send(null);
+          return;
+        }
+        await reply.code(200).send({
+          userId: req.userId,
+          boostByDeadline: req.boostByDeadline.toISOString(),
+          createdAt: req.createdAt.toISOString(),
+        });
+      } catch (error: unknown) {
+        console.error("Error getting boost request:", error);
+        await reply.code(500).send({ error: "Failed to get boost request." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/boost/team/status",
+    {
+      schema: {
+        tags: ["Boost"],
+        summary: "Get boost status for your team",
+        description:
+          "Returns all registered donors and pending boost requests for the authenticated user's team.",
+        security: bearerAuthSecurity,
+        response: {
+          200: boostTeamStatusResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = await authenticateBoostRequest(request, reply);
+      if (!auth) return;
+      const { token, userId } = auth;
+
+      try {
+        // Query the user's team live
+        const teamData = await queryMyTeam(token, userId);
+        const teamUserIds = new Set(
+          (teamData.users ?? []).map((u) => u.id)
+        );
+
+        const allDonors = await getAllDonors();
+        const allRequests = await getAllRequests();
+
+        const teamDonors = allDonors
+          .filter((d) => teamUserIds.has(d.userId))
+          .map((d) => ({
+            userId: d.userId,
+            fallbackMode: d.fallbackMode,
+          }));
+
+        const now = new Date();
+        const teamRequests = allRequests
+          .filter((r) => teamUserIds.has(r.userId) && r.boostByDeadline > now)
+          .map((r) => ({
+            userId: r.userId,
+            boostByDeadline: r.boostByDeadline.toISOString(),
+          }));
+
+        await reply.code(200).send({
+          donors: teamDonors,
+          requests: teamRequests,
+        });
+      } catch (error: unknown) {
+        console.error("Error getting team boost status:", error);
+        await reply.code(500).send({ error: "Failed to get team boost status." });
+      }
+    }
+  );
+
   fastify.get(
     "/openapi.json",
     {
@@ -1214,6 +1632,8 @@ async function startServer(): Promise<void> {
 
     startIntervalPointsQuerying();
 
+    await startBoostService();
+
     await fastify.listen({ port: PORT, host: HOST });
   } catch (err) {
     fastify.log.error({ err }, "Application failed to start"); // Use fastify logger
@@ -1234,6 +1654,7 @@ async function shutdown(): Promise<void> {
   console.log("\nReceived shutdown signal. Closing resources...");
   try {
     stopIntervalPointsQuerying();
+    stopBoostService();
 
     await fastify.close();
     console.log("Fastify server closed.");

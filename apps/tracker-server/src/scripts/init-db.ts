@@ -117,6 +117,23 @@ CREATE TABLE IF NOT EXISTS latest_user_profiles (
 CREATE INDEX IF NOT EXISTS ix_latest_user_profiles_team_id ON latest_user_profiles (team_id);
 `;
 
+const createBoostDonorsTableSql = `
+CREATE TABLE IF NOT EXISTS boost_donors (
+  user_id TEXT PRIMARY KEY,
+  refresh_token TEXT NOT NULL,
+  fallback_mode TEXT NOT NULL DEFAULT 'none',
+  registered_at TIMESTAMPTZ NOT NULL
+);
+`;
+
+const createBoostRequestsTableSql = `
+CREATE TABLE IF NOT EXISTS boost_requests (
+  user_id TEXT PRIMARY KEY,
+  boost_by_deadline TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL
+);
+`;
+
 export async function initializeDatabase() {
   console.log("Attempting to initialize the database...");
 
@@ -190,6 +207,14 @@ export async function initializeDatabase() {
       );
       await tx.execute(sql.raw(createLatestUserProfilesTableSql));
       console.log("createLatestUserProfilesTableSql ensured");
+
+      console.log("executing createBoostDonorsTableSql");
+      await tx.execute(sql.raw(createBoostDonorsTableSql));
+      console.log("createBoostDonorsTableSql ensured");
+
+      console.log("executing createBoostRequestsTableSql");
+      await tx.execute(sql.raw(createBoostRequestsTableSql));
+      console.log("createBoostRequestsTableSql ensured");
     });
 
     console.log("Transaction committed successfully.");

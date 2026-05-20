@@ -134,6 +134,19 @@ CREATE TABLE IF NOT EXISTS boost_requests (
 );
 `;
 
+const createUserBoostCountsTableSql = `
+CREATE TABLE IF NOT EXISTS user_boost_counts (
+    time TIMESTAMPTZ NOT NULL,
+    user_id TEXT NOT NULL,
+    boost_count INTEGER NOT NULL
+);
+
+SELECT create_hypertable('user_boost_counts', 'time', if_not_exists => TRUE);
+
+CREATE INDEX IF NOT EXISTS ix_user_boost_counts_user_id_time ON user_boost_counts (user_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_user_boost_counts_time_user_id ON user_boost_counts (time DESC, user_id ASC);
+`;
+
 export async function initializeDatabase() {
   console.log("Attempting to initialize the database...");
 
@@ -215,6 +228,10 @@ export async function initializeDatabase() {
       console.log("executing createBoostRequestsTableSql");
       await tx.execute(sql.raw(createBoostRequestsTableSql));
       console.log("createBoostRequestsTableSql ensured");
+
+      console.log("executing createUserBoostCountsTableSql");
+      await tx.execute(sql.raw(createUserBoostCountsTableSql));
+      console.log("createUserBoostCountsTableSql ensured");
     });
 
     console.log("Transaction committed successfully.");

@@ -28,6 +28,12 @@ type UserActivityVisibilitySnapshot = {
     isActivityPublic: boolean;
 };
 
+type UserBoostCountSnapshot = {
+    userId: string;
+    time: string;
+    boostCount: number;
+};
+
 type TeamPointsSnapshot = {
     teamId: string;
     time: string;
@@ -248,6 +254,45 @@ async function fetchAllUserActivityVisibility(
     return allItems;
 }
 
+async function fetchAllUserBoostCounts(
+    accessToken: string,
+    onProgress?: (count: number) => void,
+) {
+    const allItems: UserBoostCountSnapshot[] = [];
+    let continuationToken: string | undefined;
+
+    while (true) {
+        const result = await trackerServerClient.GET("/api/v1/users/boosts/all", {
+            params: {
+                query: {
+                    limit: EXPORT_PAGE_LIMIT,
+                    continuationToken,
+                },
+            },
+            headers: {
+                authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        if (!result.data) {
+            throw new Error(
+                `Get all user boost counts failed ${JSON.stringify(result.error)}`,
+            );
+        }
+
+        allItems.push(...result.data.items);
+        onProgress?.(allItems.length);
+
+        if (!result.data.continuationToken) {
+            break;
+        }
+
+        continuationToken = result.data.continuationToken;
+    }
+
+    return allItems;
+}
+
 async function fetchUserProfiles(accessToken: string, userIds: string[], onProgress?: (count: number) => void) {
     const uniqueUserIds = [...new Set(userIds)];
     const profiles = new Map<
@@ -395,6 +440,12 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
             params.onStatus?.(`Fetching user activity visibility snapshots... (${count})`),
     );
 
+    params.onStatus?.("Fetching user boost count snapshots...");
+    const userBoostCounts = await fetchAllUserBoostCounts(
+        accessToken,
+        (count) => params.onStatus?.(`Fetching user boost count snapshots... (${count})`),
+    );
+
     params.onStatus?.("Fetching user profiles...");
     const uniqueUserIds = [...new Set(userPoints.map((p) => p.userId))];
     const userProfiles = await fetchUserProfiles(
@@ -482,6 +533,10 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
         buildCsv(userActivityVisibility, ["userId", "time", "isActivityPublic"]),
     );
     zip.file("tracker/teams_points_all.csv", buildCsv(teamPoints, ["teamId", "time", "points"]));
+    zip.file(
+        "tracker/users_boost_counts_all.csv",
+        buildCsv(userBoostCounts, ["userId", "time", "boostCount"]),
+    );
 
     params.onStatus?.("Downloading team images...");
     await addTeamImagesToZip(
@@ -507,5 +562,5 @@ export async function exportDashboardCsvBundle(params: ExportBundleParams) {
     URL.revokeObjectURL(downloadUrl);
 
     params.onStatus?.("Export completed.");
-    return 7;
+    return 8;
 }

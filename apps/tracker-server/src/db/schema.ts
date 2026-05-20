@@ -172,3 +172,16 @@ export const boostRequests = pgTable("boost_requests", {
     withTimezone: true,
   }).notNull(),
 });
+
+export const userBoostCounts = pgTable(
+  "user_boost_counts",
+  {
+    time: timestamp("time", { mode: "date", withTimezone: true }).notNull(),
+    userId: text("user_id").notNull(),
+    boostCount: integer("boost_count").notNull(),
+  },
+  (table) => [
+    index("ix_user_boost_counts_user_id_time").on(table.userId, table.time.desc()),
+    index("ix_user_boost_counts_time_user_id").on(table.time.desc(), table.userId),
+  ]
+);

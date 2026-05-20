@@ -9,6 +9,7 @@ import {
   teamPoints,
   userActivityPoints,
   userActivityVisibility,
+  userBoostCounts,
   userPoints,
   userTeamMemberships,
 } from "../db/schema.ts";
@@ -64,6 +65,17 @@ type UserActivityVisibilityRow = {
 };
 
 type UserActivityVisibilityPageCursor = {
+  time: Date;
+  userId: string;
+};
+
+type UserBoostCountRow = {
+  time: string;
+  user_id: string;
+  boost_count: number;
+};
+
+type UserBoostCountPageCursor = {
   time: Date;
   userId: string;
 };
@@ -377,6 +389,28 @@ export async function getLatestActivityVisibilityForUsers(userIds: string[]) {
         where uav1.user_id = uav.user_id
     )
       and uav.user_id in (${sql.join(
+        userIds.map((userId) => sql`${userId}`),
+        sql`, `
+      )})
+  `);
+
+  return result.rows;
+}
+
+export async function getLatestBoostCountsForUsers(userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as UserBoostCountRow[];
+  }
+
+  const result = await db.execute<UserBoostCountRow>(sql`
+    select time, user_id, boost_count
+    from user_boost_counts ubc
+    where ubc.time = (
+        select max(ubc1.time)
+        from user_boost_counts ubc1
+        where ubc1.user_id = ubc.user_id
+    )
+      and ubc.user_id in (${sql.join(
         userIds.map((userId) => sql`${userId}`),
         sql`, `
       )})
@@ -1145,6 +1179,143 @@ export async function getTeamMembershipsByRange(
     FROM ordered_memberships
     WHERE team_id = ${teamId} AND COALESCE(left_at, ${end}) > ${start}
     ORDER BY active_from ASC, user_id ASC;
+  `);
+
+  return result.rows;
+}
+
+export async function storeUserBoostCounts(
+  timestamp: number,
+  users: {
+    id: string;
+    boostCount: number;
+  }[]
+): Promise<void> {
+  if (users.length === 0) {
+    return;
+  }
+
+  const insertTime = new Date(timestamp);
+  console.log(
+    `Attempting to store boost counts for ${users.length} users at ${insertTime.toISOString()} using Drizzle.`
+  );
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(userBoostCounts).values(
+        users.map((user) => ({
+          time: insertTime,
+          userId: user.id,
+          boostCount: user.boostCount,
+        }))
+      );
+    });
+
+    console.log(`Successfully stored ${users.length} boost count records using Drizzle.`);
+  } catch (error) {
+    console.error("Error storing user boost counts:", error);
+  }
+}
+
+export async function getStoredUserBoostCountsPage(
+  limit: number,
+  cursor?: UserBoostCountPageCursor
+): Promise<PaginatedResult<UserBoostCountRow, UserBoostCountPageCursor>> {
+  const filters: SQL[] = [];
+
+  if (cursor) {
+    filters.push(
+      sql`("time" < ${cursor.time} OR ("time" = ${cursor.time} AND user_id > ${cursor.userId}))`
+    );
+  }
+
+  const whereClause =
+    filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+  const pageSize = limit + 1;
+  const result = await db.execute<UserBoostCountRow>(sql`
+    SELECT time, user_id, boost_count
+    FROM user_boost_counts
+    ${whereClause}
+    ORDER BY "time" DESC, user_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            time: new Date(lastItem.time),
+            userId: lastItem.user_id,
+          }
+        : undefined,
+  };
+}
+
+export async function getUserBoostCountsByRange(
+  userId: string,
+  start: Date,
+  end: Date
+) {
+  const timeBucket = getTimeBucket(start, end);
+
+  if (timeBucket) {
+    const result = await db.execute<UserBoostCountRow>(sql`
+      WITH main_points AS (
+        SELECT time_bucket(${timeBucket}, "time") AS "time", user_id, LAST(boost_count, "time") AS boost_count
+        FROM user_boost_counts WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+        GROUP BY 1, user_id
+      ),
+      before_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, boost_count
+        FROM user_boost_counts
+        WHERE user_id = ${userId} AND "time" <= ${start}
+        ORDER BY user_id, "time" DESC
+      ),
+      after_points AS (
+        SELECT DISTINCT ON (user_id) time AS "time", user_id, boost_count
+        FROM user_boost_counts
+        WHERE user_id = ${userId} AND "time" >= ${end}
+        ORDER BY user_id, "time" ASC
+      )
+      SELECT * FROM before_points
+      UNION ALL
+      SELECT * FROM main_points
+      UNION ALL
+      SELECT * FROM after_points
+      ORDER BY "time" ASC, user_id ASC;
+    `);
+
+    return result.rows;
+  }
+
+  const result = await db.execute<UserBoostCountRow>(sql`
+    WITH main_points AS (
+      SELECT time, user_id, boost_count FROM user_boost_counts
+      WHERE user_id = ${userId} AND "time" >= ${start} AND "time" < ${end}
+    ),
+    before_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, boost_count
+      FROM user_boost_counts
+      WHERE user_id = ${userId} AND "time" <= ${start}
+      ORDER BY user_id, "time" DESC
+    ),
+    after_points AS (
+      SELECT DISTINCT ON (user_id) time AS "time", user_id, boost_count
+      FROM user_boost_counts
+      WHERE user_id = ${userId} AND "time" >= ${end}
+      ORDER BY user_id, "time" ASC
+    )
+    SELECT * FROM before_points
+    UNION ALL
+    SELECT * FROM main_points
+    UNION ALL
+    SELECT * FROM after_points
+    ORDER BY "time" ASC, user_id ASC;
   `);
 
   return result.rows;

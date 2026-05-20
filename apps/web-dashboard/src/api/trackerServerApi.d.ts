@@ -362,6 +362,129 @@ export interface paths {
       };
     };
   };
+  "/api/v1/users/boosts/all": {
+    /**
+     * Get all stored user boost count snapshots
+     * @description Returns raw stored user boost count records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: {
+                  userId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  time: string;
+                  boostCount: number;
+                }[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/users/{userId}/boosts": {
+    /** Get a user's boost count history */
+    get: {
+      parameters: {
+        query: {
+          /** @description ISO 8601 datetime with timezone offset */
+          startDate: string;
+          /** @description ISO 8601 datetime with timezone offset */
+          endDate: string;
+        };
+        path: {
+          userId: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+                userId: string;
+                /**
+                 * Format: date-time
+                 * @description ISO 8601 datetime with timezone offset
+                 */
+                time: string;
+                boostCount: number;
+              }[];
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/api/v1/users/{userId}/activity-points": {
     /** Get a user's activity points */
     get: {

@@ -7,6 +7,7 @@ import {
     getHistoricalUserPointsQueryOptions,
     getMyChallengeQueryOptions,
     getUserActivityVisibilityQueryOptions,
+    getUserBoostCountsQueryOptions,
     getUserByIdQueryOptions,
     getUserStatisticsQueryOptions,
     useGetUserToken,
@@ -260,6 +261,16 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         ),
     );
 
+    const boostCountQuery = useQuery(() =>
+        getUserBoostCountsQueryOptions(
+            () => props.userId,
+            () => timeWindow().start,
+            () => timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
+    );
+
     const actColors: Record<string, string> = {
         walk: "#000",
         statistic_walk: "#333",
@@ -296,28 +307,104 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         return areas;
     });
 
+    const boostMarkAreas = createMemo(() => {
+        const raw = (boostCountQuery.data ?? [])
+            .slice()
+            .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+        if (raw.length === 0) return [];
+
+        const colors: Record<number, string> = {
+            1: "rgba(249, 115, 22, 0.10)",
+            2: "rgba(249, 115, 22, 0.22)",
+            3: "rgba(249, 115, 22, 0.38)",
+        };
+
+        const areas: [{ xAxis: number; itemStyle: { color: string } }, { xAxis: number }][] = [];
+        for (let i = 0; i < raw.length; i++) {
+            const count = raw[i]!.boostCount
+            const start = new Date(raw[i]!.time).getTime();
+            const end = i + 1 < raw.length
+                ? new Date(raw[i + 1]!.time).getTime()
+                : timeWindow().end;
+            areas.push([
+            {
+                xAxis: start,
+                itemStyle: {
+                    color: colors[count % 3]!
+                },
+                label: {
+                    show: true,
+                    position: "insideTop" as const,
+                    formatter: `BOOST x${count}`,
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: 9,
+                    color: "rgba(0, 0, 0, 0.35)",
+                }
+            } as any, { xAxis: end }]);
+        }
+        return areas;
+    });
+
     const markAreaConfig = createMemo(() => {
-        const areas = privateMarkAreas();
-        if (areas.length === 0) return undefined;
+        const privAreas = privateMarkAreas();
+        const boostAreas = boostMarkAreas();
+
+        if (privAreas.length === 0 && boostAreas.length === 0) return undefined;
+
+        const privData = privAreas.map(([start, end]) => [
+            {
+                xAxis: start.xAxis,
+                itemStyle: {
+                    color: "rgba(0, 0, 0, 0.06)",
+                    borderColor: "rgba(0, 0, 0, 0.15)",
+                    borderWidth: 1,
+                    borderType: "dashed" as const,
+                },
+                label: {
+                    show: true,
+                    position: "insideTop" as const,
+                    formatter: "PRIVATE",
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: 9,
+                    color: "rgba(0, 0, 0, 0.35)",
+                },
+            },
+            end,
+        ]);
 
         return {
             silent: true,
-            itemStyle: {
-                color: "rgba(0, 0, 0, 0.06)",
-                borderColor: "rgba(0, 0, 0, 0.15)",
-                borderWidth: 1,
-                borderType: "dashed" as const,
-            },
-            label: {
-                show: true,
-                position: "insideTop" as const,
-                formatter: "PRIVATE",
-                fontFamily: "'Space Mono', monospace",
-                fontSize: 9,
-                color: "rgba(0, 0, 0, 0.35)",
-            },
-            data: areas,
+            data: [...privData, ...boostAreas],
         };
+    });
+
+    const visibilityMarkAreaConfig = createMemo(() => {
+        const privAreas = privateMarkAreas();
+        if (privAreas.length === 0) return undefined;
+
+        const privData = privAreas.map(([start, end]) => [
+            {
+                xAxis: start.xAxis,
+                itemStyle: {
+                    color: "rgba(0, 0, 0, 0.06)",
+                    borderColor: "rgba(0, 0, 0, 0.15)",
+                    borderWidth: 1,
+                    borderType: "dashed" as const,
+                },
+                label: {
+                    show: true,
+                    position: "insideTop" as const,
+                    formatter: "PRIVATE",
+                    fontFamily: "'Space Mono', monospace",
+                    fontSize: 9,
+                    color: "rgba(0, 0, 0, 0.35)",
+                },
+            },
+            end,
+        ]);
+
+        return { silent: true, data: privData };
     });
 
     const pointsChartOptions = createMemo(() => {
@@ -331,7 +418,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         }
 
         const mark = markAreaConfig();
-        const series = Object.entries(byActivity).map(([actId, data], i) => ({
+        const series: object[] = Object.entries(byActivity).map(([actId, data], i) => ({
             name: actId,
             type: "line" as const,
             areaStyle: { opacity: 0.3 },
@@ -367,8 +454,8 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             byActivity[key]!.push({ t: ts, v: entry.value });
         }
 
-        const mark = markAreaConfig();
-        const series = Object.entries(byActivity).map(([actId, data], i) => ({
+        const mark = visibilityMarkAreaConfig();
+        const series: object[] = Object.entries(byActivity).map(([actId, data], i) => ({
             name: actId,
             type: "line" as const,
             data: data.sort((a, b) => a.t - b.t).map((d) => [d.t, d.v]),

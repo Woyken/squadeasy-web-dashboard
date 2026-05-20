@@ -3058,7 +3058,9 @@ export interface components {
         UserProfileRemoteEntity: {
             id: string;
             isCurrentUser: boolean;
-            name: string;
+            name?: string;
+            firstName: string;
+            lastName: string;
             teamName: string;
             entityName?: string;
             isInSameTeam: boolean;
@@ -3151,7 +3153,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3261,7 +3263,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3430,7 +3432,7 @@ export interface operations {
                     "application/json": components["schemas"]["IdRemoteEntity"];
                 };
             };
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3454,7 +3456,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3536,7 +3538,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3560,7 +3562,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3604,7 +3606,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3624,7 +3626,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3646,7 +3648,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3748,7 +3750,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3770,7 +3772,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3794,7 +3796,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3816,7 +3818,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3834,7 +3836,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3892,7 +3894,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3914,7 +3916,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3932,7 +3934,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3950,7 +3952,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4016,7 +4018,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4098,7 +4100,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4168,7 +4170,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4234,7 +4236,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4296,7 +4298,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4316,7 +4318,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4358,7 +4360,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4400,7 +4402,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4746,7 +4748,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5004,7 +5006,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5072,7 +5074,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5096,7 +5098,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5230,7 +5232,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5276,7 +5278,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5404,7 +5406,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5424,7 +5426,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5444,7 +5446,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5490,7 +5492,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5532,7 +5534,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -5636,7 +5638,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description There is no content to send for this request, but the headers may be useful.  */
+            /** @description There is no content to send for this request, but the headers may be useful. */
             204: {
                 headers: {
                     [name: string]: unknown;

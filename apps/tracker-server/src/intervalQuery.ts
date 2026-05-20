@@ -9,6 +9,7 @@ import {
 } from "./api/client.ts";
 import {
   getLatestActivityVisibilityForUsers,
+  getLatestBoostCountsForUsers,
   getLatestPointsForTeams,
   getLatestTeamMembershipsForUsers,
   getLatestPointsForUserActivities,
@@ -19,6 +20,7 @@ import {
   storeLatestTeamProfiles,
   storeLatestUserProfiles,
   storeUserActivities,
+  storeUserBoostCounts,
   storeUserTeamMemberships,
   storeUsersActivityVisibility,
   storeUsersPoints,
@@ -40,6 +42,7 @@ type TeamUserSnapshot = {
   image?: string;
   points?: number;
   isActivityPublic?: boolean;
+  boostCount?: number;
 };
 
 type LatestUserActivityRow = Awaited<
@@ -137,6 +140,7 @@ async function fetchTeamUsersPoints(accessToken: string, id: string) {
       image: x.image,
       points: x.points,
       isActivityPublic: x.isActivityPublic,
+      boostCount: x.boostCount,
     }));
     return teamUsers ?? [];
   } catch (error) {
@@ -190,6 +194,10 @@ async function handleFetchTeamsUsersPoints(
     "Last users activity visibility fetched: ",
     lastUsersActivityVisibility.length
   );
+  const lastUsersBoostCounts = await getLatestBoostCountsForUsers(
+    teamsUsersFlat.map((x) => x.id)
+  );
+  console.log("Last users boost counts fetched: ", lastUsersBoostCounts.length);
   const lastUsersTeamMemberships = await getLatestTeamMembershipsForUsers(
     teamsUsersFlat.map((x) => x.id)
   );
@@ -294,6 +302,20 @@ async function handleFetchTeamsUsersPoints(
   );
 
   await storeUsersPoints(now, onlyChangedUsersScores);
+
+  const usersWithChangedBoostCount = onlyChangedUsersScores
+    .filter((x) => typeof x.boostCount === "number")
+    .filter((x) => {
+      const lastBoostCount = lastUsersBoostCounts.find(
+        (b) => b.user_id === x.id
+      )?.boost_count;
+      return x.boostCount !== lastBoostCount;
+    })
+    .map((x) => ({ id: x.id, boostCount: x.boostCount as number }));
+  if (usersWithChangedBoostCount.length > 0) {
+    await storeUserBoostCounts(now, usersWithChangedBoostCount);
+  }
+
   emitPointsStreamEvent({
     event: "user-points",
     data: {

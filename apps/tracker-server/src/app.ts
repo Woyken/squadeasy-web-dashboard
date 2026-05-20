@@ -21,10 +21,12 @@ import {
   getStoredUserActivityPointsPage,
   getStoredUserActivityVisibilityPage,
   getStoredTeamPointsPage,
+  getStoredUserBoostCountsPage,
   getStoredUserPointsPage,
   getTeamPointsByRange,
   getTeamMembershipsByRange,
   getUserActivityVisibilityByRange,
+  getUserBoostCountsByRange,
   getUsersActivityPointsByRange,
   getUsersPointsByRange,
   testDbConnection,
@@ -149,6 +151,12 @@ const userActivityVisibilityResponseItemSchema = z.object({
   isActivityPublic: z.boolean(),
 });
 
+const userBoostCountResponseItemSchema = z.object({
+  userId: z.string(),
+  time: dateTimeStringSchema,
+  boostCount: z.number().int(),
+});
+
 const teamMembershipResponseItemSchema = z.object({
   teamId: z.string(),
   userId: z.string(),
@@ -199,6 +207,11 @@ const paginatedUserActivityPointsResponseSchema = z.object({
 
 const paginatedUserActivityVisibilityResponseSchema = z.object({
   items: z.array(userActivityVisibilityResponseItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const paginatedUserBoostCountsResponseSchema = z.object({
+  items: z.array(userBoostCountResponseItemSchema),
   continuationToken: z.string().nullable(),
 });
 
@@ -942,6 +955,124 @@ fastify.after(() => {
             userId: x.user_id,
             time: new Date(x.time).toISOString(),
             isActivityPublic: x.is_activity_public,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/boosts/all",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get all stored user boost count snapshots",
+        description:
+          "Returns raw stored user boost count records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.",
+        security: bearerAuthSecurity,
+        querystring: exportQuerySchema,
+        response: {
+          200: paginatedUserBoostCountsResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { time: Date; id: string } | undefined;
+      try {
+        cursor = decodeContinuationToken(request.query.continuationToken);
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getStoredUserBoostCountsPage(
+          request.query.limit,
+          cursor
+            ? {
+                time: cursor.time,
+                userId: cursor.id,
+              }
+            : undefined
+        );
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            boostCount: x.boost_count,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeContinuationToken({
+                time: result.nextCursor.time,
+                id: result.nextCursor.userId,
+              })
+            : null,
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/:userId/boosts",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Get a user's boost count history",
+        security: bearerAuthSecurity,
+        params: userParamsSchema,
+        querystring: pointsQuerySchema,
+        response: {
+          200: z.array(userBoostCountResponseItemSchema),
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+      const { userId } = request.params;
+      const { startDate: startDateStr, endDate: endDateStr } = request.query;
+
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      try {
+        const result = await getUserBoostCountsByRange(userId, start, end);
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            userId: x.user_id,
+            time: new Date(x.time).toISOString(),
+            boostCount: x.boost_count,
           }))
         );
       } catch (error: unknown) {

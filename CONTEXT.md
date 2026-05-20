@@ -53,6 +53,10 @@ _Avoid_: Primary account, default user
 The action of calling `POST /api/2.0/users/{id}/boost` targeting a Team Member. Subject to a team-level cooldown tracked by `boostAvailableAt`. A user cannot boost themselves.
 _Avoid_: Power-up, buff
 
+**Boost Count**:
+The cumulative number of Boosts a user has received, as reported by the `boostCount` field on `UserRemoteEntity` from `GET /api/2.0/teams/{id}`. Tracked as a time-series alongside score changes.
+_Avoid_: Boosts received, boosts given (a different concept)
+
 **Boost Donor**:
 A user who has registered their account with the backend (by providing their refresh token) to execute Boosts on behalf of their team. Auto-deregistered when their refresh token becomes invalid.
 _Avoid_: Booster (ambiguous — could mean receiver), auto-booster

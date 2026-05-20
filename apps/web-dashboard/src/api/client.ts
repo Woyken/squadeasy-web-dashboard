@@ -1062,6 +1062,60 @@ export function getUserActivityVisibilityQueryOptions(
     });
 }
 
+export function getUserBoostCountsQueryOptions(
+    userId: Accessor<string>,
+    start: Accessor<number>,
+    end: Accessor<number>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: [
+            "userBoostCounts",
+            userId(),
+            clampRangeToNow(start(), end()).start,
+            clampRangeToNow(start(), end()).end,
+        ],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const range = clampRangeToNow(start(), end());
+
+            const result = await trackerServerClient.GET(
+                "/api/v1/users/{userId}/boosts",
+                {
+                    params: {
+                        path: {
+                            userId: userId(),
+                        },
+                        query: {
+                            startDate: new Date(range.start).toISOString(),
+                            endDate: new Date(range.end).toISOString(),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                    signal,
+                },
+            );
+
+            if (!result.data) {
+                throw new Error(
+                    `Get user boost counts failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
+        },
+        staleTime: 1000 * 60 * 1,
+        gcTime: 1000 * 60 * 5,
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
+        placeholderData: keepPreviousData,
+    });
+}
+
 // ─── Boost API ────────────────────────────────────────────────────────
 
 export type BoostDonorStatus = {

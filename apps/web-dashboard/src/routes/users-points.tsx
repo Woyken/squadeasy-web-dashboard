@@ -8,6 +8,7 @@ import {
     getHistoricalTeamPointsQueryOptions,
     getMyChallengeQueryOptions,
     getSeasonRankingInfiniteQueryOptions,
+    getTeamQueryOptions,
     useHistoricalUserPointsQueries,
     useGetUserToken,
     useStoredTeamQueries,
@@ -293,6 +294,14 @@ function TeamDetail(props: { teamId: string }) {
     const boostRequestorIds = createMemo(() =>
         new Set(boostStatusQuery.data?.requests.map((r) => r.userId) ?? []),
     );
+    const liveTeamQuery = useQuery(() =>
+        getTeamQueryOptions(() => props.teamId, getToken, () => !!mainUser.mainUserId()),
+    );
+    const liveBoostCountByUserId = createMemo(() =>
+        new Map(
+            (liveTeamQuery.data?.users ?? []).map((u) => [u.id, u.boostCount ?? 0] as const),
+        ),
+    );
 
     const scoredUsers = createMemo(() =>
         users()
@@ -419,6 +428,11 @@ function TeamDetail(props: { teamId: string }) {
                                                         <Show when={boostRequestorIds().has(user.userId)}>
                                                             <span class="bg-orange-600 px-1 py-0.5 text-[8px] font-bold text-white">
                                                                 BOOST REQ
+                                                            </span>
+                                                        </Show>
+                                                        <Show when={(liveBoostCountByUserId().get(user.userId) ?? 0) > 0}>
+                                                            <span class="bg-blue-600 px-1 py-0.5 text-[8px] font-bold text-white">
+                                                                BOOST x{liveBoostCountByUserId().get(user.userId)}
                                                             </span>
                                                         </Show>
                                                     </div>

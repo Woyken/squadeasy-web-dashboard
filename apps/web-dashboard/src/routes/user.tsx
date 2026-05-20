@@ -6,6 +6,7 @@ import {
     getHistoricalUserActivityPointsQueryOptions,
     getHistoricalUserPointsQueryOptions,
     getMyChallengeQueryOptions,
+    getTeamQueryOptions,
     getUserActivityVisibilityQueryOptions,
     getUserBoostCountsQueryOptions,
     getUserByIdQueryOptions,
@@ -100,6 +101,17 @@ function UserPage() {
     );
     const activities = createMemo(() => statsQuery.data?.activities ?? fallbackActivities());
 
+    const teamQuery = useQuery(() =>
+        getTeamQueryOptions(
+            () => statsQuery.data?.teamId,
+            getToken,
+            () => !!statsQuery.data?.teamId && !!mainUser.mainUserId(),
+        ),
+    );
+    const currentBoostCount = createMemo(() =>
+        teamQuery.data?.users?.find((u) => u.id === userId())?.boostCount ?? 0,
+    );
+
     return (
         <main class="mx-auto max-w-225 px-5 pb-20 pt-6 font-mono">
             {/* User header */}
@@ -125,6 +137,11 @@ function UserPage() {
                             <p class="text-[11px] text-(--color-brut-gray)">
                                 TEAM: {teamName()}
                             </p>
+                        </Show>
+                        <Show when={currentBoostCount() > 0}>
+                            <span class="mt-1 inline-block bg-blue-600 px-1 py-0.5 text-[8px] font-bold text-white">
+                                BOOST x{currentBoostCount()}
+                            </span>
                         </Show>
                     </div>
                     <div class="text-right">

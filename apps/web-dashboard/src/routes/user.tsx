@@ -381,7 +381,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 },
                 label: {
                     show: true,
-                    position: "insideTop" as const,
+                    position: "top" as const,
                     formatter: "PRIVATE",
                     fontFamily: "'Space Mono', monospace",
                     fontSize: 9,

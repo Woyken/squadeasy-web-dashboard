@@ -445,6 +445,10 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             ...(i === 0 && mark ? { markArea: mark } : {}),
         }));
 
+        if (series.length === 0 && mark) {
+            series.push({ name: "", type: "line", data: [], markArea: mark, silent: true });
+        }
+
         return {
             backgroundColor: "transparent",
             tooltip: brutTip(),
@@ -480,6 +484,10 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             ...(i === 0 && mark ? { markArea: mark } : {}),
         }));
 
+        if (series.length === 0 && mark) {
+            series.push({ name: "", type: "line", data: [], markArea: mark, silent: true });
+        }
+
         return {
             backgroundColor: "transparent",
             tooltip: brutTip(),
@@ -502,7 +510,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 <span class="brut-heading mb-2">ACTIVITY_POINTS</span>
                 <div class="border-2 border-black bg-white p-3">
                     <Show
-                        when={(histQuery.data ?? []).length > 0}
+                        when={(histQuery.data ?? []).length > 0 || !!markAreaConfig()}
                         fallback={
                             <div class="flex h-75 items-center justify-center text-xs text-(--color-brut-gray)">
                                 {histQuery.isLoading ? "LOADING..." : "NO DATA"}
@@ -518,7 +526,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 <span class="brut-heading mb-2">ACTIVITY_VALUES</span>
                 <div class="border-2 border-black bg-white p-3">
                     <Show
-                        when={(histQuery.data ?? []).length > 0}
+                        when={(histQuery.data ?? []).length > 0 || !!visibilityMarkAreaConfig()}
                         fallback={
                             <div class="flex h-75 items-center justify-center text-xs text-(--color-brut-gray)">
                                 {histQuery.isLoading ? "LOADING..." : "NO DATA"}

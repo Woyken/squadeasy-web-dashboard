@@ -316,9 +316,9 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             }
         }
 
-        // If still private at the end of the range, close with the window end
+        // If still private at the end of the range, close with now
         if (privateStart !== null) {
-            areas.push([{ xAxis: privateStart }, { xAxis: timeWindow().end }]);
+            areas.push([{ xAxis: privateStart }, { xAxis: Date.now() }]);
         }
 
         return areas;
@@ -338,12 +338,13 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         };
 
         const areas: [{ xAxis: number; itemStyle: { color: string } }, { xAxis: number }][] = [];
+        const lastTs = Math.min(new Date(raw[raw.length - 1]!.time).getTime(), Date.now());
         for (let i = 0; i < raw.length; i++) {
             const count = raw[i]!.boostCount
             const start = new Date(raw[i]!.time).getTime();
             const end = i + 1 < raw.length
                 ? new Date(raw[i + 1]!.time).getTime()
-                : timeWindow().end;
+                : Date.now();
             areas.push([
             {
                 xAxis: start,

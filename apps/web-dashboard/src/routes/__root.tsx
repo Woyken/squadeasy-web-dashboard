@@ -60,7 +60,10 @@ function RootComponent() {
                         <ToasterProvider>
                             <RealtimePointsListener />
                             <NavigationBar />
-                            <Outlet />
+                            <div class="pb-12 sm:pb-0">
+                                <Outlet />
+                            </div>
+                            <MobileBottomNav />
                         </ToasterProvider>
                     </AutoLikeTeamPosts>
                 </MainUserProvider>
@@ -154,20 +157,27 @@ function NavigationBar() {
                 <div class="hidden gap-2 sm:flex">
                     <Link
                         to="/"
-                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                        activeProps={{ class: "text-(--color-brut-red) border-b-2 border-(--color-brut-red)" }}
+                        inactiveProps={{ class: "text-(--color-brut-dim)" }}
+                        activeOptions={{ exact: true }}
                     >
                         LEADERBOARD
                     </Link>
                     <Link
                         to="/teams-dashboard"
-                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                        activeProps={{ class: "text-(--color-brut-red) border-b-2 border-(--color-brut-red)" }}
+                        inactiveProps={{ class: "text-(--color-brut-dim)" }}
                     >
                         CHARTS
                     </Link>
                     <Link
                         to="/users-points"
                         search={{ teamId: "" }}
-                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline text-(--color-brut-dim) hover:text-(--color-brut-red)"
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                        activeProps={{ class: "text-(--color-brut-red) border-b-2 border-(--color-brut-red)" }}
+                        inactiveProps={{ class: "text-(--color-brut-dim)" }}
                     >
                         TEAMS
                     </Link>
@@ -308,5 +318,43 @@ function NavigationBar() {
                 </Show>
             </div>
         </nav>
+    );
+}
+
+function MobileBottomNav() {
+    const usersTokens = useUsersTokens();
+    const userIds = createMemo(() => Array.from(usersTokens().tokens.keys()));
+
+    return (
+        <Show when={userIds().length > 0}>
+            <nav class="fixed bottom-0 left-0 right-0 z-9999 flex items-center justify-around border-t-[3px] border-black bg-white sm:hidden">
+                <Link
+                    to="/"
+                    class="flex-1 py-3 text-center text-[10px] font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                    activeProps={{ class: "text-(--color-brut-red) border-t-2 border-(--color-brut-red)" }}
+                    inactiveProps={{ class: "text-(--color-brut-dim)" }}
+                    activeOptions={{ exact: true }}
+                >
+                    BOARD
+                </Link>
+                <Link
+                    to="/teams-dashboard"
+                    class="flex-1 py-3 text-center text-[10px] font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                    activeProps={{ class: "text-(--color-brut-red) border-t-2 border-(--color-brut-red)" }}
+                    inactiveProps={{ class: "text-(--color-brut-dim)" }}
+                >
+                    CHARTS
+                </Link>
+                <Link
+                    to="/users-points"
+                    search={{ teamId: "" }}
+                    class="flex-1 py-3 text-center text-[10px] font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                    activeProps={{ class: "text-(--color-brut-red) border-t-2 border-(--color-brut-red)" }}
+                    inactiveProps={{ class: "text-(--color-brut-dim)" }}
+                >
+                    TEAMS
+                </Link>
+            </nav>
+        </Show>
     );
 }

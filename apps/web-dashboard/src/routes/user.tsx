@@ -341,6 +341,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         const lastTs = Math.min(new Date(raw[raw.length - 1]!.time).getTime(), Date.now());
         for (let i = 0; i < raw.length; i++) {
             const count = raw[i]!.boostCount
+            if (count === 0) continue;
             const start = new Date(raw[i]!.time).getTime();
             const end = i + 1 < raw.length
                 ? new Date(raw[i + 1]!.time).getTime()

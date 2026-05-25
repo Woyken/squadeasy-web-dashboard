@@ -350,7 +350,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             {
                 xAxis: start,
                 itemStyle: {
-                    color: colors[count % 3]!
+                    color: colors[count % (3 + 1)]!
                 },
                 label: {
                     show: true,

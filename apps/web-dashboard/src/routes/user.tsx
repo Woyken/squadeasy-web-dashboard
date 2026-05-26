@@ -288,6 +288,16 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
         ),
     );
 
+    const totalPointsQuery = useQuery(() =>
+        getHistoricalUserPointsQueryOptions(
+            () => props.userId,
+            () => timeWindow().start,
+            () => timeWindow().end,
+            getToken,
+            () => !!mainUser.mainUserId(),
+        ),
+    );
+
     const actColors: Record<string, string> = {
         walk: "#000",
         statistic_walk: "#333",
@@ -451,6 +461,20 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             series.push({ name: "", type: "line", data: [], markArea: mark, silent: true });
         }
 
+        const totalRaw = (totalPointsQuery.data ?? [])
+            .slice()
+            .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+        const totalSeries = {
+            name: "TOTAL",
+            type: "line" as const,
+            yAxisIndex: 1,
+            data: totalRaw.map((d) => [new Date(d.time).getTime(), d.points]),
+            lineStyle: { color: "#aaa", width: 2 },
+            itemStyle: { color: "#aaa" },
+            symbol: "none",
+            z: 0,
+        };
+
         return {
             backgroundColor: "transparent",
             tooltip: brutTip(),
@@ -459,10 +483,13 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
                 bottom: 24,
                 type: "scroll" as const,
             },
-            grid: { top: 12, right: 12, bottom: 58, left: 50 },
+            grid: { top: 12, right: 50, bottom: 58, left: 50 },
             xAxis: { type: "time" as const, min: props.startAt, max: props.endsAt, ...brutAxis() },
-            yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
-            series,
+            yAxis: [
+                { type: "value" as const, ...brutGrid(), ...brutAxis() },
+                { type: "value" as const, ...brutAxis(), splitLine: { show: false } },
+            ],
+            series: [...series, totalSeries],
             dataZoom: brutZoom(timeWindow().start, timeWindow().end),
         };
     });

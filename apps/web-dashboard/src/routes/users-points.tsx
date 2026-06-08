@@ -361,7 +361,7 @@ function TeamDetail(props: { teamId: string }) {
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
             xAxis: { type: "time" as const, min: startAt(), max: endsAt(), ...brutAxis() },
-            yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
+            yAxis: { type: "value" as const, scale: true, ...brutGrid(), ...brutAxis() },
             series,
             dataZoom: brutZoom(chartTimeWindow().start, chartTimeWindow().end),
         };

@@ -226,7 +226,7 @@ function TeamScoreChart(props: {
                 max: props.endsAt,
                 ...brutAxis(),
             },
-            yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
+            yAxis: { type: "value" as const, scale: true, ...brutGrid(), ...brutAxis() },
             series,
             dataZoom: brutZoom(props.timeWindow.start, props.timeWindow.end),
         };

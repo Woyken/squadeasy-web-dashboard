@@ -486,8 +486,8 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             grid: { top: 12, right: 50, bottom: 58, left: 50 },
             xAxis: { type: "time" as const, min: props.startAt, max: props.endsAt, ...brutAxis() },
             yAxis: [
-                { type: "value" as const, ...brutGrid(), ...brutAxis() },
-                { type: "value" as const, ...brutAxis(), splitLine: { show: false } },
+                { type: "value" as const, scale: true, ...brutGrid(), ...brutAxis() },
+                { type: "value" as const, scale: true, ...brutAxis(), splitLine: { show: false } },
             ],
             series: [...series, totalSeries],
             dataZoom: brutZoom(timeWindow().start, timeWindow().end),
@@ -527,7 +527,7 @@ function ActivityCharts(props: { userId: string; startAt: number; endsAt: number
             },
             grid: { top: 12, right: 12, bottom: 58, left: 50 },
             xAxis: { type: "time" as const, min: props.startAt, max: props.endsAt, ...brutAxis() },
-            yAxis: { type: "value" as const, ...brutGrid(), ...brutAxis() },
+            yAxis: { type: "value" as const, scale: true, ...brutGrid(), ...brutAxis() },
             series,
             dataZoom: brutZoom(timeWindow().start, timeWindow().end),
         };

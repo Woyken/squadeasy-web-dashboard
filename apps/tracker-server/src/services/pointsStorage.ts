@@ -134,6 +134,7 @@ type UserComparisonRow = {
   activity_value: number | null;
   activity_points: number | null;
   sort_value: number;
+  rank: number;
 };
 
 type UserComparisonPageCursor = {
@@ -1404,27 +1405,27 @@ export async function getUserComparisonPage(params: {
       `;
 
   const searchFilter = search
-    ? sql`WHERE (
-        lup.first_name ILIKE ${"%" + search + "%"}
-        OR lup.last_name ILIKE ${"%" + search + "%"}
-        OR (lup.first_name || ' ' || lup.last_name) ILIKE ${"%" + search + "%"}
-        OR ltp.name ILIKE ${"%" + search + "%"}
+    ? sql`(
+        first_name ILIKE ${"%" + search + "%"}
+        OR last_name ILIKE ${"%" + search + "%"}
+        OR (first_name || ' ' || last_name) ILIKE ${"%" + search + "%"}
+        OR team_name ILIKE ${"%" + search + "%"}
       )`
-    : sql``;
+    : sql`TRUE`;
 
   const direction = order === "asc" ? sql`ASC` : sql`DESC`;
 
   const keysetFilter = cursor
     ? order === "asc"
-      ? sql`WHERE (
+      ? sql`(
           sort_value > ${cursor.sortValue}
           OR (sort_value = ${cursor.sortValue} AND user_id > ${cursor.userId})
         )`
-      : sql`WHERE (
+      : sql`(
           sort_value < ${cursor.sortValue}
           OR (sort_value = ${cursor.sortValue} AND user_id > ${cursor.userId})
         )`
-    : sql``;
+    : sql`TRUE`;
 
   const pageSize = limit + 1;
 
@@ -1453,11 +1454,16 @@ export async function getUserComparisonPage(params: {
       LEFT JOIN latest_team_profiles ltp ON ltp.team_id = lup.team_id
       LEFT JOIN latest_user_points p ON p.user_id = lup.user_id
       LEFT JOIN latest_activity la ON la.user_id = lup.user_id
-      ${searchFilter}
+    ),
+    ranked_with_position AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (ORDER BY sort_value ${direction}, user_id ASC) AS rank
+      FROM ranked
     )
     SELECT *
-    FROM ranked
-    ${keysetFilter}
+    FROM ranked_with_position
+    WHERE ${searchFilter} AND ${keysetFilter}
     ORDER BY sort_value ${direction}, user_id ASC
     LIMIT ${pageSize}
   `);

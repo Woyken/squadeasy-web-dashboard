@@ -167,6 +167,40 @@ function UsersComparisonPage() {
     }
     onCleanup(() => clearTimeout(searchTimer));
 
+    // Auto-load the next page when the sentinel near the bottom scrolls into view.
+    let sentinel: HTMLDivElement | undefined;
+    createEffect(() => {
+        const el = sentinel;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (
+                    entries[0]?.isIntersecting &&
+                    comparisonQuery.hasNextPage &&
+                    !comparisonQuery.isFetchingNextPage
+                ) {
+                    void comparisonQuery.fetchNextPage();
+                }
+            },
+            { rootMargin: "200px" },
+        );
+        observer.observe(el);
+        onCleanup(() => observer.disconnect());
+    });
+
+    // Keep the native <select> in sync once catalog options have rendered.
+    // The `value` prop alone is applied before the async <For> options exist,
+    // so the element falls back to the first option until we re-apply it here.
+    let activitySelect: HTMLSelectElement | undefined;
+    createEffect(() => {
+        const value = selectedActivityId();
+        // Touch activities() so this re-runs after the options load.
+        activities();
+        if (activitySelect && activitySelect.value !== value) {
+            activitySelect.value = value;
+        }
+    });
+
     const sortIndicator = (key: UserComparisonSortKey) =>
         resolvedSortBy() === key ? (order() === "desc" ? " ↓" : " ↑") : "";
 
@@ -184,6 +218,7 @@ function UsersComparisonPage() {
                         ACTIVITY
                     </span>
                     <select
+                        ref={activitySelect}
                         class="border-2 border-black bg-white px-2 py-1.5 text-xs font-bold uppercase tracking-wider focus:outline-none focus:bg-(--color-brut-light)"
                         value={selectedActivityId()}
                         onChange={(e) => onPickActivity(e.currentTarget.value)}
@@ -274,10 +309,10 @@ function UsersComparisonPage() {
                                     </tr>
                                 }
                             >
-                                {(user, i) => (
+                                {(user) => (
                                     <tr class="border-t border-(--color-brut-light) hover:bg-[#fafafa] transition-colors">
                                         <td class="px-3 py-2 font-bold text-(--color-brut-gray)">
-                                            {String(i() + 1).padStart(2, "0")}
+                                            {String(user.rank).padStart(2, "0")}
                                         </td>
                                         <td class="px-3 py-2">
                                             <Link
@@ -338,16 +373,14 @@ function UsersComparisonPage() {
                 </div>
 
                 <Show when={comparisonQuery.hasNextPage}>
-                    <button
-                        type="button"
-                        class="mt-4 w-full border-2 border-black bg-white px-4 py-2 text-xs font-bold tracking-widest uppercase hover:bg-black hover:text-white disabled:opacity-50"
-                        disabled={comparisonQuery.isFetchingNextPage}
-                        onClick={() => void comparisonQuery.fetchNextPage()}
+                    <div
+                        ref={sentinel}
+                        class="mt-4 flex w-full items-center justify-center border-2 border-black bg-white px-4 py-2 text-xs font-bold tracking-widest uppercase text-(--color-brut-gray)"
                     >
                         {comparisonQuery.isFetchingNextPage
                             ? "LOADING..."
-                            : "LOAD MORE"}
-                    </button>
+                            : "SCROLL FOR MORE"}
+                    </div>
                 </Show>
             </Suspense>
 

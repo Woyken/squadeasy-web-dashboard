@@ -232,6 +232,7 @@ export interface paths {
           content: {
             "application/json": {
               items: ({
+                  rank: number;
                   userId: string;
                   firstName: string;
                   lastName: string;

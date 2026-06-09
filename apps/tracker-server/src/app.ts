@@ -252,6 +252,7 @@ const userComparisonQuerySchema = z
   });
 
 const userComparisonItemSchema = z.object({
+  rank: z.number(),
   userId: z.string(),
   firstName: z.string(),
   lastName: z.string(),
@@ -751,6 +752,7 @@ fastify.after(() => {
 
         await reply.code(200).send({
           items: result.items.map((x) => ({
+            rank: Number(x.rank),
             userId: x.user_id,
             firstName: x.first_name,
             lastName: x.last_name,

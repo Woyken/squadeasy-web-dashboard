@@ -131,6 +131,22 @@ function UsersComparisonPage() {
         }
     }
 
+    // On first load with no explicit selection, default to the "walk" activity
+    // when it exists in the catalog (otherwise stay on Score).
+    let defaultApplied = false;
+    createEffect(() => {
+        const list = activities();
+        if (defaultApplied || list.length === 0) return;
+        // Only auto-select while the URL is still at its pristine defaults.
+        if (untrack(selectedActivityId) || untrack(() => search().sortBy) !== "score") {
+            defaultApplied = true;
+            return;
+        }
+        const walk = list.find((a) => a.activityId === "walk");
+        defaultApplied = true;
+        if (walk) onPickActivity(walk.activityId);
+    });
+
     // Debounced free-text search synced to the URL.
     const [searchInput, setSearchInput] = createSignal(searchTerm());
     createEffect(() => {

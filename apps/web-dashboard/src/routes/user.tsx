@@ -135,7 +135,14 @@ function UserPage() {
                         <h1 class="text-lg font-bold uppercase">{userName()}</h1>
                         <Show when={teamName()}>
                             <p class="text-[11px] text-(--color-brut-gray)">
-                                TEAM: {teamName()}
+                                TEAM:{" "}
+                                <Link
+                                    to="/teams-dashboard"
+                                    params={{ teamId: statsQuery.data?.teamId ?? "" }}
+                                    class="font-bold text-black no-underline hover:text-(--color-brut-red)"
+                                >
+                                    {teamName()}
+                                </Link>
                             </p>
                         </Show>
                         <Show when={currentBoostCount() > 0}>

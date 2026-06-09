@@ -137,8 +137,8 @@ function UserPage() {
                             <p class="text-[11px] text-(--color-brut-gray)">
                                 TEAM:{" "}
                                 <Link
-                                    to="/teams-dashboard"
-                                    params={{ teamId: statsQuery.data?.teamId ?? "" }}
+                                    to="/users-points"
+                                    search={{ teamId: statsQuery.data?.teamId }}
                                     class="font-bold text-black no-underline hover:text-(--color-brut-red)"
                                 >
                                     {teamName()}

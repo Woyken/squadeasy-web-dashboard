@@ -66,6 +66,12 @@ function UsersComparisonPage() {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
 
+    // Snapshot the URL search params at mount so the "default to walk" logic
+    // never fights with values the user explicitly put in the URL.
+    const initialSearch = untrack(() => ({ ...search() }));
+    const hadExplicitSelection =
+        !!initialSearch.activityId || initialSearch.sortBy !== "score";
+
     const selectedActivityId = createMemo(() => search().activityId || "");
     // Sorting by an activity metric only makes sense when one is selected.
     const resolvedSortBy = createMemo<UserComparisonSortKey>(() =>
@@ -137,13 +143,10 @@ function UsersComparisonPage() {
     createEffect(() => {
         const list = activities();
         if (defaultApplied || list.length === 0) return;
-        // Only auto-select while the URL is still at its pristine defaults.
-        if (untrack(selectedActivityId) || untrack(() => search().sortBy) !== "score") {
-            defaultApplied = true;
-            return;
-        }
-        const walk = list.find((a) => a.activityId === "walk");
         defaultApplied = true;
+        // Respect anything the user already had in the URL at mount.
+        if (hadExplicitSelection) return;
+        const walk = list.find((a) => a.activityId === "walk");
         if (walk) onPickActivity(walk.activityId);
     });
 

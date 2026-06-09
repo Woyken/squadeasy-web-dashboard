@@ -73,6 +73,30 @@ _Avoid_: Boost target (ambiguous outside this context)
 A per-Donor configuration that determines what happens when no Boost Requests are pending for their team. Values: `none` (do nothing; default) or `top_points` (Boost the highest-points boostable Team Member).
 _Avoid_: Default mode, idle strategy
 
+**Score**:
+A user's overall point total, reported as `totalPoints` on `UserStatsRemoteEntity` from `GET /api/2.0/users/{id}/statistics`. The number ranked in the Season Ranking.
+_Avoid_: Points (ambiguous with Activity Points), statistic
+
+**Activity**:
+A named metric a user accumulates within a challenge (e.g. steps, distance), identified by `activityId` on `UserActivityStatsRemoteEntity`. Each Activity carries both an Activity Value and Activity Points.
+_Avoid_: Statistic, metric
+
+**Activity Value**:
+The raw measured quantity of an Activity (e.g. 5,000 steps, 12 km), reported as `value` on `UserActivityStatsRemoteEntity`.
+_Avoid_: Statistic value, amount
+
+**Activity Points**:
+The points a user earns from a single Activity, reported as `points` on `UserActivityStatsRemoteEntity`. Distinct from Score, which is the user's total across all sources.
+_Avoid_: Statistic points
+
+**Tracked User**:
+A user the tracker server has recorded a profile for (present in `latest_user_profiles`), spanning every Team in the challenge. The population the User Comparison ranks over.
+_Avoid_: Known user, seen user
+
+**User Comparison**:
+The cross-Team ranking of Tracked Users by Score, Activity Value, or Activity Points for a chosen Activity. Sourced from the tracker server's last-known snapshots, not live API reads.
+_Avoid_: Leaderboard (already used for the Team ranking), user ranking
+
 ## Relationships
 
 - A **Team** has many **Team Members**
@@ -85,6 +109,8 @@ _Avoid_: Default mode, idle strategy
 - A **Boost Request** is resolved to a Team via live API lookup (not stored)
 - When a Boost becomes available, the system fulfills the **Boost Request** with the soonest deadline whose target is boostable, using any available Donor on that team (excluding the target)
 - If no Boost Requests exist, the Donor's **Fallback Mode** determines behavior
+- A **Tracked User** has one Score and zero or more **Activities**, each with an **Activity Value** and **Activity Points**
+- The **User Comparison** ranks **Tracked Users** across all **Teams** by one chosen metric, paging through the tracker server's last-known snapshots
 
 ## Flagged ambiguities
 

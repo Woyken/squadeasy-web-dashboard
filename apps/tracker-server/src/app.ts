@@ -18,6 +18,8 @@ import { mutationLogin, mutationRefreshToken, queryMyTeam } from "./api/client.t
 import {
   getLatestTeamProfile,
   getLatestUserProfile,
+  getActivityCatalog,
+  getUserComparisonPage,
   getStoredUserActivityPointsPage,
   getStoredUserActivityVisibilityPage,
   getStoredTeamPointsPage,
@@ -221,6 +223,62 @@ const continuationTokenPayloadSchema = z.object({
   secondaryId: z.string().min(1).optional(),
 });
 
+const userComparisonSortBySchema = z.enum([
+  "score",
+  "activityValue",
+  "activityPoints",
+]);
+
+const userComparisonQuerySchema = z
+  .object({
+    sortBy: userComparisonSortBySchema.default("score"),
+    activityId: z.string().min(1).optional(),
+    order: z.enum(["asc", "desc"]).default("desc"),
+    search: z.string().trim().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    continuationToken: z.string().min(1).optional(),
+  })
+  .superRefine((query, ctx) => {
+    if (
+      (query.sortBy === "activityValue" || query.sortBy === "activityPoints") &&
+      !query.activityId
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["activityId"],
+        message: "activityId is required when sorting by an activity",
+      });
+    }
+  });
+
+const userComparisonItemSchema = z.object({
+  userId: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  imageUrl: z.string().nullable(),
+  teamId: z.string(),
+  teamName: z.string().nullable(),
+  score: z.number(),
+  activityValue: z.number().nullable(),
+  activityPoints: z.number().nullable(),
+});
+
+const paginatedUserComparisonResponseSchema = z.object({
+  items: z.array(userComparisonItemSchema),
+  continuationToken: z.string().nullable(),
+});
+
+const activityCatalogItemSchema = z.object({
+  activityId: z.string(),
+  title: z.string(),
+  type: z.string(),
+});
+
+const comparisonContinuationTokenPayloadSchema = z.object({
+  sortValue: z.number(),
+  userId: z.string().min(1),
+});
+
 type PointsQueryString = z.infer<typeof pointsQuerySchema>;
 
 const SSE_RETRY_DELAY_MS = 5000;
@@ -312,6 +370,28 @@ function decodeContinuationToken(
     id: parsedPayload.id,
     secondaryId: parsedPayload.secondaryId,
   };
+}
+
+function encodeComparisonContinuationToken(cursor: {
+  sortValue: number;
+  userId: string;
+}): string {
+  return Buffer.from(
+    JSON.stringify({ sortValue: cursor.sortValue, userId: cursor.userId }),
+    "utf8"
+  ).toString("base64url");
+}
+
+function decodeComparisonContinuationToken(
+  token?: string
+): { sortValue: number; userId: string } | undefined {
+  if (!token) {
+    return undefined;
+  }
+
+  return comparisonContinuationTokenPayloadSchema.parse(
+    JSON.parse(Buffer.from(token, "base64url").toString("utf8"))
+  );
 }
 
 const fastify: FastifyInstance = Fastify({
@@ -575,6 +655,122 @@ fastify.after(() => {
       raw.on("close", cleanup);
       raw.on("error", cleanup);
     },
+  );
+
+  api.get(
+    "/api/v1/activities",
+    {
+      schema: {
+        tags: ["Activities"],
+        summary: "Get the catalog of tracked activities",
+        description:
+          "Returns the list of activities (e.g. steps, distance) the tracker has seen, with their display titles. Use the activityId to compare users by a specific activity.",
+        security: bearerAuthSecurity,
+        response: {
+          200: z.array(activityCatalogItemSchema),
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      try {
+        const result = await getActivityCatalog();
+
+        await reply.code(200).send(
+          result.map((x) => ({
+            activityId: x.activity_id,
+            title: x.title,
+            type: x.type,
+          }))
+        );
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
+  );
+
+  api.get(
+    "/api/v1/users/comparison",
+    {
+      schema: {
+        tags: ["Users"],
+        summary: "Compare users by score or a chosen activity",
+        description:
+          "Ranks every tracked user by their last-known score, activity value, or activity points for a chosen activity. Sorting happens server-side; pass the continuationToken from the previous page to load more rows. Users with no data for the chosen activity sort last and return null value/points.",
+        security: bearerAuthSecurity,
+        querystring: userComparisonQuerySchema,
+        response: {
+          200: paginatedUserComparisonResponseSchema,
+          400: validationErrorResponseSchema,
+          401: errorResponseSchema,
+          500: errorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await isValidAccessToken(request.headers.authorization))) {
+        await reply.code(401).send({ error: "Unauthorized" });
+        return;
+      }
+
+      let cursor: { sortValue: number; userId: string } | undefined;
+      try {
+        cursor = decodeComparisonContinuationToken(
+          request.query.continuationToken
+        );
+      } catch {
+        await reply.code(400).send({
+          error: "Request validation failed",
+          details: [
+            {
+              path: "continuationToken",
+              message: "Invalid continuation token",
+            },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const result = await getUserComparisonPage({
+          limit: request.query.limit,
+          sortBy: request.query.sortBy,
+          order: request.query.order,
+          activityId: request.query.activityId,
+          search: request.query.search,
+          cursor,
+        });
+
+        await reply.code(200).send({
+          items: result.items.map((x) => ({
+            userId: x.user_id,
+            firstName: x.first_name,
+            lastName: x.last_name,
+            imageUrl: x.image,
+            teamId: x.team_id,
+            teamName: x.team_name,
+            score: x.score,
+            activityValue: x.activity_value,
+            activityPoints: x.activity_points,
+          })),
+          continuationToken: result.nextCursor
+            ? encodeComparisonContinuationToken(result.nextCursor)
+            : null,
+        });
+      } catch (error: unknown) {
+        console.error("Error executing query:", error);
+        fastify.log.error({ err: error }, "Error executing query:");
+        await reply.code(500).send({ error: "Failed to retrieve data." });
+      }
+    }
   );
 
   api.get(

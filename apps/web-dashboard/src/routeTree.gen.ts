@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as UsersPointsImport } from './routes/users-points'
+import { Route as UsersImport } from './routes/users'
 import { Route as UserImport } from './routes/user'
 import { Route as TeamsDashboardImport } from './routes/teams-dashboard'
 import { Route as SettingsImport } from './routes/settings'
@@ -24,6 +25,12 @@ import { Route as IndexImport } from './routes/index'
 const UsersPointsRoute = UsersPointsImport.update({
   id: '/users-points',
   path: '/users-points',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const UsersRoute = UsersImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -109,6 +116,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof UserImport
       parentRoute: typeof rootRoute
     }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersImport
+      parentRoute: typeof rootRoute
+    }
     '/users-points': {
       id: '/users-points'
       path: '/users-points'
@@ -128,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/teams-dashboard': typeof TeamsDashboardRoute
   '/user': typeof UserRoute
+  '/users': typeof UsersRoute
   '/users-points': typeof UsersPointsRoute
 }
 
@@ -138,6 +153,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/teams-dashboard': typeof TeamsDashboardRoute
   '/user': typeof UserRoute
+  '/users': typeof UsersRoute
   '/users-points': typeof UsersPointsRoute
 }
 
@@ -149,6 +165,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/teams-dashboard': typeof TeamsDashboardRoute
   '/user': typeof UserRoute
+  '/users': typeof UsersRoute
   '/users-points': typeof UsersPointsRoute
 }
 
@@ -161,6 +178,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/teams-dashboard'
     | '/user'
+    | '/users'
     | '/users-points'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -170,6 +188,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/teams-dashboard'
     | '/user'
+    | '/users'
     | '/users-points'
   id:
     | '__root__'
@@ -179,6 +198,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/teams-dashboard'
     | '/user'
+    | '/users'
     | '/users-points'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +210,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TeamsDashboardRoute: typeof TeamsDashboardRoute
   UserRoute: typeof UserRoute
+  UsersRoute: typeof UsersRoute
   UsersPointsRoute: typeof UsersPointsRoute
 }
 
@@ -200,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TeamsDashboardRoute: TeamsDashboardRoute,
   UserRoute: UserRoute,
+  UsersRoute: UsersRoute,
   UsersPointsRoute: UsersPointsRoute,
 }
 
@@ -219,6 +241,7 @@ export const routeTree = rootRoute
         "/settings",
         "/teams-dashboard",
         "/user",
+        "/users",
         "/users-points"
       ]
     },
@@ -239,6 +262,9 @@ export const routeTree = rootRoute
     },
     "/user": {
       "filePath": "user.tsx"
+    },
+    "/users": {
+      "filePath": "users.tsx"
     },
     "/users-points": {
       "filePath": "users-points.tsx"

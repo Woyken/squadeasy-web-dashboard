@@ -181,6 +181,15 @@ function NavigationBar() {
                     >
                         TEAMS
                     </Link>
+                    <Link
+                        to="/users"
+                        search={{ sortBy: "score", order: "desc", activityId: "", search: "" }}
+                        class="px-2 py-1 text-sm font-bold uppercase tracking-wider no-underline hover:text-(--color-brut-red)"
+                        activeProps={{ class: "text-(--color-brut-red) border-b-2 border-(--color-brut-red)" }}
+                        inactiveProps={{ class: "text-(--color-brut-dim)" }}
+                    >
+                        USERS
+                    </Link>
                 </div>
             </div>
 
@@ -281,6 +290,13 @@ function NavigationBar() {
                                         class="block px-3 py-2 text-sm font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
                                     >
                                         TEAMS
+                                    </Link>
+                                    <Link
+                                        to="/users"
+                                        search={{ sortBy: "score", order: "desc", activityId: "", search: "" }}
+                                        class="block px-3 py-2 text-sm font-bold uppercase tracking-wider no-underline text-black hover:text-(--color-brut-red)"
+                                    >
+                                        USERS
                                     </Link>
                                 </div>
                                 <Show when={userIds().length > 0}>

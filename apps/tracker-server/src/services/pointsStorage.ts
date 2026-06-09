@@ -121,6 +121,32 @@ type PaginatedResult<TItem, TCursor> = {
   nextCursor?: TCursor;
 };
 
+export type UserComparisonSortKey = "score" | "activityValue" | "activityPoints";
+
+type UserComparisonRow = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  image: string | null;
+  team_id: string;
+  team_name: string | null;
+  score: number;
+  activity_value: number | null;
+  activity_points: number | null;
+  sort_value: number;
+};
+
+type UserComparisonPageCursor = {
+  sortValue: number;
+  userId: string;
+};
+
+type ActivityCatalogRow = {
+  activity_id: string;
+  title: string;
+  type: string;
+};
+
 const CURRENT_CHALLENGE_SINGLETON_KEY = "current";
 
 function getTimeBucket(start: Date, end: Date) {
@@ -1319,4 +1345,135 @@ export async function getUserBoostCountsByRange(
   `);
 
   return result.rows;
+}
+
+export async function getActivityCatalog(): Promise<ActivityCatalogRow[]> {
+  const result = await db.execute<ActivityCatalogRow>(sql`
+    SELECT m.activity_id, m.title, m.type
+    FROM latest_activity_metadata m
+    WHERE EXISTS (
+      SELECT 1
+      FROM user_activity_points uap
+      WHERE uap.activity_id = m.activity_id
+        AND (uap.value > 0 OR uap.points > 0)
+    )
+    ORDER BY m.title ASC, m.activity_id ASC
+  `);
+
+  return result.rows;
+}
+
+/**
+ * Ranks every Tracked User (latest_user_profiles) by their last-known Score,
+ * Activity Value, or Activity Points for a chosen Activity. Sorting happens
+ * server-side and the result is keyset-paginated on (sort_value, user_id) so
+ * pages stay stable regardless of how the full population is ordered. Users
+ * with no recorded data for the chosen Activity sort as 0 but keep a null
+ * value/points so the client can render them as missing.
+ */
+export async function getUserComparisonPage(params: {
+  limit: number;
+  sortBy: UserComparisonSortKey;
+  order: "asc" | "desc";
+  activityId?: string;
+  search?: string;
+  cursor?: UserComparisonPageCursor;
+}): Promise<PaginatedResult<UserComparisonRow, UserComparisonPageCursor>> {
+  const { limit, sortBy, order, activityId, search, cursor } = params;
+
+  const sortValueExpr =
+    sortBy === "activityValue"
+      ? sql`COALESCE(la.value, 0)`
+      : sortBy === "activityPoints"
+        ? sql`COALESCE(la.points, 0)`
+        : sql`COALESCE(p.points, 0)`;
+
+  // latest_activity is only meaningful when an Activity is selected; otherwise
+  // it resolves to nothing and the activity columns come back null.
+  const latestActivityCte = activityId
+    ? sql`
+        SELECT DISTINCT ON (user_id) user_id, value, points
+        FROM user_activity_points
+        WHERE activity_id = ${activityId}
+        ORDER BY user_id, "time" DESC
+      `
+    : sql`
+        SELECT user_id, value, points
+        FROM user_activity_points
+        WHERE false
+      `;
+
+  const searchFilter = search
+    ? sql`WHERE (
+        lup.first_name ILIKE ${"%" + search + "%"}
+        OR lup.last_name ILIKE ${"%" + search + "%"}
+        OR (lup.first_name || ' ' || lup.last_name) ILIKE ${"%" + search + "%"}
+        OR ltp.name ILIKE ${"%" + search + "%"}
+      )`
+    : sql``;
+
+  const direction = order === "asc" ? sql`ASC` : sql`DESC`;
+
+  const keysetFilter = cursor
+    ? order === "asc"
+      ? sql`WHERE (
+          sort_value > ${cursor.sortValue}
+          OR (sort_value = ${cursor.sortValue} AND user_id > ${cursor.userId})
+        )`
+      : sql`WHERE (
+          sort_value < ${cursor.sortValue}
+          OR (sort_value = ${cursor.sortValue} AND user_id > ${cursor.userId})
+        )`
+    : sql``;
+
+  const pageSize = limit + 1;
+
+  const result = await db.execute<UserComparisonRow>(sql`
+    WITH latest_user_points AS (
+      SELECT DISTINCT ON (user_id) user_id, points
+      FROM user_points
+      ORDER BY user_id, "time" DESC
+    ),
+    latest_activity AS (
+      ${latestActivityCte}
+    ),
+    ranked AS (
+      SELECT
+        lup.user_id,
+        lup.first_name,
+        lup.last_name,
+        lup.image,
+        lup.team_id,
+        ltp.name AS team_name,
+        COALESCE(p.points, 0) AS score,
+        la.value AS activity_value,
+        la.points AS activity_points,
+        ${sortValueExpr} AS sort_value
+      FROM latest_user_profiles lup
+      LEFT JOIN latest_team_profiles ltp ON ltp.team_id = lup.team_id
+      LEFT JOIN latest_user_points p ON p.user_id = lup.user_id
+      LEFT JOIN latest_activity la ON la.user_id = lup.user_id
+      ${searchFilter}
+    )
+    SELECT *
+    FROM ranked
+    ${keysetFilter}
+    ORDER BY sort_value ${direction}, user_id ASC
+    LIMIT ${pageSize}
+  `);
+
+  const hasMore = result.rows.length > limit;
+  const items = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const lastItem = items.at(-1);
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? {
+            sortValue: Number(lastItem.sort_value),
+            userId: lastItem.user_id,
+          }
+        : undefined,
+  };
 }

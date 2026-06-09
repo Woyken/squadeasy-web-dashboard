@@ -174,6 +174,110 @@ export interface paths {
       };
     };
   };
+  "/api/v1/activities": {
+    /**
+     * Get the catalog of tracked activities
+     * @description Returns the list of activities (e.g. steps, distance) the tracker has seen, with their display titles. Use the activityId to compare users by a specific activity.
+     */
+    get: {
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+                activityId: string;
+                title: string;
+                type: string;
+              }[];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/users/comparison": {
+    /**
+     * Compare users by score or a chosen activity
+     * @description Ranks every tracked user by their last-known score, activity value, or activity points for a chosen activity. Sorting happens server-side; pass the continuationToken from the previous page to load more rows. Users with no data for the chosen activity sort last and return null value/points.
+     */
+    get: {
+      parameters: {
+        query?: {
+          sortBy?: "score" | "activityValue" | "activityPoints";
+          activityId?: string;
+          order?: "asc" | "desc";
+          search?: string;
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: ({
+                  userId: string;
+                  firstName: string;
+                  lastName: string;
+                  imageUrl: string | null;
+                  teamId: string;
+                  teamName: string | null;
+                  score: number;
+                  activityValue: number | null;
+                  activityPoints: number | null;
+                })[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/api/v1/users/points/all": {
     /**
      * Get all stored user point snapshots
@@ -362,129 +466,6 @@ export interface paths {
       };
     };
   };
-  "/api/v1/users/boosts/all": {
-    /**
-     * Get all stored user boost count snapshots
-     * @description Returns raw stored user boost count records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
-     */
-    get: {
-      parameters: {
-        query?: {
-          limit?: number;
-          continuationToken?: string;
-        };
-      };
-      responses: {
-        /** @description Default Response */
-        200: {
-          content: {
-            "application/json": {
-              items: {
-                  userId: string;
-                  /**
-                   * Format: date-time
-                   * @description ISO 8601 datetime with timezone offset
-                   */
-                  time: string;
-                  boostCount: number;
-                }[];
-              continuationToken: string | null;
-            };
-          };
-        };
-        /** @description Default Response */
-        400: {
-          content: {
-            "application/json": {
-              /** @enum {string} */
-              error: "Request validation failed";
-              details: {
-                  path: string;
-                  message: string;
-                }[];
-            };
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": {
-              error: string;
-            };
-          };
-        };
-        /** @description Default Response */
-        500: {
-          content: {
-            "application/json": {
-              error: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/api/v1/users/{userId}/boosts": {
-    /** Get a user's boost count history */
-    get: {
-      parameters: {
-        query: {
-          /** @description ISO 8601 datetime with timezone offset */
-          startDate: string;
-          /** @description ISO 8601 datetime with timezone offset */
-          endDate: string;
-        };
-        path: {
-          userId: string;
-        };
-      };
-      responses: {
-        /** @description Default Response */
-        200: {
-          content: {
-            "application/json": {
-                userId: string;
-                /**
-                 * Format: date-time
-                 * @description ISO 8601 datetime with timezone offset
-                 */
-                time: string;
-                boostCount: number;
-              }[];
-          };
-        };
-        /** @description Default Response */
-        400: {
-          content: {
-            "application/json": {
-              /** @enum {string} */
-              error: "Request validation failed";
-              details: {
-                  path: string;
-                  message: string;
-                }[];
-            };
-          };
-        };
-        /** @description Default Response */
-        401: {
-          content: {
-            "application/json": {
-              error: string;
-            };
-          };
-        };
-        /** @description Default Response */
-        500: {
-          content: {
-            "application/json": {
-              error: string;
-            };
-          };
-        };
-      };
-    };
-  };
   "/api/v1/users/{userId}/activity-points": {
     /** Get a user's activity points */
     get: {
@@ -635,6 +616,129 @@ export interface paths {
                  */
                 time: string;
                 isActivityPublic: boolean;
+              }[];
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/users/boosts/all": {
+    /**
+     * Get all stored user boost count snapshots
+     * @description Returns raw stored user boost count records ordered newest-first. Pass the continuationToken from the previous page to continue exporting.
+     */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+          continuationToken?: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              items: {
+                  userId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  time: string;
+                  boostCount: number;
+                }[];
+              continuationToken: string | null;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/users/{userId}/boosts": {
+    /** Get a user's boost count history */
+    get: {
+      parameters: {
+        query: {
+          /** @description ISO 8601 datetime with timezone offset */
+          startDate: string;
+          /** @description ISO 8601 datetime with timezone offset */
+          endDate: string;
+        };
+        path: {
+          userId: string;
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+                userId: string;
+                /**
+                 * Format: date-time
+                 * @description ISO 8601 datetime with timezone offset
+                 */
+                time: string;
+                boostCount: number;
               }[];
           };
         };
@@ -950,6 +1054,316 @@ export interface paths {
               details: {
                   path: string;
                   message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/boost/donor/register": {
+    /**
+     * Register as a Boost Donor
+     * @description Registers the authenticated user as a Boost Donor by storing their refresh token. The backend will use this to execute boosts on their behalf.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            refreshToken: string;
+            /**
+             * @default none
+             * @enum {string}
+             */
+            fallbackMode?: "none" | "top_points";
+          };
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              userId: string;
+              fallbackMode: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              registeredAt: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/boost/donor": {
+    /** Unregister as a Boost Donor */
+    delete: {
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: {
+            "application/json": unknown;
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/boost/donor/status": {
+    /** Get your Boost Donor registration status */
+    get: {
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              userId: string;
+              fallbackMode: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              registeredAt: string;
+            } | null;
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/boost/request": {
+    /** Get your current Boost Request */
+    get: {
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              userId: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              boostByDeadline: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              createdAt: string;
+            } | null;
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    /**
+     * Create or update your Boost Request
+     * @description Submits a request to be boosted by a deadline. One active request per user. Deadline must be in the future and at most 2 weeks or end of challenge away.
+     */
+    put: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date-time
+             * @description ISO 8601 datetime with timezone offset
+             */
+            boostByDeadline: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              userId: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              boostByDeadline: string;
+              /**
+               * Format: date-time
+               * @description ISO 8601 datetime with timezone offset
+               */
+              createdAt: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        400: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              error: "Request validation failed";
+              details: {
+                  path: string;
+                  message: string;
+                }[];
+            };
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+    /** Cancel your Boost Request */
+    delete: {
+      responses: {
+        /** @description Default Response */
+        204: {
+          content: {
+            "application/json": unknown;
+          };
+        };
+        /** @description Default Response */
+        401: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+        /** @description Default Response */
+        500: {
+          content: {
+            "application/json": {
+              error: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/api/v1/boost/team/status": {
+    /**
+     * Get boost status for your team
+     * @description Returns all registered donors and pending boost requests for the authenticated user's team.
+     */
+    get: {
+      responses: {
+        /** @description Default Response */
+        200: {
+          content: {
+            "application/json": {
+              donors: {
+                  userId: string;
+                  fallbackMode: string;
+                }[];
+              requests: {
+                  userId: string;
+                  /**
+                   * Format: date-time
+                   * @description ISO 8601 datetime with timezone offset
+                   */
+                  boostByDeadline: string;
                 }[];
             };
           };

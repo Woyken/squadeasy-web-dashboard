@@ -481,6 +481,107 @@ export function getSeasonRankingInfiniteQueryOptions(
     });
 }
 
+export type ActivityCatalogEntry =
+    trackerServerPaths["/api/v1/activities"]["get"]["responses"][200]["content"]["application/json"][number];
+
+export type UserComparisonSortKey = "score" | "activityValue" | "activityPoints";
+
+export type UserComparisonEntry =
+    trackerServerPaths["/api/v1/users/comparison"]["get"]["responses"][200]["content"]["application/json"]["items"][number];
+
+export function getActivitiesCatalogQueryOptions(
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return queryOptions({
+        queryKey: ["/api/v1/activities"],
+        queryFn: async ({ signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const result = await trackerServerClient.GET("/api/v1/activities", {
+                headers: {
+                    authorization: `Bearer ${accessToken}`,
+                },
+                signal,
+            });
+
+            if (!result.data) {
+                throw new Error(
+                    `Get activities failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
+        },
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        deferStream: true,
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
+    });
+}
+
+export function getUserComparisonInfiniteQueryOptions(
+    sortBy: Accessor<UserComparisonSortKey>,
+    order: Accessor<"asc" | "desc">,
+    activityId: Accessor<string | undefined>,
+    search: Accessor<string | undefined>,
+    getToken: () => Promise<string | undefined>,
+    enabled?: Accessor<boolean>,
+) {
+    return infiniteQueryOptions({
+        queryKey: [
+            "/api/v1/users/comparison",
+            sortBy(),
+            order(),
+            activityId() ?? "",
+            search() ?? "",
+        ],
+        initialPageParam: undefined as string | undefined,
+        queryFn: async ({ pageParam, signal }) => {
+            const accessToken = await getToken();
+            if (!accessToken) throw new Error("Missing token!");
+
+            const result = await trackerServerClient.GET(
+                "/api/v1/users/comparison",
+                {
+                    params: {
+                        query: {
+                            sortBy: sortBy(),
+                            order: order(),
+                            ...(activityId() ? { activityId: activityId() } : {}),
+                            ...(search() ? { search: search() } : {}),
+                            limit: 25,
+                            ...(pageParam
+                                ? { continuationToken: pageParam }
+                                : {}),
+                        },
+                    },
+                    headers: {
+                        authorization: `Bearer ${accessToken}`,
+                    },
+                    signal,
+                },
+            );
+
+            if (!result.data) {
+                throw new Error(
+                    `Get user comparison failed ${JSON.stringify(result.error)}`,
+                );
+            }
+
+            return result.data;
+        },
+        getNextPageParam: (lastPage) =>
+            lastPage.continuationToken ?? undefined,
+        staleTime: 60 * 1000,
+        gcTime: 5 * 60 * 1000,
+        deferStream: true,
+        enabled: typeof window !== "undefined" && (enabled?.() ?? true),
+        placeholderData: keepPreviousData,
+    });
+}
+
 export function useStoredTeamQueries(teamIds: Accessor<string[]>) {
     const mainUser = useMainUser();
     const getToken = useGetUserToken(mainUser.mainUserId);
